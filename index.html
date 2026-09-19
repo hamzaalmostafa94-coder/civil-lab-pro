@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>طوق النجاة :: لعبة الهندسة المدنية (PRO)</title>
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#38bdf8">
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <!-- ربط ملف التنسيقات -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <div class="brand">طوق النجاة :: CIVIL_ENG_LAB</div>
+        <div class="badge">يعمل 100% Offline</div>
+    </header>
+
+    <main>
+        <!-- الشاشة 1: تسجيل الدخول -->
+        <div id="screen-auth" class="screen active">
+            <div class="card" style="max-width: 500px; margin: 60px auto;">
+                <h2 style="margin-bottom: 8px; color: var(--primary); text-align: center;">تسجيل دخول المهندس</h2>
+                <p style="color: var(--text-muted); font-size: 0.85rem; text-align: center; margin-bottom: 24px;">أدخل معلوماتك الشخصية لتخصيص سجلك الأكاديمي</p>
+
+                <form onsubmit="AppEngine.login(event)">
+                    <div class="input-group">
+                        <label>الاسم الثلاثي:</label>
+                        <input type="text" id="userName" class="form-control" placeholder="أدخل اسمك الثلاثي هنا" required>
+                    </div>
+                    <div class="input-group">
+                        <label>رقم الهاتف (سوريا):</label>
+                        <input type="tel" id="userPhone" class="form-control" placeholder="+963 xxxxxxxx" required>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <div class="input-group" style="flex: 1;">
+                            <label>العمر:</label>
+                            <input type="number" id="userAge" class="form-control" value="21" required>
+                        </div>
+                        <div class="input-group" style="flex: 2;">
+                            <label>السنة الجامعية الحاليّة:</label>
+                            <select id="userYear" class="form-control">
+                                <option value="1">السنة الأولى</option>
+                                <option value="2">السنة الثانية</option>
+                                <option value="3" selected>السنة الثالثة</option>
+                                <option value="4">السنة الرابعة</option>
+                                <option value="5">السنة الخامسة</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">دخول الجامعة الافتراضية ➔</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- الشاشة 2: خارطة السنوات -->
+        <div id="screen-dashboard" class="screen">
+            <div style="max-width: 1100px; margin: 0 auto;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                    <div>
+                        <h2 style="color: var(--text-main);">مرحباً بك مهندس <span id="displayStudentName" style="color: var(--primary);"></span></h2>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">اختر السنة الدراسية لعرض المواد والمخابر المتاحة</p>
+                    </div>
+                    <button onclick="AppEngine.navigate('screen-auth')" class="btn btn-outline">تعديل البيانات</button>
+                </div>
+
+                <div class="grid-cards">
+                    <div class="custom-card" id="card-year-1" onclick="AppEngine.openYear(1)">
+                        <div class="card-title">🔹 السنة الأولى</div>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">العلوم الأساسية للهندسة</p>
+                        <span class="subject-tag">الفيزياء</span> <span class="subject-tag">الكيمياء</span> <span class="subject-tag">الرسم</span>
+                    </div>
+                    <div class="custom-card" id="card-year-2" onclick="AppEngine.openYear(2)">
+                        <div class="card-title">🔹 السنة الثانية</div>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">علوم المواد والميكانيك</p>
+                        <span class="subject-tag">مقاومة المواد</span> <span class="subject-tag">المساحة</span> <span class="subject-tag">السوائل</span>
+                    </div>
+                    <div class="custom-card" id="card-year-3" onclick="AppEngine.openYear(3)">
+                        <div class="card-title">🔹 السنة الثالثة</div>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">الإنشاءات والبيتون</p>
+                        <span class="subject-tag">بيتون مسلح 1</span> <span class="subject-tag">الإنشاءات</span> <span class="subject-tag">تربة</span>
+                    </div>
+                    <div class="custom-card" id="card-year-4" onclick="AppEngine.openYear(4)">
+                        <div class="card-title">🔹 السنة الرابعة</div>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">التصميم التنفيذي</p>
+                        <span class="subject-tag">بيتون مسلح 2</span> <span class="subject-tag">معدنية</span> <span class="subject-tag">طرق</span>
+                    </div>
+                    <div class="custom-card" id="card-year-5" onclick="AppEngine.openYear(5)">
+                        <div class="card-title">🔹 السنة الخامسة</div>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">مشروع التخرج</p>
+                        <span class="subject-tag">الزلازل</span> <span class="subject-tag">إدارة المشاريع</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- الشاشة 3: المواد -->
+        <div id="screen-subjects" class="screen">
+            <div style="max-width: 1100px; margin: 0 auto;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+                    <h2 style="color: var(--text-main);">📚 مواد وتجارب: <span id="selectedYearTitle" style="color: var(--primary);"></span></h2>
+                    <button onclick="AppEngine.navigate('screen-dashboard')" class="btn btn-outline">↩ العودة للسنوات</button>
+                </div>
+                <div id="subjectsListGrid" class="grid-cards"></div>
+            </div>
+        </div>
+
+        <!-- الشاشة 4: مخبر البيتون -->
+        <div id="screen-concrete" class="screen">
+            <div class="lab-container">
+                <div class="viewport-3d" id="concrete-canvas">
+                    <button class="btn btn-outline" style="position: absolute; top: 16px; right: 16px; z-index: 5; background: var(--surface-200);" onclick="AppEngine.navigate('screen-subjects')">➔ عودة</button>
+                </div>
+                
+                <div class="lab-panel">
+                    <div class="panel-header">إعدادات اختبار الضغط</div>
+                    <div class="panel-body">
+                        <div class="formula-box">f'ci = (Cf · Ct · Ch) · f''ci<br>f''ci = (NR / Ac) · 10</div>
+                        <div class="input-group">
+                            <label>شكل العينة (تحديد عامل الشكل Cf)</label>
+                            <select id="c_shape" class="form-control" onchange="ConcreteLab.calculate()">
+                                <option value="0.80">مكعب 150×150×150 (Cf = 0.80)</option>
+                                <option value="1.00">أسطوانة 150×300 (Cf = 1.00)</option>
+                                <option value="0.78">مكعب 100×100×100 (Cf = 0.78)</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>عمر العينة (t) بالأيام</label>
+                            <input type="number" id="c_age" class="form-control" value="7" min="3" oninput="ConcreteLab.calculate()">
+                        </div>
+                        <div class="input-group">
+                            <label>قوة الانكسار المقاسة NR (Kg)</label>
+                            <input type="number" id="c_force" class="form-control" value="53200" oninput="ConcreteLab.calculate()">
+                        </div>
+                        <hr style="border-color: var(--surface-300); margin: 20px 0;">
+                        <div class="data-display">
+                            <span class="data-label">عامل تصحيح العمر (Ct):</span>
+                            <span class="data-value" id="res_ct" style="color: var(--warning);">1.50</span>
+                        </div>
+                        <div class="data-display">
+                            <span class="data-label">الإجهاد الفعلي (f''ci):</span>
+                            <span class="data-value" id="res_f_prime_prime">23.64 MPa</span>
+                        </div>
+                        <div class="data-display" style="border-color: var(--success);">
+                            <span class="data-label">الإجهاد المصحح النظامي (f'ci):</span>
+                            <span class="data-value" id="res_f_prime">28.37 MPa</span>
+                        </div>
+                        <button id="btn-crush" class="btn btn-danger" style="width: 100%; margin-top: 16px;" onclick="ConcreteLab.startSimulation()">▶ تطبيق حمل الانكسار</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- الشاشة 5: مخبر الفولاذ -->
+        <div id="screen-steel" class="screen">
+            <div style="display: flex; flex-direction: column; gap: 20px; height: 100%;">
+                <div style="display: grid; grid-template-columns: 1fr 350px; gap: 20px; flex: 1; min-height: 380px;">
+                    <div class="viewport-3d" id="steel-canvas">
+                        <button class="btn btn-outline" style="position: absolute; top: 16px; right: 16px; z-index: 5; background: var(--surface-200);" onclick="AppEngine.navigate('screen-subjects')">➔ عودة</button>
+                    </div>
+                    
+                    <div class="lab-panel">
+                        <div class="panel-header">اختبار الشد</div>
+                        <div class="panel-body">
+                            <div class="formula-box">As = (π · d²) / 4<br>Ny = (N'y - Ng) · 10<br>fyi = Ny / As</div>
+                            <div class="input-group">
+                                <label>قطر العينة ds (mm)</label>
+                                <select id="s_dia" class="form-control">
+                                    <option value="12">12 mm (مخبر مواد بناء)</option>
+                                    <option value="16">16 mm (مخبر مواد بناء)</option>
+                                    <option value="22" selected>22 mm (مخبر البيتون)</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label>القوة المقاسة N'y (Kg)</label>
+                                <input type="number" id="s_force" class="form-control" value="17600">
+                            </div>
+                            <button id="btn-pull" class="btn btn-primary" style="width: 100%; margin-top: 16px;" onclick="SteelLab.startSimulation()">▶ بدء اختبار الشد الفعلي</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin: 0; display: flex; flex-direction: column; height: 260px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 10px;">
+                        <h3 style="color: var(--primary);">الجدول الإحصائي (إجهاد الخضوع fy)</h3>
+                        <div style="font-size: 0.9rem;">الوسطي (fym): <strong id="stat_fym" style="color: var(--success); font-size: 1.2rem;">0.00 MPa</strong></div>
+                    </div>
+                    <div style="flex: 1; overflow-y: auto;">
+                        <table class="pro-table">
+                            <thead>
+                                <tr><th>#</th><th>القطر ds</th><th>المساحة As</th><th>المكبس Ng</th><th>القوة Ny</th><th>إجهاد الخضوع fyi</th></tr>
+                            </thead>
+                            <tbody id="steel_table_body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- الشاشة 6: التحليل الإنشائي CAD -->
+        <div id="screen-cad" class="screen">
+            <div style="max-width: 1100px; margin: 0 auto;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="color: var(--primary);">📐 استديو التحليل الإنشائي وتصميم الجوائز (CAD Studio)</h2>
+                    <button onclick="AppEngine.navigate('screen-subjects')" class="btn btn-outline">العودة للمواد</button>
+                </div>
+
+                <div class="card" style="padding: 20px;">
+                    <canvas id="cadCanvas"></canvas>
+
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px;">
+                        <div class="input-group">
+                            <label>طول الجائز (L): <b id="spanVal" style="color:var(--primary);">6.0 m</b></label>
+                            <input type="range" id="spanInput" class="form-control" min="3" max="10" step="0.5" value="6" oninput="CADLab.recalculate()">
+                        </div>
+                        <div class="input-group">
+                            <label>الحمل الموزع (q): <b id="loadVal" style="color:var(--warning);">30 kN/m</b></label>
+                            <input type="range" id="loadInput" class="form-control" min="10" max="80" step="5" value="30" oninput="CADLab.recalculate()">
+                        </div>
+                        <div class="input-group">
+                            <label>عمق المقطع (h): <b id="depthVal" style="color:var(--success);">50 cm</b></label>
+                            <input type="range" id="depthInput" class="form-control" min="30" max="90" step="5" value="50" oninput="CADLab.recalculate()">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px;">
+                        <div class="data-display">
+                            <span class="data-label">العزم المحسوب ($M_{max}$):</span>
+                            <span class="data-value" id="mMaxVal">135.0 kN.m</span>
+                        </div>
+                        <div class="data-display" style="border-color: var(--danger);">
+                            <span class="data-label">القص المحسوب ($V_{max}$):</span>
+                            <span class="data-value" id="vMaxVal" style="color: var(--danger);">90.0 kN</span>
+                        </div>
+                        <div class="data-display" style="border-color: var(--success);">
+                            <span class="data-label">التسليح التقريبي ($A_s$):</span>
+                            <span class="data-value" id="rebarVal" style="color: var(--success);">4 T 16</span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-top: 15px;">
+                        <button class="btn" style="background: var(--warning); color: #000;" onclick="CADLab.simulateEarthquake()">⚠️ محاكاة زلزال</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      
+      <!-- نافذة الاشتراك وتفعيل الحساب -->
+        <div id="subscriptionModal" class="modal-overlay">
+            <div class="modal-box">
+                <button class="modal-close" onclick="AppEngine.closeModal()">×</button>
+                <h3 class="modal-title">تفعيل الدخول للمخبر 🚧</h3>
+                <p class="modal-text">للبدء بإجراء التجارب العملية واستخدام المعدات الافتراضية، يرجى تفعيل اشتراكك في منصة لمسة.</p>
+                
+                <div class="modal-info">
+                    اضغط على الزر أدناه للتواصل معنا مباشرة عبر واتساب للحصول على رمز التفعيل الخاص بك والبدء بتجربتك الهندسية.
+                </div>
+                
+                <button class="btn btn-whatsapp" onclick="AppEngine.redirectToWhatsApp()">تفعيل الاشتراك عبر واتساب 💬</button>
+                
+                <button class="btn btn-outline btn-code" onclick="AppEngine.enterCode()">
+                    <span>لدي رمز تفعيل مسبقاً</span>
+                    <span>❯</span>
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- رسالة طلب التثبيت (PWA) -->
+    <div id="installPrompt" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--surface-200); border: 1px solid var(--primary); padding: 20px; border-radius: 12px; z-index: 9999; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.8); width: 90%; max-width: 400px;">
+        <h4 style="color: var(--primary); margin-bottom: 10px;">تثبيت اللعبة 📲</h4>
+        <p style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-main);">هل تريد تثبيت "مخبر الهندسة" ليعمل كـ تطبيق بدون إنترنت؟</p>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button id="btnInstallYes" class="btn btn-success" style="flex: 1;">نعم، تثبيت</button>
+            <button id="btnInstallNo" class="btn btn-outline" style="flex: 1;">لا، شكراً</button>
+        </div>
+    </div>
+    
+    <!-- ربط ملف الجافاسكريبت -->
+    <script src="script.js"></script>
+</body>
+</html>
