@@ -1,0 +1,2011 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مختبر المساحة الهندسية التفاعلي | منصة لمسة التعليمية</title>
+
+  <!-- خط Tajawal من Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+  <!-- محرك Three.js الإصدار r128 و OrbitControls عبر CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --glass-bg: rgba(30, 41, 59, 0.78);
+      --glass-border: rgba(148, 163, 184, 0.22);
+      --accent-blue: #38bdf8;
+      --accent-amber: #f59e0b;
+      --accent-emerald: #10b981;
+      --accent-rose: #f43f5e;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Tajawal', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* الشريط العلوي والتبويب */
+    header {
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--glass-border);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent-amber), #d97706);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: #0f172a;
+      box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+    }
+
+    .brand-title h1 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .brand-title p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 10px;
+      background: rgba(15, 23, 42, 0.8);
+      padding: 6px;
+      border-radius: 12px;
+      border: 1px solid var(--glass-border);
+    }
+
+    .tab-btn {
+      background: transparent;
+      color: var(--text-muted);
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, var(--accent-blue), #0284c7);
+      color: #0f172a;
+      box-shadow: 0 4px 12px rgba(56, 189, 248, 0.35);
+    }
+
+    .global-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.88rem;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      background: var(--accent-blue);
+      color: #0f172a;
+    }
+    .btn-primary:hover {
+      background: #7dd3fc;
+    }
+
+    .btn-amber {
+      background: var(--accent-amber);
+      color: #0f172a;
+    }
+    .btn-amber:hover {
+      background: #fbbf24;
+    }
+
+    .btn-emerald {
+      background: var(--accent-emerald);
+      color: #0f172a;
+    }
+    .btn-emerald:hover {
+      background: #34d399;
+    }
+
+    .btn-outline {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+      border-color: var(--glass-border);
+    }
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    /* حاويات الأقسام */
+    .tab-section {
+      display: none;
+      flex: 1;
+      position: relative;
+    }
+
+    .tab-section.active {
+      display: flex;
+    }
+
+    /* ================= القسم الأول: محاكي 3D ================= */
+    #tab1-container {
+      width: 100%;
+      height: calc(100vh - 70px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    #webgl-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+
+    .hud-overlay {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: grid;
+      grid-template-columns: 370px 1fr 360px;
+      gap: 16px;
+      padding: 16px;
+    }
+
+    .glass-panel {
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 16px;
+      pointer-events: auto;
+      overflow-y: auto;
+      max-height: calc(100vh - 105px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    }
+
+    .glass-panel::-webkit-scrollbar {
+      width: 6px;
+    }
+    .glass-panel::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.3);
+      border-radius: 4px;
+    }
+
+    .panel-header {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--accent-blue);
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--glass-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .control-group {
+      margin-bottom: 14px;
+      background: rgba(15, 23, 42, 0.55);
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #e2e8f0;
+    }
+
+    .control-val {
+      color: var(--accent-amber);
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent-blue);
+      cursor: pointer;
+      height: 6px;
+      border-radius: 4px;
+    }
+
+    /* نافذة الفقاعة المدمجة */
+    .vial-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      gap: 12px;
+      margin: 10px 0;
+    }
+
+    .circular-bullseye {
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.25) 0%, rgba(6, 78, 59, 0.7) 75%, #022c22 100%);
+      border: 3px solid #475569;
+      position: relative;
+      box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
+    }
+
+    .bullseye-ring-inner {
+      position: absolute;
+      width: 34px;
+      height: 34px;
+      border: 2px dashed rgba(255, 255, 255, 0.75);
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .bullseye-cross-h, .bullseye-cross-v {
+      position: absolute;
+      background: rgba(255,255,255,0.2);
+    }
+    .bullseye-cross-h { width: 100%; height: 1px; top: 50%; left: 0; }
+    .bullseye-cross-v { height: 100%; width: 1px; left: 50%; top: 0; }
+
+    .bubble-dot {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #ffffff, #a7f3d0 45%, #10b981 90%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.9);
+      transition: transform 0.08s linear;
+    }
+
+    /* عدسة المنظار التلسكوبي */
+    .eyepiece-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .eyepiece-viewport {
+      width: 250px;
+      height: 250px;
+      border-radius: 50%;
+      border: 6px solid #334155;
+      box-shadow: inset 0 0 30px #000000, 0 0 20px rgba(0, 0, 0, 0.7);
+      position: relative;
+      overflow: hidden;
+      background: #0f172a;
+    }
+
+    #eyepiece-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .status-badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+    .badge-ok { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; }
+    .badge-warn { background: rgba(244, 63, 94, 0.2); color: #fb7185; border: 1px solid #f43f5e; }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: 1fr 110px;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .input-row label {
+      font-size: 0.84rem;
+      color: #cbd5e1;
+    }
+
+    .num-input {
+      background: #0f172a;
+      border: 1px solid #475569;
+      color: var(--accent-amber);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-weight: 700;
+      text-align: center;
+      font-size: 0.9rem;
+      width: 100%;
+    }
+
+    .formula-box {
+      background: rgba(15, 23, 42, 0.85);
+      border-right: 3px solid var(--accent-amber);
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      margin-top: 8px;
+      color: #e2e8f0;
+    }
+
+    /* ================= القسم الثاني: محقق دفتر الغيط ================= */
+    #tab2-container {
+      width: 100%;
+      padding: 24px;
+      max-width: 1440px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .detective-header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 20px;
+      align-items: center;
+      background: var(--glass-bg);
+      padding: 20px;
+      border-radius: 16px;
+      border: 1px solid var(--glass-border);
+    }
+
+    .score-cards {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .stat-card {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--glass-border);
+      padding: 10px 18px;
+      border-radius: 12px;
+      text-align: center;
+      min-width: 120px;
+    }
+
+    .stat-card span {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .stat-card strong {
+      font-size: 1.25rem;
+      color: var(--accent-amber);
+    }
+
+    .scenario-banner {
+      background: linear-gradient(90deg, rgba(56, 189, 248, 0.15), rgba(245, 158, 11, 0.15));
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 12px;
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .table-wrapper {
+      background: var(--glass-bg);
+      border-radius: 16px;
+      border: 1px solid var(--glass-border);
+      padding: 16px;
+      overflow-x: auto;
+    }
+
+    table.field-book {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1050px;
+    }
+
+    table.field-book th {
+      background: #0f172a;
+      color: var(--accent-blue);
+      padding: 12px 8px;
+      font-size: 0.85rem;
+      border: 1px solid #334155;
+      text-align: center;
+    }
+
+    table.field-book td {
+      padding: 8px;
+      border: 1px solid #334155;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    table.field-book tr:nth-child(even) {
+      background: rgba(15, 23, 42, 0.4);
+    }
+
+    .cell-input {
+      width: 95px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid #475569;
+      color: #f8fafc;
+      padding: 6px;
+      border-radius: 6px;
+      text-align: center;
+      font-weight: 700;
+      font-family: monospace;
+      transition: all 0.2s;
+    }
+
+    .cell-input:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+    }
+
+    .cell-input.correct {
+      border-color: var(--accent-emerald);
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+    }
+
+    .cell-input.wrong {
+      border-color: var(--accent-rose);
+      background: rgba(244, 63, 94, 0.18);
+      color: #fb7185;
+    }
+
+    .checks-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+      gap: 16px;
+    }
+
+    .check-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    .check-card h3 {
+      font-size: 1rem;
+      color: var(--accent-amber);
+      margin-bottom: 10px;
+    }
+
+    .math-line {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px dashed rgba(148, 163, 184, 0.2);
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 1150px) {
+      .hud-overlay {
+        grid-template-columns: 1fr;
+        overflow-y: auto;
+      }
+      #tab1-container {
+        height: auto;
+        min-height: 100vh;
+      }
+      #webgl-container {
+        position: fixed;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- الشريط العلوي -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">📐</div>
+      <div class="brand-title">
+        <h1>مختبر المساحة الهندسية (مساحة 1)</h1>
+        <p>محاكاة ثلاثية الأبعاد لضبط الميزان وتدقيق دفاتر الغيط والميزانية</p>
+      </div>
+    </div>
+
+    <div class="nav-tabs">
+      <button class="tab-btn active" id="tab-btn-3d" onclick="SurveyingLab.switchTab('3d')">
+        🔭 محاكي الميزان الميداني 3D
+      </button>
+      <button class="tab-btn" id="tab-btn-book" onclick="SurveyingLab.switchTab('book')">
+        📒 دفتر الغيط وموازنة المناسيب
+      </button>
+    </div>
+
+    <div class="global-actions">
+      <button class="btn btn-primary" id="btn-toggle-sim" onclick="SurveyingLab.toggleSimulation()">
+        ⏸️ إيقاف مؤقت
+      </button>
+      <button class="btn btn-outline" onclick="SurveyingLab.reset()">
+        🔄 إعادة ضبط
+      </button>
+      <button class="btn btn-emerald" onclick="SurveyingLab.verifyAll()">
+        ✅ التحقق الحسابي
+      </button>
+      <button class="btn btn-amber" onclick="SurveyingLab.toggleMethod()">
+        🔁 تبديل طريقة الحساب
+      </button>
+    </div>
+  </header>
+
+  <!-- ==================== القسم الأول: محاكي مهندس الموقع 3D ==================== -->
+  <section id="section-3d" class="tab-section active">
+    <div id="tab1-container">
+      <!-- حاوية WebGL -->
+      <div id="webgl-container"></div>
+
+      <!-- واجهة التحكم الزجاجية فوق المشهد -->
+      <div class="hud-overlay">
+        
+        <!-- اللوحة اليمنى: الضبط المؤقت للجهاز والقامة -->
+        <div class="glass-panel">
+          <div class="panel-header">
+            <span>1. الضبط المؤقت للميزان (Temporary Adjustments)</span>
+            <span id="level-badge" class="status-badge badge-warn">غير موزون</span>
+          </div>
+
+          <!-- الفقاعة الدائرية ومسامير التسوية -->
+          <div class="control-group">
+            <div class="control-label">
+              <span>الخطوة أ: تسوية الفقاعة (Foot Screws A, B, C)</span>
+              <button class="btn btn-outline" style="padding:2px 8px; font-size:0.75rem;" onclick="SurveyingLab.autoLevel()">ضبط تلقائي ⚡</button>
+            </div>
+
+            <div class="vial-wrapper">
+              <div class="circular-bullseye" title="الفقاعة الدائرية (Bull's-eye Spirit Level)">
+                <div class="bullseye-cross-h"></div>
+                <div class="bullseye-cross-v"></div>
+                <div class="bullseye-ring-inner"></div>
+                <div class="bubble-dot" id="bubble-indicator"></div>
+              </div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); flex:1;">
+                <p>• حرك المسمارين <b>A و B</b> لضبط المحور X.</p>
+                <p>• حرك المسمار <b>C</b> لضبط المحور Y المتعامد.</p>
+                <p style="margin-top:6px; color:var(--accent-amber);">ميل خط النظر: <span id="tilt-angle-readout">0.00°</span></p>
+              </div>
+            </div>
+
+            <div class="control-label">
+              <span>مسمارا التسوية (A & B - محور X)</span>
+              <span class="control-val" id="val-screw-ab">2.5</span>
+            </div>
+            <input type="range" id="slider-screw-ab" min="-5" max="5" step="0.1" value="2.5" />
+
+            <div class="control-label" style="margin-top:8px;">
+              <span>مسمار التسوية (C - محور Y)</span>
+              <span class="control-val" id="val-screw-c">-2.0</span>
+            </div>
+            <input type="range" id="slider-screw-c" min="-5" max="5" step="0.1" value="-2.0" />
+          </div>
+
+          <!-- التخلص من اختلاف المنظر Parallax -->
+          <div class="control-group">
+            <div class="control-label">
+              <span>الخطوة ب: إزالة اختلاف المنظر (Parallax)</span>
+              <span id="focus-badge" class="status-badge badge-warn">ضبابي</span>
+            </div>
+
+            <div class="control-label">
+              <span>توضيح حامل الشعيرات (Eyepiece Diopter)</span>
+              <span class="control-val" id="val-reticle-focus">65%</span>
+            </div>
+            <input type="range" id="slider-reticle-focus" min="0" max="100" step="1" value="65" />
+
+            <div class="control-label" style="margin-top:8px;">
+              <span>مسمار التوضيح البؤري للهدف (Objective Focus)</span>
+              <span class="control-val" id="val-obj-focus">14.0 m</span>
+            </div>
+            <input type="range" id="slider-obj-focus" min="10" max="35" step="0.5" value="14.0" />
+          </div>
+
+          <!-- إعدادات القامة المترية في الموقع -->
+          <div class="control-group">
+            <div class="control-label">
+              <span>إعدادات القامة المترية (Leveling Staff)</span>
+            </div>
+
+            <div class="control-label">
+              <span>المسافة الحقيقية للقامة (D)</span>
+              <span class="control-val" id="val-staff-dist">20.0 m</span>
+            </div>
+            <input type="range" id="slider-staff-dist" min="12" max="32" step="0.5" value="20.0" />
+
+            <div class="control-label" style="margin-top:8px;">
+              <span>ميل القامة عن الشاقول (θ_staff)</span>
+              <span class="control-val" id="val-staff-tilt">0.0°</span>
+            </div>
+            <input type="range" id="slider-staff-tilt" min="-12" max="12" step="0.5" value="0.0" />
+
+            <div class="control-label" style="margin-top:8px;">
+              <span>منسوب النقطة الأرضية تحت القامة</span>
+              <span class="control-val" id="val-ground-rl">100.000 m</span>
+            </div>
+            <input type="range" id="slider-ground-rl" min="99.20" max="100.80" step="0.02" value="100.00" />
+          </div>
+        </div>
+
+        <!-- المنطقة الوسطى: إرشادات تفاعلية للمشهد الثلاثي -->
+        <div style="display:flex; flex-direction:column; justify-content:flex-end; align-items:center; pointer-events:none;">
+          <div style="background:rgba(15,23,42,0.82); border:1px solid var(--glass-border); padding:10px 18px; border-radius:30px; font-size:0.85rem; color:#cbd5e1; pointer-events:auto; margin-bottom:8px;">
+            🖱️ التدوير: زر الفأرة الأيسر | 🔍 التقريب: عجلة الفأرة | ✋ التحريك: زر الفأرة الأيمن
+          </div>
+        </div>
+
+        <!-- اللوحة اليسرى: عدسة المنظار والقراءة الاستادية -->
+        <div class="glass-panel">
+          <div class="panel-header">
+            <span>2. عدسة المنظار والقراءات الاستادية</span>
+          </div>
+
+          <!-- شاشة المنظار الدائرية -->
+          <div class="eyepiece-box">
+            <div class="eyepiece-viewport">
+              <canvas id="eyepiece-canvas" width="260" height="260"></canvas>
+            </div>
+            <small id="staff-tilt-warning" style="color:var(--accent-rose); font-weight:700; margin-top:6px; display:none;">
+              ⚠️ تنبيه: القامة مائلة! القراءة أكبر من الحقيقية: y_read = y_true / cos(θ)
+            </small>
+          </div>
+
+          <!-- إدخال القراءات والتحقق -->
+          <div class="control-group">
+            <div class="control-label">
+              <span>تدوين قراءات الشعيرات (بالمتر)</span>
+              <button class="btn btn-outline" style="padding:2px 8px; font-size:0.74rem;" onclick="SurveyingLab.fillExactReadings()">ملء تلقائي ✍️</button>
+            </div>
+
+            <div class="input-row">
+              <label>الشعيرة العليا (y_top):</label>
+              <input type="number" step="0.001" id="inp-y-top" class="num-input" value="1.600" />
+            </div>
+            <div class="input-row">
+              <label>الشعيرة الوسطى (y_mid):</label>
+              <input type="number" step="0.001" id="inp-y-mid" class="num-input" value="1.500" />
+            </div>
+            <div class="input-row">
+              <label>الشعيرة السفلى (y_bot):</label>
+              <input type="number" step="0.001" id="inp-y-bot" class="num-input" value="1.400" />
+            </div>
+
+            <button class="btn btn-emerald" style="width:100%; justify-content:center; margin-top:6px;" onclick="SurveyingLab.checkStadiaReading()">
+              🔍 فحص القراءة والمسافة الاستادية
+            </button>
+            <div id="stadia-feedback" style="margin-top:8px; font-size:0.83rem; font-weight:700;"></div>
+          </div>
+
+          <!-- القوانين والنتائج الفورية -->
+          <div class="formula-box">
+            <div><strong>الفاصل الاستادي:</strong> <span id="out-stadia-s">s = y_top - y_bot = 0.200 m</span></div>
+            <div><strong>المسافة الاستادية (k=100, c=0):</strong> <span id="out-stadia-d">d = 100 × s × cos²(η) = 20.00 m</span></div>
+            <div><strong>تحقق التناظر:</strong> <span id="out-stadia-sym">(y_top + y_bot)/2 = 1.500 m</span></div>
+            <div><strong>تأثير ميل القامة:</strong> <span id="out-tilt-err">Δy = 0.000 m</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== القسم الثاني: محقق دفتر الغيط ==================== -->
+  <section id="section-book" class="tab-section">
+    <div id="tab2-container">
+
+      <!-- رأس قسم دفتر الغيط ونظام النقاط -->
+      <div class="detective-header">
+        <div>
+          <h2 style="color:var(--accent-blue); font-size:1.35rem; margin-bottom:6px;">
+            🕵️‍♂️ محقق دفتر الغيط: موازنة المناسيب وتدقيق الأرصاد
+          </h2>
+          <p style="color:var(--text-muted); font-size:0.9rem;">
+            افحص القراءات الميدانية، اكتشف الأخطاء الشائعة، احسب المناسيب بطريقتي (سطح الميزان HI) أو (الارتفاع والانخفاض Rise/Fall)، ووزع خطأ القفل المسموح.
+          </p>
+        </div>
+
+        <div class="score-cards">
+          <div class="stat-card">
+            <span>الوضع الحالي</span>
+            <strong id="detective-mode-label" style="color:var(--accent-blue);">الوضع التدريبي</strong>
+          </div>
+          <div class="stat-card">
+            <span>طريقة الحساب</span>
+            <strong id="calc-method-label">سطح الميزان (HI)</strong>
+          </div>
+          <div class="stat-card">
+            <span>النقاط (Score)</span>
+            <strong id="detective-score">100</strong>
+          </div>
+          <div class="stat-card">
+            <span>الزمن المنقضي</span>
+            <strong id="detective-timer">00:00</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- شريط السيناريو والأزرار -->
+      <div class="scenario-banner">
+        <div>
+          <strong style="color:var(--accent-amber); font-size:1rem;" id="scenario-title">
+            📌 السيناريو 1 (التدريبي المعاير): ميزانية مغلقة حول الموقع الإنشائي (A → B → C → A)
+          </strong>
+          <p id="scenario-desc" style="font-size:0.88rem; color:#e2e8f0; margin-top:4px;">
+            روبير البداية المحطة (A) بمنسوب معلوم 100.000m. طول المسار الكلي K = 1.44 km (درجة عادية c = 20 mm). خطأ القفل المتوقع W = +0.070m.
+          </p>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="SurveyingLab.loadStandardScenario()">
+            📘 المسألة المعيارية (A-B-C-A)
+          </button>
+          <button class="btn btn-amber" onclick="SurveyingLab.generateDetectiveCase()">
+            🕵️‍♂️ توليد قضية "محقق الموقع" (عشوائي)
+          </button>
+          <button class="btn btn-outline" onclick="SurveyingLab.autoSolveTable()">
+            💡 إظهار الحل النموذجي
+          </button>
+        </div>
+      </div>
+
+      <!-- جدول دفتر الغيط التفاعلي -->
+      <div class="table-wrapper">
+        <table class="field-book">
+          <thead>
+            <tr>
+              <th>المحطة<br>(Station)</th>
+              <th>مؤخرة<br>BS (m)</th>
+              <th>متوسطة<br>IS (m)</th>
+              <th>مقدمة<br>FS (m)</th>
+              <th class="col-hi">سطح الميزان<br>HI (m)</th>
+              <th class="col-rf" style="display:none;">ارتفاع<br>Rise (+)</th>
+              <th class="col-rf" style="display:none;">انخفاض<br>Fall (-)</th>
+              <th>المنسوب المحسوب<br>RL (m)</th>
+              <th>التصحيح<br>Corr. (m)</th>
+              <th>المنسوب المصحح<br>Adj. RL (m)</th>
+              <th>الملاحظات<br>(Remarks)</th>
+            </tr>
+          </thead>
+          <tbody id="fieldbook-tbody">
+            <!-- يتم توليد الصفوف ديناميكياً عبر SurveyingLab -->
+          </tbody>
+          <tfoot>
+            <tr style="background:#0f172a; font-weight:800;">
+              <td>المجموع (∑)</td>
+              <td id="sum-bs-cell" style="color:var(--accent-amber);">0.000</td>
+              <td>—</td>
+              <td id="sum-fs-cell" style="color:var(--accent-amber);">0.000</td>
+              <td class="col-hi">—</td>
+              <td class="col-rf" id="sum-rise-cell" style="display:none; color:var(--accent-emerald);">0.000</td>
+              <td class="col-rf" id="sum-fall-cell" style="display:none; color:var(--accent-rose);">0.000</td>
+              <td id="diff-rl-cell" style="color:var(--accent-blue);">0.000</td>
+              <td id="sum-corr-cell">0.000</td>
+              <td id="final-check-cell">100.000</td>
+              <td>صف التحقق الحسابي</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <!-- بطاقات التحقق الحسابي الثلاثي وهندسة التسامح -->
+      <div class="checks-grid">
+        <div class="check-card">
+          <h3>1. التحقق الحسابي الثلاثي (Arithmetic Check)</h3>
+          <div class="math-line">
+            <span>مجموع المؤخرات - مجموع المقدمات (∑BS - ∑FS):</span>
+            <strong id="chk-bs-fs">0.000 m</strong>
+          </div>
+          <div class="math-line">
+            <span>مجموع الارتفاع - مجموع الانخفاض (∑Rise - ∑Fall):</span>
+            <strong id="chk-rise-fall">0.000 m</strong>
+          </div>
+          <div class="math-line">
+            <span>منسوب آخر نقطة - منسوب أول نقطة (RL_last - RL_first):</span>
+            <strong id="chk-last-first">0.000 m</strong>
+          </div>
+          <div style="margin-top:10px;" id="triple-check-badge">
+            <span class="status-badge badge-warn">بانتظار إكمال الجدول والتحقق</span>
+          </div>
+        </div>
+
+        <div class="check-card">
+          <h3>2. خطأ القفل والحد المسموح (Closing Error & Tolerance)</h3>
+          <div class="math-line">
+            <span>خطأ القفل الفعلي (W = RL_calc - RL_known):</span>
+            <strong id="val-closing-w">+0.070 m (+70 mm)</strong>
+          </div>
+          <div class="math-line">
+            <span>الحد المسموح للتسامح (T_max = ± c × √K):</span>
+            <strong id="val-tolerance-max">±24.0 mm</strong>
+          </div>
+          <div class="math-line">
+            <span>توزيع التصحيح التراكمي لكل وقفة (c_i = -W / n):</span>
+            <strong id="val-step-corr">-0.0233 m</strong>
+          </div>
+          <div style="margin-top:10px;" id="tolerance-status-badge">
+            <span class="status-badge badge-ok">جاهز للتصحيح وتوزيع الخطأ</span>
+          </div>
+        </div>
+
+        <div class="check-card">
+          <h3>3. تقرير محقق الموقع (Field Detective Report)</h3>
+          <p id="detective-report-text" style="font-size:0.88rem; line-height:1.6; color:#cbd5e1;">
+            أدخل القيم المفقودة في الجدول أعلاه ثم اضغط على زر <b>"التحقق الحسابي"</b> في الشريط العلوي لتقييم دقتك الهندسية والتأكد من سلامة منسوب صب القواعد.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==================== الكود البرمجي الموحد SurveyingLab ==================== -->
+  <script>
+    const SurveyingLab = {
+      // حالة التطبيق العامة
+      isRunning: true,
+      activeTab: '3d',
+      calcMethod: 'HI', // 'HI' أو 'RF'
+      animationFrameId: null,
+      score: 100,
+      timerSeconds: 0,
+      timerInterval: null,
+
+      // كائنات Three.js
+      container: null,
+      scene: null,
+      camera: null,
+      renderer: null,
+      controls: null,
+
+      // مجسمات المشهد
+      instrumentGroup: null,
+      telescopeGroup: null,
+      screwMeshes: [],
+      staffGroup: null,
+      staffTexture: null,
+      sightLine: null,
+
+      // المعاملات الفيزيائية والمساحية للمحاكي
+      state3D: {
+        screwAB: 2.5,         // ميل محور X
+        screwC: -2.0,         // ميل محور Y
+        reticleFocus: 65,     // التركيز البؤري للشعيرات (المثالي 100)
+        objFocus: 14.0,       // التركيز البؤري للعدسة الشيئية (المثالي = staffDist)
+        staffDist: 20.0,      // المسافة الأفقية للقامة بالمتر
+        staffTiltDeg: 0.0,    // ميل القامة بالدرجات
+        groundRL: 100.000,    // منسوب الأرض عند القامة
+        instrumentHI: 101.500,// منسوب سطح الميزان المرجعي
+        trueMidReading: 1.500,
+        trueTopReading: 1.600,
+        trueBotReading: 1.400,
+        horizontalDistanceCalc: 20.0
+      },
+
+      // بيانات دفتر الغيط
+      fieldBookData: [],
+      currentScenarioMeta: {
+        title: '',
+        lengthKm: 1.44,
+        cFactor: 20,
+        anomalyHint: ''
+      },
+
+      // مراجع دوال الأحداث لسهولة إزالتها في destroy()
+      boundListeners: [],
+
+      /**
+       * 1. التهيئة الرئيسية للمشروع
+       */
+      init: function(containerId = 'webgl-container') {
+        this.container = document.getElementById(containerId);
+        if (!this.container) return;
+
+        this.initThreeScene();
+        this.buildSurveyingLevelModel();
+        this.buildMetricStaffModel();
+        this.buildLineOfSight();
+        this.bindDOMEvents();
+        this.loadStandardScenario();
+        this.startTimer();
+
+        this.calculate();
+        this.update();
+        this.animate();
+      },
+
+      /**
+       * إعداد المشهد والكاميرا والإضاءة والشبكة الأرضية
+       */
+      initThreeScene: function() {
+        const width = this.container.clientWidth || window.innerWidth;
+        const height = this.container.clientHeight || (window.innerHeight - 70);
+
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0x0f172a);
+        this.scene.fog = new THREE.FogExp2(0x0f172a, 0.015);
+
+        this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 200);
+        this.camera.position.set(3.2, 2.3, 3.8);
+
+        this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+        this.renderer.setSize(width, height);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        this.container.innerHTML = '';
+        this.container.appendChild(this.renderer.domElement);
+
+        this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+        this.controls.enableDamping = true;
+        this.controls.dampingFactor = 0.06;
+        this.controls.target.set(0, 1.35, -2.5);
+        this.controls.maxPolarAngle = Math.PI / 2 - 0.02;
+
+        // الإضاءة المتوازنة
+        const ambientLight = new THREE.AmbientLight(0x93c5fd, 0.65);
+        this.scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.95);
+        dirLight.position.set(12, 24, 15);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        this.scene.add(dirLight);
+
+        // أرضية خفيفة مع شبكة هندسية دقيقة
+        const groundGeo = new THREE.PlaneGeometry(120, 120);
+        const groundMat = new THREE.MeshStandardMaterial({
+          color: 0x0b1120,
+          roughness: 0.9,
+          metalness: 0.1
+        });
+        const groundMesh = new THREE.Mesh(groundGeo, groundMat);
+        groundMesh.rotation.x = -Math.PI / 2;
+        groundMesh.receiveShadow = true;
+        this.scene.add(groundMesh);
+
+        const gridHelper = new THREE.GridHelper(80, 80, 0x38bdf8, 0x1e293b);
+        gridHelper.position.y = 0.005;
+        this.scene.add(gridHelper);
+      },
+
+      /**
+       * بناء مجسم الميزان المساحي (Tripod + Tribrach + Foot Screws + Telescope)
+       */
+      buildSurveyingLevelModel: function() {
+        this.instrumentGroup = new THREE.Group();
+        this.instrumentGroup.position.set(0, 0, 0);
+
+        const woodYellowMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.4, metalness: 0.2 });
+        const darkMetalMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3, metalness: 0.8 });
+        const brassMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, roughness: 0.25, metalness: 0.85 });
+        const bodyOrangeMat = new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.35, metalness: 0.3 });
+        const lensGlassMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.1, metalness: 0.9, emissive: 0x0284c7, emissiveIntensity: 0.3 });
+
+        // 1. أرجل الحامل الثلاثي (Tripod Legs)
+        const legAngles = [0, (2 * Math.PI) / 3, (4 * Math.PI) / 3];
+        legAngles.forEach(angle => {
+          const legPivot = new THREE.Group();
+          legPivot.position.set(0, 1.3, 0);
+          legPivot.rotation.y = angle;
+
+          const legGeo = new THREE.CylinderGeometry(0.025, 0.018, 1.52, 12);
+          const legMesh = new THREE.Mesh(legGeo, woodYellowMat);
+          legMesh.position.set(0, -0.68, 0.32);
+          legMesh.rotation.x = -0.44;
+          legMesh.castShadow = true;
+          legPivot.add(legMesh);
+
+          this.instrumentGroup.add(legPivot);
+        });
+
+        // 2. قاعدة الحامل العلوية (Tripod Head)
+        const headGeo = new THREE.CylinderGeometry(0.18, 0.21, 0.05, 24);
+        const headMesh = new THREE.Mesh(headGeo, darkMetalMat);
+        headMesh.position.y = 1.30;
+        this.instrumentGroup.add(headMesh);
+
+        // 3. مسامير التسوية الثلاثة (Foot Screws A, B, C)
+        this.screwMeshes = [];
+        const screwCoords = [
+          { x: -0.10, z: 0.07 },
+          { x: 0.10, z: 0.07 },
+          { x: 0.0, z: -0.11 }
+        ];
+        screwCoords.forEach(coord => {
+          const screwGeo = new THREE.CylinderGeometry(0.032, 0.032, 0.08, 16);
+          const screwMesh = new THREE.Mesh(screwGeo, brassMat);
+          screwMesh.position.set(coord.x, 1.36, coord.z);
+          this.instrumentGroup.add(screwMesh);
+          this.screwMeshes.push(screwMesh);
+        });
+
+        // 4. مجموعة المنظار والقاعدة المثلثية القابلة للميل
+        this.telescopeGroup = new THREE.Group();
+        this.telescopeGroup.position.set(0, 1.40, 0);
+
+        // القاعدة المثلثية (Tribrach)
+        const tribrachGeo = new THREE.CylinderGeometry(0.16, 0.16, 0.035, 3);
+        const tribrachMesh = new THREE.Mesh(tribrachGeo, darkMetalMat);
+        this.telescopeGroup.add(tribrachMesh);
+
+        // محور الدوران الرأسي
+        const spindleGeo = new THREE.CylinderGeometry(0.06, 0.07, 0.09, 20);
+        const spindleMesh = new THREE.Mesh(spindleGeo, brassMat);
+        spindleMesh.position.y = 0.05;
+        this.telescopeGroup.add(spindleMesh);
+
+        // جسم الميزان الرئيسي (Level Housing)
+        const housingGeo = new THREE.BoxGeometry(0.16, 0.14, 0.38);
+        const housingMesh = new THREE.Mesh(housingGeo, bodyOrangeMat);
+        housingMesh.position.y = 0.12;
+        housingMesh.castShadow = true;
+        this.telescopeGroup.add(housingMesh);
+
+        // أنبوب المنظار الأسطواني
+        const tubeGeo = new THREE.CylinderGeometry(0.055, 0.055, 0.44, 24);
+        tubeGeo.rotateX(Math.PI / 2);
+        const tubeMesh = new THREE.Mesh(tubeGeo, darkMetalMat);
+        tubeMesh.position.y = 0.12;
+        this.telescopeGroup.add(tubeMesh);
+
+        // العدسة الشيئية الأمامية (Objective Lens)
+        const objLensGeo = new THREE.CylinderGeometry(0.052, 0.052, 0.02, 24);
+        objLensGeo.rotateX(Math.PI / 2);
+        const objLensMesh = new THREE.Mesh(objLensGeo, lensGlassMat);
+        objLensMesh.position.set(0, 0.12, -0.22);
+        this.telescopeGroup.add(objLensMesh);
+
+        // العدسة العينية الخلفية (Eyepiece)
+        const eyeGeo = new THREE.CylinderGeometry(0.035, 0.042, 0.06, 20);
+        eyeGeo.rotateX(Math.PI / 2);
+        const eyeMesh = new THREE.Mesh(eyeGeo, darkMetalMat);
+        eyeMesh.position.set(0, 0.12, 0.24);
+        this.telescopeGroup.add(eyeMesh);
+
+        this.instrumentGroup.add(this.telescopeGroup);
+        this.scene.add(this.instrumentGroup);
+      },
+
+      /**
+       * بناء القامة المترية بتدريج E-Pattern الكلاسيكي
+       */
+      buildMetricStaffModel: function() {
+        this.staffGroup = new THREE.Group();
+
+        // توليد تكتشر القامة 4 أمتار برمجياً
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 2048;
+        const ctx = canvas.getContext('2d');
+
+        // خلفية بيضاء
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const totalMeters = 4.0;
+        const pxPerMeter = canvas.height / totalMeters; // 512px per meter
+        const pxPerCm = pxPerMeter / 100;
+
+        // رسم سنتيمترات ودسيمترات القامة (E-pattern)
+        for (let cm = 0; cm < 400; cm++) {
+          const meterIdx = Math.floor(cm / 100);
+          const color = (meterIdx % 2 === 0) ? '#111827' : '#dc2626';
+          ctx.fillStyle = color;
+
+          const yBottom = canvas.height - cm * pxPerCm;
+          const yTop = yBottom - pxPerCm;
+
+          // تدريج السنتيمتر الفردي
+          if (cm % 2 === 1) {
+            ctx.fillRect(140, yTop, 116, pxPerCm);
+          }
+
+          // تشكيل حرف E لكل 5 سم
+          const rem5 = cm % 5;
+          if (rem5 === 0) {
+            ctx.fillRect(95, yBottom - pxPerCm * 5, 45, pxPerCm * 5);
+          }
+        }
+
+        // كتابة أرقام الدسيمترات بوضوح
+        ctx.font = 'bold 26px Tajawal, monospace';
+        ctx.textAlign = 'center';
+        for (let dm = 1; dm < 40; dm++) {
+          const yPos = canvas.height - dm * 10 * pxPerCm + 10;
+          ctx.fillStyle = (Math.floor(dm / 10) % 2 === 0) ? '#0f172a' : '#b91c1c';
+          ctx.fillText((dm / 10).toFixed(1), 48, yPos);
+        }
+
+        this.staffTexture = new THREE.CanvasTexture(canvas);
+        this.staffTexture.anisotropy = 4;
+
+        const staffGeo = new THREE.BoxGeometry(0.18, 4.0, 0.04);
+        // رفع نقطة الارتكاز لأسفل القامة تماماً (y = 0 عند كعب القامة)
+        staffGeo.translate(0, 2.0, 0);
+
+        const frontMat = new THREE.MeshStandardMaterial({ map: this.staffTexture, roughness: 0.4 });
+        const sideMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.5 });
+
+        const materials = [sideMat, sideMat, sideMat, sideMat, frontMat, sideMat];
+        const staffMesh = new THREE.Mesh(staffGeo, materials);
+        staffMesh.castShadow = true;
+
+        this.staffGroup.add(staffMesh);
+        this.staffGroup.position.set(0, 0, -8);
+        this.scene.add(this.staffGroup);
+      },
+
+      /**
+       * بناء شعاع خط النظر الليزري للتوضيح البصري في المشهد الثلاثي
+       */
+      buildLineOfSight: function() {
+        const lineMat = new THREE.LineDashedMaterial({
+          color: 0x38bdf8,
+          dashSize: 0.25,
+          gapSize: 0.12
+        });
+        const points = [
+          new THREE.Vector3(0, 1.52, -0.22),
+          new THREE.Vector3(0, 1.52, -8.0)
+        ];
+        const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+        this.sightLine = new THREE.Line(lineGeo, lineMat);
+        this.sightLine.computeLineDistances();
+        this.scene.add(this.sightLine);
+      },
+
+      /**
+       * ربط عناصر التحكم والـ Sliders
+       */
+      bindDOMEvents: function() {
+        const addManagedListener = (el, type, handler) => {
+          if (!el) return;
+          el.addEventListener(type, handler);
+          this.boundListeners.push({ el, type, handler });
+        };
+
+        const bindSlider = (id, stateKey, valId, suffix = '') => {
+          const el = document.getElementById(id);
+          const valEl = document.getElementById(valId);
+          addManagedListener(el, 'input', (e) => {
+            const v = parseFloat(e.target.value);
+            this.state3D[stateKey] = v;
+            if (valEl) valEl.textContent = v.toFixed(stateKey === 'groundRL' ? 3 : 1) + suffix;
+            this.calculate();
+            this.update();
+          });
+        };
+
+        bindSlider('slider-screw-ab', 'screwAB', 'val-screw-ab', '');
+        bindSlider('slider-screw-c', 'screwC', 'val-screw-c', '');
+        bindSlider('slider-reticle-focus', 'reticleFocus', 'val-reticle-focus', '%');
+        bindSlider('slider-obj-focus', 'objFocus', 'val-obj-focus', ' m');
+        bindSlider('slider-staff-dist', 'staffDist', 'val-staff-dist', ' m');
+        bindSlider('slider-staff-tilt', 'staffTiltDeg', 'val-staff-tilt', '°');
+        bindSlider('slider-ground-rl', 'groundRL', 'val-ground-rl', ' m');
+
+        const onResize = () => {
+          if (!this.container || !this.renderer || !this.camera) return;
+          const w = this.container.clientWidth || window.innerWidth;
+          const h = this.container.clientHeight || (window.innerHeight - 70);
+          this.camera.aspect = w / h;
+          this.camera.updateProjectionMatrix();
+          this.renderer.setSize(w, h);
+        };
+        addManagedListener(window, 'resize', onResize);
+      },
+
+      /**
+       * 2. دالة الحساب الهندسي (calculate)
+       */
+      calculate: function() {
+        const s = this.state3D;
+
+        // حساب زاوية ميل خط النظر الرأسي η الناتجة عن عدم ضبط مسمار C
+        const tiltEtaDeg = s.screwC * 0.35; // بالدرجات
+        const tiltEtaRad = THREE.Math.degToRad(tiltEtaDeg);
+
+        // القراءة الحقيقية على قامة رأسية تماماً
+        const baseStaffHeight = (s.instrumentHI - s.groundRL) + s.staffDist * Math.tan(tiltEtaRad);
+
+        // تأثير ميل القامة عن الشاقول: y_read = y_true / cos(theta_staff)
+        const staffTiltRad = THREE.Math.degToRad(s.staffTiltDeg);
+        const cosStaffTilt = Math.max(0.85, Math.cos(staffTiltRad));
+
+        const midReading = baseStaffHeight / cosStaffTilt;
+        const halfStadiaInterval = (s.staffDist / 200) / cosStaffTilt; // لأن k = 100
+
+        s.trueMidReading = Math.max(0.2, Math.min(3.8, midReading));
+        s.trueTopReading = s.trueMidReading + halfStadiaInterval;
+        s.trueBotReading = s.trueMidReading - halfStadiaInterval;
+
+        const stadiaS = s.trueTopReading - s.trueBotReading;
+        const cosEtaSq = Math.pow(Math.cos(tiltEtaRad), 2);
+        s.horizontalDistanceCalc = 100 * stadiaS * cosEtaSq;
+      },
+
+      /**
+       * 3. دالة تحديث المشهد والواجهات (update)
+       */
+      update: function() {
+        const s = this.state3D;
+
+        // أ. تحديث موضع الفقاعة الدائرية
+        const bubbleEl = document.getElementById('bubble-indicator');
+        if (bubbleEl) {
+          const offsetX = s.screwAB * 6.5;
+          const offsetY = s.screwC * 6.5;
+          bubbleEl.style.transform = `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px))`;
+        }
+
+        const isLeveled = Math.abs(s.screwAB) <= 0.25 && Math.abs(s.screwC) <= 0.25;
+        const levelBadge = document.getElementById('level-badge');
+        if (levelBadge) {
+          levelBadge.textContent = isLeveled ? 'موزون تماماً ✓' : 'غير موزون ⚠️';
+          levelBadge.className = 'status-badge ' + (isLeveled ? 'badge-ok' : 'badge-warn');
+        }
+
+        const tiltReadout = document.getElementById('tilt-angle-readout');
+        if (tiltReadout) {
+          const totalTilt = Math.hypot(s.screwAB, s.screwC) * 0.35;
+          tiltReadout.textContent = totalTilt.toFixed(2) + '°';
+        }
+
+        // ب. تحديث حالة وضوح المنظار (Parallax)
+        const focusDiffObj = Math.abs(s.objFocus - s.staffDist);
+        const focusDiffRet = Math.abs(100 - s.reticleFocus);
+        const isSharp = focusDiffObj <= 1.0 && focusDiffRet <= 8;
+        const focusBadge = document.getElementById('focus-badge');
+        if (focusBadge) {
+          focusBadge.textContent = isSharp ? 'رؤية حادة ✓' : 'يوجد Parallax';
+          focusBadge.className = 'status-badge ' + (isSharp ? 'badge-ok' : 'badge-warn');
+        }
+
+        // ج. تحديث المجسمات ثلاثية الأبعاد في المشهد
+        if (this.telescopeGroup) {
+          this.telescopeGroup.rotation.z = THREE.Math.degToRad(s.screwAB * 1.2);
+          this.telescopeGroup.rotation.x = THREE.Math.degToRad(s.screwC * 1.2);
+        }
+
+        if (this.staffGroup) {
+          // مقياس تمثيلي في المشهد حتى تظل القامة مرئية بوضوح
+          const visualZ = - (s.staffDist * 0.45);
+          const visualY = (s.groundRL - 100.0) * 1.0;
+          this.staffGroup.position.set(0, visualY, visualZ);
+          this.staffGroup.rotation.x = THREE.Math.degToRad(s.staffTiltDeg);
+
+          if (this.sightLine) {
+            const endY = 1.52 + Math.tan(THREE.Math.degToRad(s.screwC * 0.8)) * Math.abs(visualZ);
+            const positions = this.sightLine.geometry.attributes.position.array;
+            positions[3] = 0;
+            positions[4] = endY;
+            positions[5] = visualZ;
+            this.sightLine.geometry.attributes.position.needsUpdate = true;
+            this.sightLine.computeLineDistances();
+          }
+        }
+
+        // د. تحديث تنبيه ميل القامة والصناديق الحسابية
+        const tiltWarn = document.getElementById('staff-tilt-warning');
+        if (tiltWarn) {
+          tiltWarn.style.display = Math.abs(s.staffTiltDeg) > 1.0 ? 'block' : 'none';
+        }
+
+        const stadiaS = s.trueTopReading - s.trueBotReading;
+        const symAvg = (s.trueTopReading + s.trueBotReading) / 2;
+        const tiltErr = s.trueMidReading * (1 - Math.cos(THREE.Math.degToRad(s.staffTiltDeg)));
+
+        document.getElementById('out-stadia-s').textContent = `s = ${s.trueTopReading.toFixed(3)} - ${s.trueBotReading.toFixed(3)} = ${stadiaS.toFixed(3)} m`;
+        document.getElementById('out-stadia-d').textContent = `d = 100 × ${stadiaS.toFixed(3)} = ${s.horizontalDistanceCalc.toFixed(2)} m`;
+        document.getElementById('out-stadia-sym').textContent = `(y_top + y_bot)/2 = ${symAvg.toFixed(3)} m`;
+        document.getElementById('out-tilt-err').textContent = `Δy = +${tiltErr.toFixed(4)} m`;
+
+        // هـ. رسم عدسة المنظار التلسكوبي
+        this.renderEyepieceCanvas();
+      },
+
+      /**
+       * رسم المنظار الدائري وشبكة الشعيرات الاستادية وتأثير الضبابية (Blur)
+       */
+      renderEyepieceCanvas: function() {
+        const canvas = document.getElementById('eyepiece-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width;
+        const h = canvas.height;
+        const s = this.state3D;
+
+        ctx.clearRect(0, 0, w, h);
+
+        // خلفية السماء والأرض داخل العدسة
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, 0, w, h);
+
+        // حساب ضبابية الهدف (Objective Blur)
+        const objBlurPx = Math.min(8, Math.abs(s.objFocus - s.staffDist) * 0.45);
+        ctx.save();
+        ctx.filter = `blur(${objBlurPx.toFixed(1)}px)`;
+
+        // تحويل القراءة الوسطى إلى إحداثيات البكسل
+        const centerY = h / 2;
+        const pxPerMeterScope = 420; // مقياس تكبير المنظار
+
+        ctx.translate(w / 2, centerY);
+        ctx.rotate(THREE.Math.degToRad(s.staffTiltDeg * 0.7));
+
+        const staffWidth = 74;
+        // رسم جسم القامة حول القراءة الوسطى
+        const minM = s.trueMidReading - 0.35;
+        const maxM = s.trueMidReading + 0.35;
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(-staffWidth / 2, -h, staffWidth, h * 2);
+
+        const startCm = Math.max(0, Math.floor(minM * 100));
+        const endCm = Math.min(399, Math.ceil(maxM * 100));
+
+        for (let cm = startCm; cm <= endCm; cm++) {
+          const meterVal = cm / 100;
+          const dy = (s.trueMidReading - meterVal) * pxPerMeterScope;
+          const cmHeight = 0.01 * pxPerMeterScope;
+
+          const color = (Math.floor(cm / 100) % 2 === 0) ? '#0f172a' : '#dc2626';
+          ctx.fillStyle = color;
+
+          if (cm % 2 === 1) {
+            ctx.fillRect(4, dy - cmHeight, staffWidth / 2 - 4, cmHeight);
+          }
+
+          if (cm % 5 === 0) {
+            ctx.fillRect(-10, dy - cmHeight * 5, 14, cmHeight * 5);
+          }
+
+          if (cm % 10 === 0) {
+            ctx.font = 'bold 13px monospace';
+            ctx.textAlign = 'right';
+            ctx.fillText((cm / 100).toFixed(1), -14, dy - 2);
+          }
+        }
+        ctx.restore();
+
+        // رسم حامل الشعيرات (Reticle Crosshairs) مع ضبابية العينية
+        const reticleBlurPx = Math.max(0, (100 - s.reticleFocus) * 0.08);
+        ctx.save();
+        ctx.filter = `blur(${reticleBlurPx.toFixed(1)}px)`;
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1.6;
+
+        // الشعيرة الرأسية
+        ctx.beginPath();
+        ctx.moveTo(w / 2, 0);
+        ctx.lineTo(w / 2, h);
+        ctx.stroke();
+
+        // الشعيرة الأفقية الوسطى
+        ctx.beginPath();
+        ctx.moveTo(0, centerY);
+        ctx.lineTo(w, centerY);
+        ctx.stroke();
+
+        // شعيرتا الاستاديا العليا والسفلى
+        const stadiaOffsetPx = ((s.trueTopReading - s.trueMidReading) * pxPerMeterScope);
+        ctx.lineWidth = 1.4;
+        // العليا
+        ctx.beginPath();
+        ctx.moveTo(w * 0.25, centerY - stadiaOffsetPx);
+        ctx.lineTo(w * 0.75, centerY - stadiaOffsetPx);
+        ctx.stroke();
+        // السفلى
+        ctx.beginPath();
+        ctx.moveTo(w * 0.25, centerY + stadiaOffsetPx);
+        ctx.lineTo(w * 0.75, centerY + stadiaOffsetPx);
+        ctx.stroke();
+
+        ctx.restore();
+
+        // التظليل الدائري لحواف العدسة (Vignette)
+        const grad = ctx.createRadialGradient(w / 2, h / 2, w * 0.38, w / 2, h / 2, w * 0.5);
+        grad.addColorStop(0, 'rgba(0,0,0,0)');
+        grad.addColorStop(1, 'rgba(2,6,23,0.92)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+      },
+
+      /**
+       * ضبط تلقائي لمسامير التسوية وإزالة اختلاف المنظر
+       */
+      autoLevel: function() {
+        this.state3D.screwAB = 0.0;
+        this.state3D.screwC = 0.0;
+        this.state3D.reticleFocus = 100;
+        this.state3D.objFocus = this.state3D.staffDist;
+        this.state3D.staffTiltDeg = 0.0;
+
+        document.getElementById('slider-screw-ab').value = 0;
+        document.getElementById('val-screw-ab').textContent = '0.0';
+        document.getElementById('slider-screw-c').value = 0;
+        document.getElementById('val-screw-c').textContent = '0.0';
+        document.getElementById('slider-reticle-focus').value = 100;
+        document.getElementById('val-reticle-focus').textContent = '100%';
+        document.getElementById('slider-obj-focus').value = this.state3D.staffDist;
+        document.getElementById('val-obj-focus').textContent = this.state3D.staffDist.toFixed(1) + ' m';
+        document.getElementById('slider-staff-tilt').value = 0;
+        document.getElementById('val-staff-tilt').textContent = '0.0°';
+
+        this.calculate();
+        this.update();
+      },
+
+      /**
+       * ملء القراءات الصحيحة في خانات المنظار
+       */
+      fillExactReadings: function() {
+        this.calculate();
+        document.getElementById('inp-y-top').value = this.state3D.trueTopReading.toFixed(3);
+        document.getElementById('inp-y-mid').value = this.state3D.trueMidReading.toFixed(3);
+        document.getElementById('inp-y-bot').value = this.state3D.trueBotReading.toFixed(3);
+        this.checkStadiaReading();
+      },
+
+      /**
+       * فحص قراءة الطالب للشعيرات الثلاث
+       */
+      checkStadiaReading: function() {
+        const yTop = parseFloat(document.getElementById('inp-y-top').value) || 0;
+        const yMid = parseFloat(document.getElementById('inp-y-mid').value) || 0;
+        const yBot = parseFloat(document.getElementById('inp-y-bot').value) || 0;
+
+        const errTop = Math.abs(yTop - this.state3D.trueTopReading);
+        const errMid = Math.abs(yMid - this.state3D.trueMidReading);
+        const errBot = Math.abs(yBot - this.state3D.trueBotReading);
+
+        const fb = document.getElementById('stadia-feedback');
+        if (errTop <= 0.005 && errMid <= 0.005 && errBot <= 0.005) {
+          const d = (yTop - yBot) * 100;
+          fb.style.color = '#34d399';
+          fb.textContent = `✅ ممتاز! قراءات دقيقة. المسافة الاستادية المحسوبة = ${d.toFixed(2)} متر.`;
+        } else {
+          fb.style.color = '#fb7185';
+          fb.textContent = `❌ توجد فروق في القراءة! القيم الفعلية هي: عليا (${this.state3D.trueTopReading.toFixed(3)})، وسطى (${this.state3D.trueMidReading.toFixed(3)})، سفلى (${this.state3D.trueBotReading.toFixed(3)}).`;
+        }
+      },
+
+      /* =====================================================================
+         القسم الثاني: منطق دفتر الغيط وموازنة المناسيب (Field Book Detective)
+         ===================================================================== */
+
+      /**
+       * تحميل المسألة المعيارية من التقرير (A -> B -> C -> A)
+       */
+      loadStandardScenario: function() {
+        document.getElementById('detective-mode-label').textContent = 'الوضع التدريبي';
+        document.getElementById('scenario-title').textContent = '📌 السيناريو 1 (التدريبي المعاير): ميزانية مغلقة حول الموقع الإنشائي (A → B → C → A)';
+        document.getElementById('scenario-desc').textContent = 'روبير البداية المحطة (A) بمنسوب معلوم 100.000m. طول المسار الكلي K = 1.44 km (c = 20 mm). اكتشف خطأ القفل W = +0.070m ووزعه بالتساوي.';
+
+        this.currentScenarioMeta = {
+          lengthKm: 1.44,
+          cFactor: 20,
+          knownStartRL: 100.000,
+          knownEndRL: 100.000,
+          anomalyHint: 'المسألة التدريبية القياسية: قراءات صحيحة وتحتاج لحساب المناسيب وتوزيع خطأ القفل W = +0.070m على 3 وقفات.'
+        };
+
+        this.fieldBookData = [
+          { station: 'A (BM)', bs: 2.150, is: null, fs: null, remark: 'روبير البداية (RL = 100.000m)' },
+          { station: 'B (TP1)', bs: 1.640, is: null, fs: 1.850, remark: 'نقطة دوران أولى' },
+          { station: 'C (TP2)', bs: 2.320, is: null, fs: 1.420, remark: 'نقطة دوران ثانية' },
+          { station: 'A (إغلاق)', bs: null, is: null, fs: 2.770, remark: 'قفل الميزانية على الروبير A' }
+        ];
+
+        this.computeExactFieldBookSolution();
+        this.renderFieldBookTable(false);
+      },
+
+      /**
+       * توليد سيناريو "محقق الموقع" بأخطاء هندسية متعمدة
+       */
+      generateDetectiveCase: function() {
+        document.getElementById('detective-mode-label').textContent = 'وضع محقق الموقع 🕵️‍♂️';
+
+        const cases = [
+          {
+            title: '🚨 قضية رقم 1: انقلاب رقمين في دفتر الغيط عند النقطة B!',
+            desc: 'سجل الراصد القراءة الأمامية عند المحطة B بقيمة (1.580) بدلاً من (1.850) نتيجة خطأ تدوين عكسي. صحح القراءة وأعد موازنة المناسيب!',
+            rows: [
+              { station: 'A (BM)', bs: 2.150, is: null, fs: null, remark: 'روبير ثابت (100.000m)' },
+              { station: 'B (TP1)', bs: 1.640, is: null, fs: 1.580, remark: '⚠️ افحص القراءة الأمامية (الأصل 1.850)' },
+              { station: 'C (TP2)', bs: 2.320, is: null, fs: 1.420, remark: 'نقطة دوران ثانية' },
+              { station: 'A (إغلاق)', bs: null, is: null, fs: 2.770, remark: 'إغلاق الحلقة' }
+            ]
+          },
+          {
+            title: '🚨 قضية رقم 2: هبوط القاعدة الخرسانية بسبب خطأ في منسوب النقطة المتوسطة!',
+            desc: 'تم أخذ قراءة متوسطة (IS) لمحور القاعدة الخرسانية F1. احسب المنسوب الدقيق للقاعدة وتأكد من إغلاق الميزانية على الروبير النهائي.',
+            rows: [
+              { station: 'BM-1', bs: 1.820, is: null, fs: null, remark: 'روبير المشروع (100.000m)' },
+              { station: 'قاعدة F1', bs: null, is: 1.320, fs: null, remark: 'منسوب صب القاعدة الإنشائية' },
+              { station: 'TP-1', bs: 2.110, is: null, fs: 1.520, remark: 'نقطة دوران' },
+              { station: 'BM-1 (قفل)', bs: null, is: null, fs: 2.380, remark: 'قفل على الروبير الأول' }
+            ]
+          }
+        ];
+
+        const chosen = cases[Math.floor(Math.random() * cases.length)];
+        document.getElementById('scenario-title').textContent = chosen.title;
+        document.getElementById('scenario-desc').textContent = chosen.desc;
+
+        this.fieldBookData = JSON.parse(JSON.stringify(chosen.rows));
+        this.computeExactFieldBookSolution();
+        this.renderFieldBookTable(false);
+      },
+
+      /**
+       * حساب الحل الرياضي النموذجي الكامل لدفتر الغيط
+       */
+      computeExactFieldBookSolution: function() {
+        let currentRL = 100.000;
+        let currentHI = 0;
+
+        // عدد الوقفات (أو الفترات التصحيحية)
+        const nTurns = this.fieldBookData.length - 1;
+
+        // 1. حساب HI و Rise/Fall والمناسيب غير المصححة
+        for (let i = 0; i < this.fieldBookData.length; i++) {
+          const row = this.fieldBookData[i];
+          row.exactRise = null;
+          row.exactFall = null;
+          row.exactHI = null;
+
+          if (i === 0) {
+            row.exactRL = currentRL;
+            row.exactHI = currentRL + (row.bs || 0);
+            currentHI = row.exactHI;
+          } else {
+            const prevRow = this.fieldBookData[i - 1];
+            const prevSight = (prevRow.bs !== null) ? prevRow.bs : prevRow.is;
+            const currSight = (row.fs !== null) ? row.fs : row.is;
+
+            const diff = prevSight - currSight;
+            if (diff >= 0) row.exactRise = diff;
+            else row.exactFall = Math.abs(diff);
+
+            row.exactRL = currentHI - currSight;
+
+            if (row.bs !== null) {
+              row.exactHI = row.exactRL + row.bs;
+              currentHI = row.exactHI;
+            }
+          }
+        }
+
+        // 2. حساب خطأ القفل W والتصحيح التراكمي
+        const lastRL = this.fieldBookData[this.fieldBookData.length - 1].exactRL;
+        const closingErrorW = lastRL - 100.000;
+        this.currentScenarioMeta.closingW = closingErrorW;
+
+        for (let i = 0; i < this.fieldBookData.length; i++) {
+          const row = this.fieldBookData[i];
+          row.exactCorr = (i === 0) ? 0.000 : (-closingErrorW * (i / nTurns));
+          row.exactAdjRL = row.exactRL + row.exactCorr;
+        }
+      },
+
+      /**
+       * بناء جدول دفتر الغيط في الـ DOM
+       */
+      renderFieldBookTable: function(fillSolution = false) {
+        const tbody = document.getElementById('fieldbook-tbody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        this.fieldBookData.forEach((row, idx) => {
+          const tr = document.createElement('tr');
+
+          const fmt = (v) => (v !== null && v !== undefined) ? v.toFixed(3) : '';
+
+          const hiVal = fillSolution && row.exactHI !== null ? row.exactHI.toFixed(3) : '';
+          const riseVal = fillSolution && row.exactRise !== null ? row.exactRise.toFixed(3) : '';
+          const fallVal = fillSolution && row.exactFall !== null ? row.exactFall.toFixed(3) : '';
+          const rlVal = (idx === 0 || fillSolution) ? row.exactRL.toFixed(3) : '';
+          const corrVal = (idx === 0 || fillSolution) ? row.exactCorr.toFixed(3) : '';
+          const adjVal = (idx === 0 || fillSolution) ? row.exactAdjRL.toFixed(3) : '';
+
+          tr.innerHTML = `
+            <td style="font-weight:800; color:var(--accent-blue);">${row.station}</td>
+            <td>
+              ${row.bs !== null ? `<input type="number" step="0.001" class="cell-input inp-bs" data-idx="${idx}" value="${fmt(row.bs)}" onchange="SurveyingLab.onSightInputChange(${idx}, 'bs', this.value)" />` : '—'}
+            </td>
+            <td>
+              ${row.is !== null ? `<input type="number" step="0.001" class="cell-input inp-is" data-idx="${idx}" value="${fmt(row.is)}" onchange="SurveyingLab.onSightInputChange(${idx}, 'is', this.value)" />` : '—'}
+            </td>
+            <td>
+              ${row.fs !== null ? `<input type="number" step="0.001" class="cell-input inp-fs" data-idx="${idx}" value="${fmt(row.fs)}" onchange="SurveyingLab.onSightInputChange(${idx}, 'fs', this.value)" />` : '—'}
+            </td>
+            <td class="col-hi" style="display:${this.calcMethod === 'HI' ? 'table-cell' : 'none'};">
+              ${row.bs !== null ? `<input type="number" step="0.001" class="cell-input inp-hi" data-idx="${idx}" value="${hiVal}" placeholder="HI" />` : '—'}
+            </td>
+            <td class="col-rf" style="display:${this.calcMethod === 'RF' ? 'table-cell' : 'none'};">
+              ${idx > 0 ? `<input type="number" step="0.001" class="cell-input inp-rise" data-idx="${idx}" value="${riseVal}" placeholder="+" />` : '—'}
+            </td>
+            <td class="col-rf" style="display:${this.calcMethod === 'RF' ? 'table-cell' : 'none'};">
+              ${idx > 0 ? `<input type="number" step="0.001" class="cell-input inp-fall" data-idx="${idx}" value="${fallVal}" placeholder="-" />` : '—'}
+            </td>
+            <td>
+              <input type="number" step="0.001" class="cell-input inp-rl" data-idx="${idx}" value="${rlVal}" ${idx === 0 ? 'readonly' : ''} placeholder="RL" />
+            </td>
+            <td>
+              <input type="number" step="0.001" class="cell-input inp-corr" data-idx="${idx}" value="${corrVal}" ${idx === 0 ? 'readonly' : ''} placeholder="c_i" />
+            </td>
+            <td>
+              <input type="number" step="0.001" class="cell-input inp-adj" data-idx="${idx}" value="${adjVal}" ${idx === 0 ? 'readonly' : ''} placeholder="Adj.RL" />
+            </td>
+            <td style="font-size:0.8rem; color:#cbd5e1;">${row.remark}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        this.updateFooterTotals();
+      },
+
+      /**
+       * تحديث القراءات عند تعديل الطالب لخانات BS أو IS أو FS
+       */
+      onSightInputChange: function(idx, key, val) {
+        const num = parseFloat(val);
+        if (!isNaN(num)) {
+          this.fieldBookData[idx][key] = num;
+          this.computeExactFieldBookSolution();
+          this.updateFooterTotals();
+        }
+      },
+
+      /**
+       * تحديث المجاميع والتحقق الحسابي الثلاثي في أسفل الجدول
+       */
+      updateFooterTotals: function() {
+        let sumBS = 0, sumFS = 0, sumRise = 0, sumFall = 0, sumCorr = 0;
+
+        this.fieldBookData.forEach(r => {
+          if (r.bs !== null) sumBS += r.bs;
+          if (r.fs !== null) sumFS += r.fs;
+          if (r.exactRise !== null) sumRise += r.exactRise;
+          if (r.exactFall !== null) sumFall += r.exactFall;
+          if (r.exactCorr !== null) sumCorr += r.exactCorr;
+        });
+
+        const firstRL = this.fieldBookData[0].exactRL;
+        const lastRL = this.fieldBookData[this.fieldBookData.length - 1].exactRL;
+        const diffRL = lastRL - firstRL;
+        const diffBSFS = sumBS - sumFS;
+        const diffRF = sumRise - sumFall;
+
+        document.getElementById('sum-bs-cell').textContent = sumBS.toFixed(3);
+        document.getElementById('sum-fs-cell').textContent = sumFS.toFixed(3);
+        document.getElementById('sum-rise-cell').textContent = sumRise.toFixed(3);
+        document.getElementById('sum-fall-cell').textContent = sumFall.toFixed(3);
+        document.getElementById('diff-rl-cell').textContent = (diffRL >= 0 ? '+' : '') + diffRL.toFixed(3);
+        document.getElementById('sum-corr-cell').textContent = sumCorr.toFixed(3);
+        document.getElementById('final-check-cell').textContent = this.fieldBookData[this.fieldBookData.length - 1].exactAdjRL.toFixed(3);
+
+        // تحديث بطاقات التحقق الثلاثي
+        document.getElementById('chk-bs-fs').textContent = (diffBSFS >= 0 ? '+' : '') + diffBSFS.toFixed(3) + ' m';
+        document.getElementById('chk-rise-fall').textContent = (diffRF >= 0 ? '+' : '') + diffRF.toFixed(3) + ' m';
+        document.getElementById('chk-last-first').textContent = (diffRL >= 0 ? '+' : '') + diffRL.toFixed(3) + ' m';
+
+        const wMm = diffRL * 1000;
+        const tMaxMm = this.currentScenarioMeta.cFactor * Math.sqrt(this.currentScenarioMeta.lengthKm);
+        const stepCorr = -diffRL / (this.fieldBookData.length - 1);
+
+        document.getElementById('val-closing-w').textContent = `${diffRL >= 0 ? '+' : ''}${diffRL.toFixed(3)} m (${wMm >= 0 ? '+' : ''}${wMm.toFixed(0)} mm)`;
+        document.getElementById('val-tolerance-max').textContent = `±${tMaxMm.toFixed(1)} mm`;
+        document.getElementById('val-step-corr').textContent = `${stepCorr >= 0 ? '+' : ''}${stepCorr.toFixed(4)} m`;
+      },
+
+      /**
+       * إظهار الحل النموذجي الكامل في الجدول
+       */
+      autoSolveTable: function() {
+        this.computeExactFieldBookSolution();
+        this.renderFieldBookTable(true);
+        this.verifyAll();
+      },
+
+      /**
+       * تبديل طريقة الحساب بين (سطح الميزان HI) و (الارتفاع والانخفاض Rise & Fall)
+       */
+      toggleMethod: function() {
+        this.calcMethod = (this.calcMethod === 'HI') ? 'RF' : 'HI';
+        document.getElementById('calc-method-label').textContent =
+          (this.calcMethod === 'HI') ? 'سطح الميزان (HI)' : 'الارتفاع والانخفاض (R&F)';
+
+        const hiCols = document.querySelectorAll('.col-hi');
+        const rfCols = document.querySelectorAll('.col-rf');
+
+        hiCols.forEach(el => el.style.display = (this.calcMethod === 'HI') ? 'table-cell' : 'none');
+        rfCols.forEach(el => el.style.display = (this.calcMethod === 'RF') ? 'table-cell' : 'none');
+      },
+
+      /**
+       * التحقق الشامل من صحة إدخالات الطالب في الجدول
+       */
+      verifyAll: function() {
+        if (this.activeTab === '3d') {
+          this.checkStadiaReading();
+        }
+
+        this.computeExactFieldBookSolution();
+        let totalCells = 0;
+        let correctCells = 0;
+
+        const validateGroup = (selector, propName) => {
+          document.querySelectorAll(selector).forEach(inp => {
+            const idx = parseInt(inp.getAttribute('data-idx'), 10);
+            const expected = this.fieldBookData[idx][propName];
+            if (expected === null || expected === undefined) return;
+
+            totalCells++;
+            const val = parseFloat(inp.value);
+            if (!isNaN(val) && Math.abs(val - expected) <= 0.005) {
+              inp.classList.add('correct');
+              inp.classList.remove('wrong');
+              correctCells++;
+            } else {
+              inp.classList.add('wrong');
+              inp.classList.remove('correct');
+            }
+          });
+        };
+
+        if (this.calcMethod === 'HI') {
+          validateGroup('.inp-hi', 'exactHI');
+        } else {
+          validateGroup('.inp-rise', 'exactRise');
+          validateGroup('.inp-fall', 'exactFall');
+        }
+        validateGroup('.inp-rl', 'exactRL');
+        validateGroup('.inp-corr', 'exactCorr');
+        validateGroup('.inp-adj', 'exactAdjRL');
+
+        const accuracy = totalCells > 0 ? Math.round((correctCells / totalCells) * 100) : 0;
+        this.score = accuracy;
+        document.getElementById('detective-score').textContent = accuracy + '%';
+
+        const badgeBox = document.getElementById('triple-check-badge');
+        const reportText = document.getElementById('detective-report-text');
+
+        if (accuracy === 100) {
+          badgeBox.innerHTML = `<span class="status-badge badge-ok">✅ التحقق الثلاثي مطابق 100%: ∑BS - ∑FS = ∑Rise - ∑Fall = ΔRL</span>`;
+          reportText.innerHTML = `<span style="color:#34d399; font-weight:700;">أحسنت يا مهندس!</span> تمت موازنة دفتر الغيط بنجاح، وتوزيع خطأ القفل بشكل سليم، ومناسيب القواعد الإنشائية جاهزة للصب بأمان.`;
+        } else {
+          badgeBox.innerHTML = `<span class="status-badge badge-warn">⚠️ دقة الجدول الحالية ${accuracy}% — راجع الخانات الملونة بالأحمر</span>`;
+          reportText.innerHTML = `توجد بعض الخانات غير المكتملة أو التي تحتوي على فرق حسابي. تذكر أن: <b>HI = RL + BS</b>، وأن <b>RL = HI - FS</b>، والتصحيح التراكمي يوزع بعكس إشارة خطأ القفل.`;
+        }
+      },
+
+      /**
+       * التبديل بين التبويب الأول (3D) والتبويب الثاني (دفتر الغيط)
+       */
+      switchTab: function(tabName) {
+        this.activeTab = tabName;
+        document.getElementById('section-3d').classList.toggle('active', tabName === '3d');
+        document.getElementById('section-book').classList.toggle('active', tabName === 'book');
+        document.getElementById('tab-btn-3d').classList.toggle('active', tabName === '3d');
+        document.getElementById('tab-btn-book').classList.toggle('active', tabName === 'book');
+      },
+
+      /**
+       * إيقاف / تشغيل حلقة التحريك
+       */
+      toggleSimulation: function() {
+        this.isRunning = !this.isRunning;
+        const btn = document.getElementById('btn-toggle-sim');
+        if (btn) {
+          btn.innerHTML = this.isRunning ? '⏸️ إيقاف مؤقت' : '▶️ استئناف المحاكاة';
+        }
+      },
+
+      /**
+       * مؤقت التمرين
+       */
+      startTimer: function() {
+        if (this.timerInterval) clearInterval(this.timerInterval);
+        this.timerSeconds = 0;
+        this.timerInterval = setInterval(() => {
+          if (!this.isRunning) return;
+          this.timerSeconds++;
+          const m = String(Math.floor(this.timerSeconds / 60)).padStart(2, '0');
+          const s = String(this.timerSeconds % 60).padStart(2, '0');
+          const el = document.getElementById('detective-timer');
+          if (el) el.textContent = `${m}:${s}`;
+        }, 1000);
+      },
+
+      /**
+       * حلقة الرسم المستمرة (Animation Loop)
+       */
+      animate: function() {
+        this.animationFrameId = requestAnimationFrame(() => this.animate());
+        if (!this.isRunning) return;
+
+        if (this.controls) this.controls.update();
+        if (this.renderer && this.scene && this.camera) {
+          this.renderer.render(this.scene, this.camera);
+        }
+      },
+
+      /**
+       * 4. دالة إعادة الضبط الشاملة (reset)
+       */
+      reset: function() {
+        this.state3D.screwAB = 2.5;
+        this.state3D.screwC = -2.0;
+        this.state3D.reticleFocus = 65;
+        this.state3D.objFocus = 14.0;
+        this.state3D.staffDist = 20.0;
+        this.state3D.staffTiltDeg = 0.0;
+        this.state3D.groundRL = 100.000;
+
+        document.getElementById('slider-screw-ab').value = 2.5;
+        document.getElementById('val-screw-ab').textContent = '2.5';
+        document.getElementById('slider-screw-c').value = -2.0;
+        document.getElementById('val-screw-c').textContent = '-2.0';
+        document.getElementById('slider-reticle-focus').value = 65;
+        document.getElementById('val-reticle-focus').textContent = '65%';
+        document.getElementById('slider-obj-focus').value = 14.0;
+        document.getElementById('val-obj-focus').textContent = '14.0 m';
+        document.getElementById('slider-staff-dist').value = 20.0;
+        document.getElementById('val-staff-dist').textContent = '20.0 m';
+        document.getElementById('slider-staff-tilt').value = 0.0;
+        document.getElementById('val-staff-tilt').textContent = '0.0°';
+        document.getElementById('slider-ground-rl').value = 100.00;
+        document.getElementById('val-ground-rl').textContent = '100.000 m';
+
+        if (this.camera && this.controls) {
+          this.camera.position.set(3.2, 2.3, 3.8);
+          this.controls.target.set(0, 1.35, -2.5);
+          this.controls.update();
+        }
+
+        this.loadStandardScenario();
+        this.calculate();
+        this.update();
+      },
+
+      /**
+       * 5. دالة التنظيف الإلزامية لمنع تسريب ذاكرة WebGL (destroy)
+       */
+      destroy: function() {
+        // إيقاف حلقة التحريك والمؤقت
+        if (this.animationFrameId) {
+          cancelAnimationFrame(this.animationFrameId);
+          this.animationFrameId = null;
+        }
+        if (this.timerInterval) {
+          clearInterval(this.timerInterval);
+          this.timerInterval = null;
+        }
+
+        // إزالة كافة مستمعي الأحداث
+        this.boundListeners.forEach(({ el, type, handler }) => {
+          if (el) el.removeEventListener(type, handler);
+        });
+        this.boundListeners = [];
+
+        // التخلص من متحكمات الكاميرا
+        if (this.controls) {
+          this.controls.dispose();
+          this.controls = null;
+        }
+
+        // المرور التكراري على كافة عناصر المشهد لتفريغ الـ Geometry والـ Material والـ Textures
+        if (this.scene) {
+          this.scene.traverse((object) => {
+            if (object.geometry) {
+              object.geometry.dispose();
+            }
+            if (object.material) {
+              if (Array.isArray(object.material)) {
+                object.material.forEach(mat => {
+                  if (mat.map) mat.map.dispose();
+                  mat.dispose();
+                });
+              } else {
+                if (object.material.map) object.material.map.dispose();
+                object.material.dispose();
+              }
+            }
+          });
+          this.scene.clear();
+          this.scene = null;
+        }
+
+        if (this.staffTexture) {
+          this.staffTexture.dispose();
+          this.staffTexture = null;
+        }
+
+        // تفريغ الـ WebGLRenderer وإزالة الـ Canvas من الـ DOM
+        if (this.renderer) {
+          this.renderer.dispose();
+          this.renderer.forceContextLoss();
+          if (this.renderer.domElement && this.renderer.domElement.parentNode) {
+            this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+          }
+          this.renderer = null;
+        }
+      }
+    };
+
+    // تشغيل المختبر فور جاهزية الصفحة
+    window.addEventListener('DOMContentLoaded', () => {
+      SurveyingLab.init('webgl-container');
+    });
+  </script>
+</body>
+</html>

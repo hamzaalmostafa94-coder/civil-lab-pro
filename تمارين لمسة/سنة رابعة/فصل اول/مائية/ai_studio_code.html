@@ -1,0 +1,1710 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مختبر هندسة السدود التفاعلي | منصة لمسة</title>
+    
+    <!-- Google Fonts: Tajawal -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+    <!-- Three.js r128 & OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --panel-bg: rgba(15, 23, 42, 0.85);
+            --border-color: rgba(148, 163, 184, 0.2);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-blue: #0ea5e9;
+            --accent-blue-hover: #0284c7;
+            --safe-green: #10b981;
+            --safe-bg: rgba(16, 185, 129, 0.12);
+            --danger-red: #ef4444;
+            --danger-bg: rgba(239, 68, 68, 0.15);
+            --warn-amber: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Tajawal', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+        }
+
+        /* 3D Canvas Container */
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Top Header Navigation */
+        .top-header {
+            position: absolute;
+            top: 0;
+            right: 0;
+            left: 0;
+            height: 68px;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 10;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .brand-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #fff;
+            white-space: nowrap;
+        }
+
+        .brand-badge {
+            background: linear-gradient(135deg, #0ea5e9, #2563eb);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .mode-tabs {
+            display: flex;
+            gap: 10px;
+            background: rgba(30, 41, 59, 0.8);
+            padding: 5px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .tab-btn {
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 7px;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .tab-btn:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-btn.active {
+            background: var(--accent-blue);
+            color: #fff;
+            box-shadow: 0 2px 10px rgba(14, 165, 233, 0.4);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            background: rgba(30, 41, 59, 0.9);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            background: rgba(51, 65, 85, 0.9);
+            border-color: var(--accent-blue);
+        }
+
+        .action-btn.primary {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border-color: transparent;
+        }
+
+        .action-btn.primary:hover {
+            filter: brightness(1.1);
+        }
+
+        .action-btn.challenge {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            border-color: transparent;
+            color: #fff;
+        }
+
+        /* Side Control & Telemetry Panels */
+        .side-panel {
+            position: absolute;
+            top: 80px;
+            bottom: 20px;
+            width: 390px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .panel-right {
+            right: 20px;
+        }
+
+        .panel-left {
+            left: 20px;
+            width: 370px;
+        }
+
+        .panel-header {
+            padding: 14px 18px;
+            background: rgba(30, 41, 59, 0.6);
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 800;
+            font-size: 1.05rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-content {
+            padding: 16px;
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .panel-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        .panel-content::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.3);
+            border-radius: 3px;
+        }
+
+        /* Scenario Brief Box */
+        .scenario-box {
+            background: rgba(14, 165, 233, 0.1);
+            border-right: 4px solid var(--accent-blue);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            line-height: 1.5;
+            color: #e2e8f0;
+        }
+
+        .scenario-box strong {
+            color: var(--accent-blue);
+            display: block;
+            margin-bottom: 4px;
+            font-size: 0.95rem;
+        }
+
+        /* Sliders & Controls */
+        .control-group {
+            background: rgba(30, 41, 59, 0.45);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+            padding: 12px;
+            border-radius: 10px;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .math-sym {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+            color: #38bdf8;
+            font-weight: bold;
+            direction: ltr;
+            display: inline-block;
+        }
+
+        .val-badge {
+            background: rgba(15, 23, 42, 0.8);
+            padding: 2px 8px;
+            border-radius: 5px;
+            font-size: 0.85rem;
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            direction: ltr;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent-blue);
+            height: 6px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        select.custom-select {
+            width: 100%;
+            background: #0f172a;
+            color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 0.9rem;
+            margin-top: 4px;
+            cursor: pointer;
+        }
+
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed rgba(148, 163, 184, 0.2);
+            font-size: 0.85rem;
+        }
+
+        /* Live Telemetry Cards */
+        .status-banner {
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 800;
+            text-align: center;
+            font-size: 1rem;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+
+        .status-banner.safe {
+            background: var(--safe-bg);
+            color: var(--safe-green);
+            border-color: var(--safe-green);
+        }
+
+        .status-banner.danger {
+            background: var(--danger-bg);
+            color: var(--danger-red);
+            border-color: var(--danger-red);
+            animation: pulse-danger 2s infinite;
+        }
+
+        @keyframes pulse-danger {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3); }
+            50% { box-shadow: 0 0 15px 2px rgba(239, 68, 68, 0.5); }
+        }
+
+        .metric-card {
+            background: rgba(30, 41, 59, 0.55);
+            border-right: 4px solid var(--text-muted);
+            border-radius: 8px;
+            padding: 12px;
+            transition: all 0.25s;
+        }
+
+        .metric-card.safe {
+            border-right-color: var(--safe-green);
+            background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.08));
+        }
+
+        .metric-card.danger {
+            border-right-color: var(--danger-red);
+            background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.12));
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .metric-title {
+            font-weight: 700;
+            font-size: 0.92rem;
+        }
+
+        .metric-value {
+            font-weight: 800;
+            font-size: 1.05rem;
+            direction: ltr;
+        }
+
+        .metric-card.safe .metric-value { color: var(--safe-green); }
+        .metric-card.danger .metric-value { color: var(--danger-red); }
+
+        .formula-box {
+            font-family: 'Times New Roman', serif;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            background: rgba(15, 23, 42, 0.6);
+            padding: 5px 8px;
+            border-radius: 5px;
+            direction: ltr;
+            text-align: left;
+            margin-top: 4px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .sub-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 6px;
+            font-size: 0.8rem;
+            color: #cbd5e1;
+        }
+
+        .sub-metric-item {
+            background: rgba(15, 23, 42, 0.5);
+            padding: 5px 8px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* 3D Legend Overlay */
+        .legend-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--border-color);
+            padding: 8px 18px;
+            border-radius: 30px;
+            display: flex;
+            gap: 18px;
+            z-index: 10;
+            font-size: 0.82rem;
+            white-space: nowrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        /* Toast Notification */
+        #toast-modal {
+            position: absolute;
+            top: 85px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: rgba(15, 23, 42, 0.95);
+            border: 2px solid var(--accent-blue);
+            padding: 14px 24px;
+            border-radius: 12px;
+            z-index: 50;
+            font-weight: 700;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        #toast-modal.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        @media (max-width: 1100px) {
+            .side-panel { width: 310px; }
+            .brand-title span { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3D Viewport Container -->
+    <div id="canvas-container"></div>
+
+    <!-- Top Navigation Bar -->
+    <header class="top-header">
+        <div class="brand-title">
+            <div class="brand-badge">منصة لمسة 3D</div>
+            <span>مختبر المنشآت المائية والسدود</span>
+        </div>
+
+        <div class="mode-tabs">
+            <button id="tab-stability" class="tab-btn active" onclick="HydraulicDamLab.switchMode('stability')">
+                🚨 التمرين 1: غرفة طوارئ السد (التوازن والإجهادات)
+            </button>
+            <button id="tab-seepage" class="tab-btn" onclick="HydraulicDamLab.switchMode('seepage')">
+                💧 التمرين 2: مهندس مسار التسرب (الرشح والفوران)
+            </button>
+        </div>
+
+        <div class="header-actions">
+            <button class="action-btn challenge" onclick="HydraulicDamLab.generateChallenge()">
+                ⚡ تحدي طوارئ عشوائي
+            </button>
+            <button class="action-btn primary" onclick="HydraulicDamLab.testDesign()">
+                🔍 اختبر تصميمي
+            </button>
+            <button class="action-btn" id="btn-toggle-sim" onclick="HydraulicDamLab.toggleSimulation()">
+                ⏸️ إيقاف مؤقت
+            </button>
+            <button class="action-btn" onclick="HydraulicDamLab.reset()">
+                🔄 إعادة ضبط
+            </button>
+        </div>
+    </header>
+
+    <!-- Toast Feedback -->
+    <div id="toast-modal"></div>
+
+    <!-- RIGHT PANEL: Controls & Sliders -->
+    <aside class="side-panel panel-right">
+        <div class="panel-header">
+            <span id="control-panel-title">🎛️ لوحة التحكم الهندسي</span>
+            <span style="font-size: 0.8rem; color: var(--accent-blue);" id="budget-indicator">الميزانية: $1.2M</span>
+        </div>
+
+        <!-- Controls for Exercise 1: Stability -->
+        <div class="panel-content" id="controls-stability">
+            <div class="scenario-box">
+                <strong>🎯 مهمة الطالب (إنقاذ السد):</strong>
+                السد الحالي يواجه خطر الانقلاب والانزلاق وتولد إجهادات شد في القاعدة. عدّل أبعاد السد والضرس البيتوني والتصريف لتحقيق الشروط الثلاثة بأقل تكلفة!
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>عرض قاعدة السد <span class="math-sym">(b)</span></span>
+                    <span class="val-badge" id="val-b">14.0 m</span>
+                </div>
+                <input type="range" id="slider-b" min="10" max="35" step="0.5" value="14" oninput="HydraulicDamLab.onInputChange()">
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>ميل الوجه الأمامي <span class="math-sym">(m_u)</span></span>
+                    <span class="val-badge" id="val-slope">0.00</span>
+                </div>
+                <input type="range" id="slider-slope" min="0" max="0.4" step="0.02" value="0" oninput="HydraulicDamLab.onInputChange()">
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top:4px;">إمالة الوجه الأمامي تستثمر وزن الماء الشاقولي <span class="math-sym">W_w</span> لزيادة التثبيت.</div>
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>عمق ضرس البيتون <span class="math-sym">(d_k)</span></span>
+                    <span class="val-badge" id="val-key">0.0 m</span>
+                </div>
+                <input type="range" id="slider-key" min="0" max="5" step="0.5" value="0" oninput="HydraulicDamLab.onInputChange()">
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>معامل تخفيض الرفع بالتصريف <span class="math-sym">(α_u)</span></span>
+                    <span class="val-badge" id="val-alpha">0.95</span>
+                </div>
+                <input type="range" id="slider-alpha" min="0.4" max="1.0" step="0.05" value="0.95" oninput="HydraulicDamLab.onInputChange()">
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top:4px;">1.0 = بدون تصريف | 0.4 = آبار تصريف وستارة حقن عالية الكفاءة.</div>
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>منسوب المياه الأمامي <span class="math-sym">(H_1)</span></span>
+                    <span class="val-badge" id="val-h1">24.0 m</span>
+                </div>
+                <input type="range" id="slider-h1" min="15" max="30" step="0.5" value="24" oninput="HydraulicDamLab.onInputChange()">
+            </div>
+        </div>
+
+        <!-- Controls for Exercise 2: Seepage & Piping -->
+        <div class="panel-content" id="controls-seepage" style="display: none;">
+            <div class="scenario-box">
+                <strong>🎯 مهمة الطالب (حماية الأساس):</strong>
+                المياه المتسربة تحت السد تسبب فوران الرمل (Piping) عند المخرج وضغط رفع عالٍ. صمم الحصيرة والصفائح الكتيمة وطبقة الرصف الحجري لتأمين السد!
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>نوع تربة الأساس (معامل بلاي <span class="math-sym">C_B</span>)</span>
+                    <span class="val-badge" id="val-cb">18</span>
+                </div>
+                <select class="custom-select" id="select-cb" onchange="HydraulicDamLab.onInputChange()">
+                    <option value="18" selected>تربة رملية ناعمة حرجة (CB = 18)</option>
+                    <option value="12">تربة رملية خشنة (CB = 12)</option>
+                    <option value="9">تربة حصوية ورملية (CB = 9)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>فرق الضاغط المائي <span class="math-sym">(H_B = H_1 - H_2)</span></span>
+                    <span class="val-badge" id="val-hb">18.0 m</span>
+                </div>
+                <input type="range" id="slider-hb" min="10" max="25" step="0.5" value="18" oninput="HydraulicDamLab.onInputChange()">
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>طول الحصيرة البيتونية الأمامية <span class="math-sym">(L_a)</span></span>
+                    <span class="val-badge" id="val-apron">4.0 m</span>
+                </div>
+                <input type="range" id="slider-apron" min="0" max="30" step="1" value="4" oninput="HydraulicDamLab.onInputChange()">
+                <div class="toggle-row">
+                    <span>حالة وصلة الحصيرة بالسد:</span>
+                    <select id="select-joint" class="custom-select" style="width: auto; margin:0; padding:4px 8px;" onchange="HydraulicDamLab.onInputChange()">
+                        <option value="intact">سليمة وكتيمة ✅</option>
+                        <option value="cracked">متشققة (+21% ضغط رفع) ⚠️</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>عمق الصفيحة الكتيمة الأمامية <span class="math-sym">(S_1)</span></span>
+                    <span class="val-badge" id="val-s1">3.0 m</span>
+                </div>
+                <input type="range" id="slider-s1" min="2" max="15" step="0.5" value="3" oninput="HydraulicDamLab.onInputChange()">
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>عمق الصفيحة الخلفية عند المخرج <span class="math-sym">(S_2)</span></span>
+                    <span class="val-badge" id="val-s2">3.0 m</span>
+                </div>
+                <input type="range" id="slider-s2" min="2" max="15" step="0.5" value="3" oninput="HydraulicDamLab.onInputChange()">
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>سماكة الرصف الحجري الخلفي <span class="math-sym">(t_r)</span></span>
+                    <span class="val-badge" id="val-tr">0.0 m</span>
+                </div>
+                <input type="range" id="slider-tr" min="0" max="3.0" step="0.1" value="0" oninput="HydraulicDamLab.onInputChange()">
+            </div>
+        </div>
+    </aside>
+
+    <!-- LEFT PANEL: Live Telemetry & Engineering Equations -->
+    <aside class="side-panel panel-left">
+        <div class="panel-header">
+            <span>📊 القراءات الهندسية ومعاملات الأمان</span>
+        </div>
+
+        <!-- Telemetry for Exercise 1: Stability -->
+        <div class="panel-content" id="telemetry-stability">
+            <div id="overall-status-1" class="status-banner danger">
+                ⚠️ السد في حالة خطر! غير آمن هندسياً
+            </div>
+
+            <!-- Condition 1: Overturning -->
+            <div class="metric-card danger" id="card-ko">
+                <div class="metric-header">
+                    <span class="metric-title">1. الأمان ضد الانقلاب <span class="math-sym">(K_o ≥ 1.5)</span></span>
+                    <span class="metric-value" id="res-ko">1.12</span>
+                </div>
+                <div class="formula-box">K_o = ΣM_S / ΣM_R ≥ 1.50</div>
+                <div class="sub-metrics">
+                    <div class="sub-metric-item"><span>عزم التثبيت <span class="math-sym">M_S</span>:</span> <strong id="res-ms">0 kN.m</strong></div>
+                    <div class="sub-metric-item"><span>عزم القلب <span class="math-sym">M_R</span>:</span> <strong id="res-mr">0 kN.m</strong></div>
+                </div>
+            </div>
+
+            <!-- Condition 2: Sliding -->
+            <div class="metric-card danger" id="card-kc">
+                <div class="metric-header">
+                    <span class="metric-title">2. الأمان ضد الانزلاق <span class="math-sym">(K_c ≥ 1.2)</span></span>
+                    <span class="metric-value" id="res-kc">0.85</span>
+                </div>
+                <div class="formula-box">K_c = (m/n_c)·(ΣV·tan φ + c·b) / ΣH ≥ 1.20</div>
+                <div class="sub-metrics">
+                    <div class="sub-metric-item"><span>القوى الشاقولية <span class="math-sym">ΣV</span>:</span> <strong id="res-sv">0 kN</strong></div>
+                    <div class="sub-metric-item"><span>الدفع الأفقي <span class="math-sym">ΣH</span>:</span> <strong id="res-sh">0 kN</strong></div>
+                </div>
+            </div>
+
+            <!-- Condition 3: Base Stresses -->
+            <div class="metric-card danger" id="card-sigma">
+                <div class="metric-header">
+                    <span class="metric-title">3. إجهادات القاعدة <span class="math-sym">(σ_y)</span></span>
+                    <span class="metric-value" id="res-sigma-status">فشل (شد)</span>
+                </div>
+                <div class="formula-box">σ_y = (ΣV / b) ∓ (6·ΣM_0 / b²)</div>
+                <div class="sub-metrics">
+                    <div class="sub-metric-item"><span>أمامي <span class="math-sym">σ'_y ≥ 0</span>:</span> <strong id="res-sig1">-45 kPa</strong></div>
+                    <div class="sub-metric-item"><span>خلفي <span class="math-sym">σ''_y ≤ 600</span>:</span> <strong id="res-sig2">520 kPa</strong></div>
+                </div>
+            </div>
+
+            <!-- Forces Summary -->
+            <div class="control-group" style="font-size: 0.82rem;">
+                <div style="font-weight: 700; margin-bottom: 6px; color: var(--accent-blue);">تفصيل القوى المؤثرة (لكل 1m طولي):</div>
+                <div class="sub-metrics">
+                    <div class="sub-metric-item"><span>وزن السد <span class="math-sym">W_d</span>:</span> <span id="res-wd">0 kN</span></div>
+                    <div class="sub-metric-item"><span>وزن الماء <span class="math-sym">W_w</span>:</span> <span id="res-ww">0 kN</span></div>
+                    <div class="sub-metric-item"><span>ضغط الرفع <span class="math-sym">W_f</span>:</span> <span id="res-wf">0 kN</span></div>
+                    <div class="sub-metric-item"><span>اللامركزية <span class="math-sym">e</span>:</span> <span id="res-ecc">0 m</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Telemetry for Exercise 2: Seepage -->
+        <div class="panel-content" id="telemetry-seepage" style="display: none;">
+            <div id="overall-status-2" class="status-banner danger">
+                ⚠️ خطر فوران ورشح! مسار التسرب قصير جداً
+            </div>
+
+            <!-- Condition 1: Bligh Creep Length -->
+            <div class="metric-card danger" id="card-creep">
+                <div class="metric-header">
+                    <span class="metric-title">1. أمان مسار التسرب <span class="math-sym">(L_N ≥ L_B)</span></span>
+                    <span class="metric-value" id="res-creep-ratio">45%</span>
+                </div>
+                <div class="formula-box">L_N = L_horiz + 2·(S_1 + S_2) ≥ C_B · H_B</div>
+                <div class="sub-metrics">
+                    <div class="sub-metric-item"><span>الفعلي <span class="math-sym">L_N</span>:</span> <strong id="res-ln">36 m</strong></div>
+                    <div class="sub-metric-item"><span>المطلوب <span class="math-sym">L_B</span>:</span> <strong id="res-lb">324 m</strong></div>
+                </div>
+            </div>
+
+            <!-- Condition 2: Exit Gradient & Piping -->
+            <div class="metric-card danger" id="card-piping">
+                <div class="metric-header">
+                    <span class="metric-title">2. الأمان ضد الفوران <span class="math-sym">(Piping)</span></span>
+                    <span class="metric-value" id="res-piping-status">فوران نشط!</span>
+                </div>
+                <div class="formula-box">I_exit = Δh / S_2 ≤ I_cr (0.95)  أو  t_r ≥ t_req</div>
+                <div class="sub-metrics">
+                    <div class="sub-metric-item"><span>تدرج المخرج <span class="math-sym">I</span>:</span> <strong id="res-iexit">1.45</strong></div>
+                    <div class="sub-metric-item"><span>الحرج <span class="math-sym">I_cr</span>:</span> <strong>0.95</strong></div>
+                </div>
+            </div>
+
+            <!-- Condition 3: Rock Riprap & Uplift Pressure -->
+            <div class="metric-card safe" id="card-riprap">
+                <div class="metric-header">
+                    <span class="metric-title">3. الرصف الحجري وضغط الرفع <span class="math-sym">(P_x)</span></span>
+                    <span class="metric-value" id="res-treq-val">t_req = 1.2m</span>
+                </div>
+                <div class="formula-box">t_req = S_2·(I - I_cr)·(γ_w / γ_r)·K_z</div>
+                <div class="sub-metrics">
+                    <div class="sub-metric-item"><span>رفع خلف <span class="math-sym">S_1</span>:</span> <strong id="res-px1">0 kPa</strong></div>
+                    <div class="sub-metric-item"><span>رفع أمام <span class="math-sym">S_2</span>:</span> <strong id="res-px2">0 kPa</strong></div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Bottom Legend Bar -->
+    <div class="legend-bar" id="legend-bar">
+        <div class="legend-item"><span class="legend-dot" style="background:#0ea5e9;"></span> الدفع المائي الأفقي (P_h)</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#10b981;"></span> الأوزان المثبتة (W_d, W_w)</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#f59e0b;"></span> ضغط الرفع (Uplift W_f)</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#ef4444;"></span> منطقة شد خطرة / فوران حبيبات</div>
+    </div>
+
+    <!-- Single Encapsulated Application Logic -->
+    <script>
+        const HydraulicDamLab = {
+            // Core Three.js variables
+            scene: null,
+            camera: null,
+            renderer: null,
+            controls: null,
+            animationId: null,
+            isRunning: true,
+            clock: new THREE.Clock(),
+
+            // Current Active Exercise Mode ('stability' | 'seepage')
+            mode: 'stability',
+
+            // Groups for clean switching
+            stabilityGroup: null,
+            seepageGroup: null,
+
+            // Exercise 1 State & Constants
+            state1: {
+                H: 32,          // Total dam height (m)
+                b_crest: 5,     // Top crest width (m)
+                b: 14,          // Base width (m)
+                slope: 0.0,     // Upstream face slope ratio
+                d_key: 0.0,     // Dental concrete key depth (m)
+                alpha_u: 0.95,  // Uplift reduction factor
+                H1: 24,         // Upstream water head (m)
+                gamma_w: 9.81,  // Water unit weight (kN/m3)
+                gamma_c: 24.0,  // Concrete unit weight (kN/m3)
+                phi: 35,        // Friction angle (degrees)
+                c_base: 80,     // Base cohesion (kPa)
+                sigma_allow: 600 // Allowable soil bearing stress (kPa)
+            },
+
+            // Exercise 1 Computed Results
+            results1: {
+                Ko: 0, Kc: 0, sig1: 0, sig2: 0, isSafe: false
+            },
+
+            // Exercise 2 State & Constants
+            state2: {
+                CB: 18,         // Bligh coefficient
+                HB: 18,         // Water head difference (m)
+                L_dam: 22,      // Base width of dam in seepage view (m)
+                L_apron: 4,     // Upstream concrete apron length (m)
+                joint: 'intact',// 'intact' or 'cracked'
+                S1: 3.0,        // Upstream sheet pile depth (m)
+                S2: 3.0,        // Downstream sheet pile depth (m)
+                tr: 0.0,        // Downstream rock riprap thickness (m)
+                I_cr: 0.95      // Critical exit gradient
+            },
+
+            // Exercise 2 Computed Results
+            results2: {
+                LN: 0, LB: 0, I_exit: 0, t_req: 0, isCreepSafe: false, isPipingSafe: false, isSafe: false
+            },
+
+            // Dynamic 3D Meshes References
+            meshes1: {},
+            meshes2: {},
+            seepageParticles: [],
+            boilingParticles: [],
+            seepageCurve: null,
+
+            /**
+             * Initialize the 3D WebGL Scene
+             */
+            init(containerId) {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+
+                // 1. Scene Setup
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x0f172a);
+                this.scene.fog = new THREE.FogExp2(0x0f172a, 0.0045);
+
+                // 2. Camera Setup
+                this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.5, 500);
+                this.camera.position.set(0, 18, 72);
+
+                // 3. Renderer Setup
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                container.appendChild(this.renderer.domElement);
+
+                // 4. OrbitControls
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.06;
+                this.controls.maxPolarAngle = Math.PI / 2 + 0.15;
+                this.controls.minDistance = 20;
+                this.controls.maxDistance = 150;
+                this.controls.target.set(0, 5, 0);
+
+                // 5. Lighting & Grid
+                this.setupLightsAndGrid();
+
+                // 6. Initialize Scene Groups
+                this.stabilityGroup = new THREE.Group();
+                this.seepageGroup = new THREE.Group();
+                this.scene.add(this.stabilityGroup);
+                this.scene.add(this.seepageGroup);
+
+                this.buildStabilityScene();
+                this.buildSeepageScene();
+
+                // 7. Initial Mode & Calculation
+                this.switchMode('stability');
+
+                // 8. Event Listeners
+                this._onResize = this.onWindowResize.bind(this);
+                window.addEventListener('resize', this._onResize);
+
+                // 9. Start Animation Loop
+                this.animate();
+            },
+
+            setupLightsAndGrid() {
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+                this.scene.add(ambientLight);
+
+                const dirLight = new THREE.DirectionalLight(0xfffbeb, 0.9);
+                dirLight.position.set(35, 60, 40);
+                dirLight.castShadow = true;
+                dirLight.shadow.mapSize.width = 2048;
+                dirLight.shadow.mapSize.height = 2048;
+                dirLight.shadow.camera.near = 10;
+                dirLight.shadow.camera.far = 160;
+                const d = 45;
+                dirLight.shadow.camera.left = -d;
+                dirLight.shadow.camera.right = d;
+                dirLight.shadow.camera.top = d;
+                dirLight.shadow.camera.bottom = -d;
+                this.scene.add(dirLight);
+
+                const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.4);
+                rimLight.position.set(-40, 20, -30);
+                this.scene.add(rimLight);
+
+                const grid = new THREE.GridHelper(140, 70, 0x334155, 0x1e293b);
+                grid.position.y = -0.05;
+                this.scene.add(grid);
+            },
+
+            /**
+             * Build Exercise 1 (Dam Stability) 3D Elements
+             */
+            buildStabilityScene() {
+                // Foundation rock bed
+                const bedGeo = new THREE.BoxGeometry(90, 14, 18);
+                const bedMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 });
+                const bedMesh = new THREE.Mesh(bedGeo, bedMat);
+                bedMesh.position.set(0, -7, 0);
+                bedMesh.receiveShadow = true;
+                this.stabilityGroup.add(bedMesh);
+
+                // Pivot Container for Dam (allows tilting around downstream toe when Ko < 1.5)
+                this.meshes1.damPivot = new THREE.Group();
+                this.stabilityGroup.add(this.meshes1.damPivot);
+
+                // Dam Concrete Body (Extruded dynamically in update)
+                const damMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.5, metalness: 0.1 });
+                this.meshes1.damBody = new THREE.Mesh(new THREE.BufferGeometry(), damMat);
+                this.meshes1.damBody.castShadow = true;
+                this.meshes1.damBody.receiveShadow = true;
+                this.meshes1.damPivot.add(this.meshes1.damBody);
+
+                // Dental Key Wall
+                const keyMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.6 });
+                this.meshes1.dentalKey = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1, 14), keyMat);
+                this.meshes1.damPivot.add(this.meshes1.dentalKey);
+
+                // Upstream Reservoir Water
+                const waterMat = new THREE.MeshPhysicalMaterial({
+                    color: 0x0ea5e9,
+                    transparent: true,
+                    opacity: 0.62,
+                    roughness: 0.15,
+                    transmission: 0.3
+                });
+                this.meshes1.waterMesh = new THREE.Mesh(new THREE.BufferGeometry(), waterMat);
+                this.stabilityGroup.add(this.meshes1.waterMesh);
+
+                // Base Stress Diagram Mesh (Trapezoid under base)
+                const stressMat = new THREE.MeshBasicMaterial({
+                    color: 0x10b981,
+                    transparent: true,
+                    opacity: 0.55,
+                    side: THREE.DoubleSide
+                });
+                this.meshes1.stressDiagram = new THREE.Mesh(new THREE.BufferGeometry(), stressMat);
+                this.stabilityGroup.add(this.meshes1.stressDiagram);
+
+                // Stress Wireframe Outline
+                const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff });
+                this.meshes1.stressOutline = new THREE.LineLoop(new THREE.BufferGeometry(), lineMat);
+                this.stabilityGroup.add(this.meshes1.stressOutline);
+
+                // Force Arrows (Hydrostatic Ph, Weight Wd, Water Weight Ww, Uplift Wf)
+                this.meshes1.arrowPh = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(-20, 8, 0), 10, 0x0ea5e9, 2.2, 1.4);
+                this.meshes1.arrowWd = new THREE.ArrowHelper(new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 15, 8), 10, 0x10b981, 2.2, 1.4);
+                this.meshes1.arrowWw = new THREE.ArrowHelper(new THREE.Vector3(0, -1, 0), new THREE.Vector3(-8, 18, 8), 6, 0x38bdf8, 1.8, 1.2);
+                this.meshes1.arrowWf = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(-2, -6, 8), 8, 0xf59e0b, 2.2, 1.4);
+
+                this.stabilityGroup.add(this.meshes1.arrowPh);
+                this.stabilityGroup.add(this.meshes1.arrowWd);
+                this.stabilityGroup.add(this.meshes1.arrowWw);
+                this.stabilityGroup.add(this.meshes1.arrowWf);
+            },
+
+            /**
+             * Build Exercise 2 (Seepage & Piping) 3D Elements
+             */
+            buildSeepageScene() {
+                // Permeable Soil Foundation Cutaway
+                const soilGeo = new THREE.BoxGeometry(100, 22, 16);
+                const soilMat = new THREE.MeshStandardMaterial({
+                    color: 0xb45309,
+                    roughness: 0.9,
+                    transparent: true,
+                    opacity: 0.45
+                });
+                this.meshes2.soilBed = new THREE.Mesh(soilGeo, soilMat);
+                this.meshes2.soilBed.position.set(0, -11, 0);
+                this.seepageGroup.add(this.meshes2.soilBed);
+
+                // Dam Body sitting on soil
+                const damShape = new THREE.Shape();
+                damShape.moveTo(-11, 0);
+                damShape.lineTo(-11, 22);
+                damShape.lineTo(-5, 22);
+                damShape.lineTo(11, 0);
+                damShape.closePath();
+                const extrudeSettings = { depth: 14, bevelEnabled: false };
+                const damGeo = new THREE.ExtrudeGeometry(damShape, extrudeSettings);
+                damGeo.translate(0, 0, -7);
+                const damMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.5 });
+                this.meshes2.dam = new THREE.Mesh(damGeo, damMat);
+                this.seepageGroup.add(this.meshes2.dam);
+
+                // Upstream Concrete Apron (L_apron)
+                const apronMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: 0.4 });
+                this.meshes2.apron = new THREE.Mesh(new THREE.BoxGeometry(1, 1.2, 14), apronMat);
+                this.seepageGroup.add(this.meshes2.apron);
+
+                // Crack visual indicator at joint
+                const crackMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+                this.meshes2.crackIndicator = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.8, 14.4), crackMat);
+                this.meshes2.crackIndicator.position.set(-11, 0.6, 0);
+                this.seepageGroup.add(this.meshes2.crackIndicator);
+
+                // Upstream Sheet Pile (S1) & Downstream Sheet Pile (S2)
+                const pileMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.7, roughness: 0.2 });
+                this.meshes2.pileS1 = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1, 14.2), pileMat);
+                this.meshes2.pileS2 = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1, 14.2), pileMat);
+                this.seepageGroup.add(this.meshes2.pileS1);
+                this.seepageGroup.add(this.meshes2.pileS2);
+
+                // Downstream Rock Riprap Filter Layer (tr)
+                const riprapMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.95 });
+                this.meshes2.riprap = new THREE.Mesh(new THREE.BoxGeometry(12, 1, 14), riprapMat);
+                this.seepageGroup.add(this.meshes2.riprap);
+
+                // Upstream Water Volume
+                const waterMat = new THREE.MeshPhysicalMaterial({
+                    color: 0x0ea5e9,
+                    transparent: true,
+                    opacity: 0.6
+                });
+                this.meshes2.upstreamWater = new THREE.Mesh(new THREE.BoxGeometry(39, 1, 14), waterMat);
+                this.seepageGroup.add(this.meshes2.upstreamWater);
+
+                // Uplift Pressure 3D Diagram under base (Px)
+                const upliftMat = new THREE.MeshBasicMaterial({
+                    color: 0xf59e0b,
+                    transparent: true,
+                    opacity: 0.48,
+                    side: THREE.DoubleSide
+                });
+                this.meshes2.upliftDiagram = new THREE.Mesh(new THREE.BufferGeometry(), upliftMat);
+                this.seepageGroup.add(this.meshes2.upliftDiagram);
+
+                // Seepage Path Line
+                const pathMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 2 });
+                this.meshes2.seepageLine = new THREE.Line(new THREE.BufferGeometry(), pathMat);
+                this.seepageGroup.add(this.meshes2.seepageLine);
+
+                // Seepage Moving Particles (40 glowing spheres along creep path)
+                const pGeo = new THREE.SphereGeometry(0.38, 12, 12);
+                const pMat = new THREE.MeshBasicMaterial({ color: 0x7dd3fc });
+                for (let i = 0; i < 40; i++) {
+                    const p = new THREE.Mesh(pGeo, pMat);
+                    p.userData = { t: i / 40 };
+                    this.seepageParticles.push(p);
+                    this.seepageGroup.add(p);
+                }
+
+                // Boiling / Piping Sand Particles at Downstream Exit (28 red/orange spheres)
+                const bGeo = new THREE.SphereGeometry(0.42, 10, 10);
+                const bMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+                for (let i = 0; i < 28; i++) {
+                    const b = new THREE.Mesh(bGeo, bMat);
+                    b.userData = {
+                        offsetX: 11.5 + Math.random() * 5.5,
+                        offsetZ: (Math.random() - 0.5) * 11,
+                        phase: Math.random() * Math.PI * 2,
+                        speed: 1.5 + Math.random() * 2.0
+                    };
+                    this.boilingParticles.push(b);
+                    this.seepageGroup.add(b);
+                }
+            },
+
+            /**
+             * Switch cleanly between Exercise 1 and Exercise 2
+             */
+            switchMode(newMode) {
+                this.mode = newMode;
+
+                // Toggle UI Tabs
+                document.getElementById('tab-stability').classList.toggle('active', newMode === 'stability');
+                document.getElementById('tab-seepage').classList.toggle('active', newMode === 'seepage');
+
+                // Toggle Side Panels
+                document.getElementById('controls-stability').style.display = newMode === 'stability' ? 'flex' : 'none';
+                document.getElementById('telemetry-stability').style.display = newMode === 'stability' ? 'flex' : 'none';
+                document.getElementById('controls-seepage').style.display = newMode === 'seepage' ? 'flex' : 'none';
+                document.getElementById('telemetry-seepage').style.display = newMode === 'seepage' ? 'flex' : 'none';
+
+                // Toggle 3D Scene Groups
+                this.stabilityGroup.visible = (newMode === 'stability');
+                this.seepageGroup.visible = (newMode === 'seepage');
+
+                // Adjust Camera Position smoothly for best perspective
+                if (newMode === 'stability') {
+                    this.camera.position.set(0, 16, 68);
+                    this.controls.target.set(0, 6, 0);
+                } else {
+                    this.camera.position.set(0, 4, 72);
+                    this.controls.target.set(-2, -2, 0);
+                }
+                this.controls.update();
+
+                this.calculate();
+                this.update();
+            },
+
+            /**
+             * Read DOM Slider Inputs and Update State
+             */
+            onInputChange() {
+                if (this.mode === 'stability') {
+                    this.state1.b = parseFloat(document.getElementById('slider-b').value);
+                    this.state1.slope = parseFloat(document.getElementById('slider-slope').value);
+                    this.state1.d_key = parseFloat(document.getElementById('slider-key').value);
+                    this.state1.alpha_u = parseFloat(document.getElementById('slider-alpha').value);
+                    this.state1.H1 = parseFloat(document.getElementById('slider-h1').value);
+
+                    document.getElementById('val-b').textContent = this.state1.b.toFixed(1) + ' m';
+                    document.getElementById('val-slope').textContent = this.state1.slope.toFixed(2);
+                    document.getElementById('val-key').textContent = this.state1.d_key.toFixed(1) + ' m';
+                    document.getElementById('val-alpha').textContent = this.state1.alpha_u.toFixed(2);
+                    document.getElementById('val-h1').textContent = this.state1.H1.toFixed(1) + ' m';
+                } else {
+                    this.state2.CB = parseFloat(document.getElementById('select-cb').value);
+                    this.state2.HB = parseFloat(document.getElementById('slider-hb').value);
+                    this.state2.L_apron = parseFloat(document.getElementById('slider-apron').value);
+                    this.state2.joint = document.getElementById('select-joint').value;
+                    this.state2.S1 = parseFloat(document.getElementById('slider-s1').value);
+                    this.state2.S2 = parseFloat(document.getElementById('slider-s2').value);
+                    this.state2.tr = parseFloat(document.getElementById('slider-tr').value);
+
+                    document.getElementById('val-cb').textContent = this.state2.CB;
+                    document.getElementById('val-hb').textContent = this.state2.HB.toFixed(1) + ' m';
+                    document.getElementById('val-apron').textContent = this.state2.L_apron.toFixed(1) + ' m';
+                    document.getElementById('val-s1').textContent = this.state2.S1.toFixed(1) + ' m';
+                    document.getElementById('val-s2').textContent = this.state2.S2.toFixed(1) + ' m';
+                    document.getElementById('val-tr').textContent = this.state2.tr.toFixed(1) + ' m';
+                }
+
+                this.calculate();
+                this.update();
+            },
+
+            /**
+             * Perform All Hydraulic & Structural Engineering Calculations
+             */
+            calculate() {
+                // ==========================================
+                // EXERCISE 1: DAM STABILITY & BASE STRESSES
+                // ==========================================
+                const s1 = this.state1;
+                const H = s1.H;
+                const b = s1.b;
+                const b_crest = s1.b_crest;
+
+                // Upstream horizontal projection due to front slope
+                const b_up = Math.min(b - b_crest - 1, s1.slope * H);
+                const b_down = Math.max(0.5, b - b_crest - b_up);
+
+                // Component Weights & Moment Arms about Downstream Toe (x = b from heel)
+                // 1. Upstream triangle
+                const W1 = 0.5 * b_up * H * s1.gamma_c;
+                const x1 = b - (2 / 3) * b_up;
+                // 2. Central rectangle under crest
+                const W2 = b_crest * H * s1.gamma_c;
+                const x2 = b - b_up - 0.5 * b_crest;
+                // 3. Downstream triangle
+                const W3 = 0.5 * b_down * H * s1.gamma_c;
+                const x3 = (2 / 3) * b_down;
+                // 4. Dental key weight
+                const W_key = 2.5 * s1.d_key * s1.gamma_c;
+                const x_key = b * 0.65;
+
+                const W_d = W1 + W2 + W3 + W_key;
+                const M_Wd = W1 * x1 + W2 * x2 + W3 * x3 + W_key * x_key;
+
+                // Vertical Water Weight on inclined upstream face (Ww)
+                const b_up_sub = b_up * (s1.H1 / H);
+                const W_w = 0.5 * b_up_sub * s1.H1 * s1.gamma_w;
+                const x_w = b - (1 / 3) * b_up_sub;
+                const M_Ww = W_w * x_w;
+
+                // Horizontal Hydrostatic Thrust (Ph)
+                const P_h = 0.5 * s1.gamma_w * Math.pow(s1.H1, 2);
+                const y_Ph = s1.H1 / 3.0;
+                const M_Ph = P_h * y_Ph;
+
+                // Uplift Force (Wf) acting 2/3 b from downstream toe
+                const W_f = 0.5 * s1.gamma_w * s1.H1 * b * s1.alpha_u;
+                const x_Wf = (2 / 3) * b;
+                const M_Wf = W_f * x_Wf;
+
+                // Summations
+                const sumV = W_d + W_w - W_f;
+                const sumH = P_h;
+                const sumM_S = M_Wd + M_Ww; // Stabilizing moments
+                const sumM_R = M_Ph + M_Wf; // Overturning moments
+
+                // 1. Overturning Safety Factor (Ko >= 1.5)
+                const Ko = sumM_S / Math.max(1, sumM_R);
+
+                // 2. Sliding Safety Factor (Kc >= 1.2)
+                // Effective cohesion increases with dental key depth
+                const tanPhi = Math.tan((s1.phi * Math.PI) / 180);
+                const c_eff = s1.c_base + s1.d_key * 38;
+                const m_nc = 0.9; // (m / n_c) ratio
+                const Kc = m_nc * (( Math.max(0, sumV) * tanPhi + c_eff * b ) / Math.max(1, sumH));
+
+                // 3. Base Normal Stresses (sigma_y)
+                const netM_toe = sumM_S - sumM_R;
+                const x_bar = netM_toe / Math.max(1, sumV); // location of resultant from toe
+                const ecc = (b / 2) - x_bar; // eccentricity from center of base (+ towards toe)
+                const sumM_0 = sumV * ecc;
+
+                // sigma'_y (upstream heel) & sigma''_y (downstream toe)
+                const sig1 = (sumV / b) - (6 * sumM_0) / Math.pow(b, 2);
+                const sig2 = (sumV / b) + (6 * sumM_0) / Math.pow(b, 2);
+
+                const isKoSafe = Ko >= 1.5;
+                const isKcSafe = Kc >= 1.2;
+                const isSigSafe = (sig1 >= 0) && (sig2 <= s1.sigma_allow);
+
+                this.results1 = {
+                    W_d, W_w, W_f, P_h, sumV, sumH, sumM_S, sumM_R, ecc,
+                    Ko, Kc, sig1, sig2,
+                    isKoSafe, isKcSafe, isSigSafe,
+                    isSafe: isKoSafe && isKcSafe && isSigSafe,
+                    b_up, b_down
+                };
+
+                // Estimate Construction Cost ($M)
+                const cost1 = (W_d / 5000) + (s1.d_key * 0.18) + ((1 - s1.alpha_u) * 1.2);
+
+                // ==========================================
+                // EXERCISE 2: SEEPAGE & PIPING DEFENDER
+                // ==========================================
+                const s2 = this.state2;
+                // Required Bligh Creep Length: LB = CB * HB
+                const LB = s2.CB * s2.HB;
+
+                // Actual Creep Length: LN = L_horizontal + 2*(S1 + S2)
+                // If apron joint is cracked, apron length is lost!
+                const effectiveApron = (s2.joint === 'intact') ? s2.L_apron : 0;
+                const L_horiz = s2.L_dam + effectiveApron;
+                const LN = L_horiz + 2 * (s2.S1 + s2.S2);
+
+                // Uplift pressures along base: Px = H1 - (HB / LN) * x
+                // If joint is cracked, uplift increases by 21%
+                const crackMultiplier = (s2.joint === 'cracked') ? 1.21 : 1.0;
+                const x_after_S1 = effectiveApron + 2 * s2.S1;
+                const x_before_S2 = effectiveApron + 2 * s2.S1 + s2.L_dam;
+
+                const H_up1 = Math.min(s2.HB, (s2.HB - (s2.HB / LN) * x_after_S1) * crackMultiplier);
+                const H_up2 = Math.max(1.5, (s2.HB - (s2.HB / LN) * x_before_S2) * crackMultiplier);
+
+                const Px1 = H_up1 * 9.81; // kPa
+                const Px2 = H_up2 * 9.81; // kPa
+
+                // Exit Hydraulic Gradient: I = delta_h / S2
+                // Head loss across downstream pile S2 enhanced by total creep ratio
+                const delta_h = s2.HB * Math.max(0.18, (2.2 * s2.S2) / Math.max(25, LN * 0.45));
+                const I_exit = (delta_h / s2.S2) * crackMultiplier;
+
+                // Required Rock Riprap Thickness if I_exit > I_cr
+                // t_req = S2 * (I - I_cr) * (gamma_w / gamma_r) * Kz
+                const gamma_w_r = 9.81 / 18.5; // ~ 0.53
+                const Kz = 1.35; // Safety factor
+                const t_req = (I_exit > s2.I_cr)
+                    ? s2.S2 * (I_exit - s2.I_cr) * gamma_w_r * Kz
+                    : 0;
+
+                const isCreepSafe = LN >= LB * 0.42; // Scaled practical threshold for 3D geometry
+                const reqLB_scaled = Math.round(LB * 0.42);
+                const isCreepSafeExact = LN >= reqLB_scaled;
+                const isPipingSafe = (I_exit <= s2.I_cr) || (s2.tr >= t_req && t_req > 0);
+
+                this.results2 = {
+                    LN,
+                    LB: reqLB_scaled,
+                    Px1, Px2, H_up1, H_up2,
+                    I_exit, t_req,
+                    isCreepSafe: isCreepSafeExact,
+                    isPipingSafe,
+                    isSafe: isCreepSafeExact && isPipingSafe
+                };
+
+                const cost2 = (s2.L_apron * 0.05) + ((s2.S1 + s2.S2) * 0.08) + (s2.tr * 0.35);
+
+                // Update Budget Header
+                const activeCost = (this.mode === 'stability') ? cost1 : cost2;
+                document.getElementById('budget-indicator').textContent = `الكلفة التقديرية: $${activeCost.toFixed(2)}M`;
+            },
+
+            /**
+             * Update 3D Geometries, Arrows, Colors, and DOM Telemetry Cards
+             */
+            update() {
+                if (this.mode === 'stability') {
+                    this.updateStabilityDOM();
+                    this.updateStability3D();
+                } else {
+                    this.updateSeepageDOM();
+                    this.updateSeepage3D();
+                }
+            },
+
+            updateStabilityDOM() {
+                const r = this.results1;
+
+                // Overall Banner
+                const banner = document.getElementById('overall-status-1');
+                if (r.isSafe) {
+                    banner.className = 'status-banner safe';
+                    banner.textContent = '✅ التصميم آمن ومعتمد هندسياً!';
+                } else {
+                    banner.className = 'status-banner danger';
+                    banner.textContent = '⚠️ السد في حالة خطر! غير آمن هندسياً';
+                }
+
+                // 1. Overturning Card
+                const cardKo = document.getElementById('card-ko');
+                cardKo.className = 'metric-card ' + (r.isKoSafe ? 'safe' : 'danger');
+                document.getElementById('res-ko').textContent = r.Ko.toFixed(2) + (r.isKoSafe ? ' ✅' : ' ❌');
+                document.getElementById('res-ms').textContent = Math.round(r.sumM_S).toLocaleString() + ' kN.m';
+                document.getElementById('res-mr').textContent = Math.round(r.sumM_R).toLocaleString() + ' kN.m';
+
+                // 2. Sliding Card
+                const cardKc = document.getElementById('card-kc');
+                cardKc.className = 'metric-card ' + (r.isKcSafe ? 'safe' : 'danger');
+                document.getElementById('res-kc').textContent = r.Kc.toFixed(2) + (r.isKcSafe ? ' ✅' : ' ❌');
+                document.getElementById('res-sv').textContent = Math.round(r.sumV).toLocaleString() + ' kN';
+                document.getElementById('res-sh').textContent = Math.round(r.sumH).toLocaleString() + ' kN';
+
+                // 3. Base Stress Card
+                const cardSig = document.getElementById('card-sigma');
+                cardSig.className = 'metric-card ' + (r.isSigSafe ? 'safe' : 'danger');
+                let sigStatus = 'آمن (ضغط فقط) ✅';
+                if (r.sig1 < 0) sigStatus = 'خطر! إجهاد شد ❌';
+                else if (r.sig2 > this.state1.sigma_allow) sigStatus = 'تجاوز تحمل التربة ❌';
+                document.getElementById('res-sigma-status').textContent = sigStatus;
+                document.getElementById('res-sig1').textContent = Math.round(r.sig1) + ' kPa';
+                document.getElementById('res-sig1').style.color = r.sig1 >= 0 ? '#10b981' : '#ef4444';
+                document.getElementById('res-sig2').textContent = Math.round(r.sig2) + ' kPa';
+                document.getElementById('res-sig2').style.color = r.sig2 <= 600 ? '#10b981' : '#ef4444';
+
+                // Sub-metrics
+                document.getElementById('res-wd').textContent = Math.round(r.W_d).toLocaleString() + ' kN';
+                document.getElementById('res-ww').textContent = Math.round(r.W_w).toLocaleString() + ' kN';
+                document.getElementById('res-wf').textContent = Math.round(r.W_f).toLocaleString() + ' kN';
+                document.getElementById('res-ecc').textContent = r.ecc.toFixed(2) + ' m';
+            },
+
+            updateStability3D() {
+                const s = this.state1;
+                const r = this.results1;
+                const heelX = -s.b / 2;
+                const toeX = s.b / 2;
+
+                // 1. Update Dam Body Extrude Geometry
+                const damShape = new THREE.Shape();
+                damShape.moveTo(heelX, 0);
+                damShape.lineTo(heelX + r.b_up, s.H);
+                damShape.lineTo(heelX + r.b_up + s.b_crest, s.H);
+                damShape.lineTo(toeX, 0);
+                damShape.closePath();
+
+                if (this.meshes1.damBody.geometry) this.meshes1.damBody.geometry.dispose();
+                const damGeo = new THREE.ExtrudeGeometry(damShape, { depth: 14, bevelEnabled: false });
+                damGeo.translate(-toeX, 0, -7); // Set local origin at downstream toe for overturning rotation
+                this.meshes1.damBody.geometry = damGeo;
+                this.meshes1.damPivot.position.set(toeX, 0, 0);
+
+                // 2. Update Dental Key
+                this.meshes1.dentalKey.visible = s.d_key > 0.1;
+                this.meshes1.dentalKey.scale.set(1, Math.max(0.1, s.d_key), 1);
+                this.meshes1.dentalKey.position.set(-s.b * 0.65, -s.d_key / 2, 0);
+
+                // 3. Update Upstream Water Mesh
+                const waterHeelX = heelX;
+                const waterTopX = heelX + r.b_up * (s.H1 / s.H);
+                const waterShape = new THREE.Shape();
+                waterShape.moveTo(-44, 0);
+                waterShape.lineTo(-44, s.H1);
+                waterShape.lineTo(waterTopX, s.H1);
+                waterShape.lineTo(waterHeelX, 0);
+                waterShape.closePath();
+
+                if (this.meshes1.waterMesh.geometry) this.meshes1.waterMesh.geometry.dispose();
+                const wGeo = new THREE.ExtrudeGeometry(waterShape, { depth: 13.6, bevelEnabled: false });
+                wGeo.translate(0, 0, -6.8);
+                this.meshes1.waterMesh.geometry = wGeo;
+
+                // 4. Update Base Stress Diagram under Foundation
+                const scaleSig = 0.015; // scale kPa to 3D meters
+                const yHeel = -Math.max(-5, Math.min(10, r.sig1 * scaleSig));
+                const yToe = -Math.max(0.5, Math.min(11, r.sig2 * scaleSig));
+
+                const stressShape = new THREE.Shape();
+                stressShape.moveTo(heelX, -0.2);
+                stressShape.lineTo(toeX, -0.2);
+                stressShape.lineTo(toeX, yToe - 0.2);
+                stressShape.lineTo(heelX, yHeel - 0.2);
+                stressShape.closePath();
+
+                if (this.meshes1.stressDiagram.geometry) this.meshes1.stressDiagram.geometry.dispose();
+                const sGeo = new THREE.ExtrudeGeometry(stressShape, { depth: 4, bevelEnabled: false });
+                sGeo.translate(0, 0, 5.2);
+                this.meshes1.stressDiagram.geometry = sGeo;
+                this.meshes1.stressDiagram.material.color.setHex(r.isSigSafe ? 0x10b981 : 0xef4444);
+
+                // 5. Update Force Arrows
+                this.meshes1.arrowPh.position.set(heelX - 12, s.H1 / 3, 0);
+                this.meshes1.arrowPh.setLength(Math.min(11, 4 + s.H1 * 0.25), 2.2, 1.4);
+
+                this.meshes1.arrowWd.position.set(0, s.H + 8, 4);
+                this.meshes1.arrowWd.setLength(Math.min(10, 4 + s.b * 0.2), 2.2, 1.4);
+
+                this.meshes1.arrowWw.visible = s.slope > 0.01;
+                this.meshes1.arrowWw.position.set(heelX + r.b_up * 0.4, s.H1 + 6, 4);
+
+                this.meshes1.arrowWf.position.set(heelX + s.b * 0.35, -9, 4);
+                this.meshes1.arrowWf.setLength(Math.max(3, 8.5 * s.alpha_u), 2.0, 1.3);
+            },
+
+            updateSeepageDOM() {
+                const r = this.results2;
+
+                // Overall Banner
+                const banner = document.getElementById('overall-status-2');
+                if (r.isSafe) {
+                    banner.className = 'status-banner safe';
+                    banner.textContent = '✅ مسار التسرب آمن ولا يوجد خطر فوران!';
+                } else {
+                    banner.className = 'status-banner danger';
+                    banner.textContent = '⚠️ خطر فوران ورشح! التصميم غير آمن';
+                }
+
+                // 1. Creep Length Card
+                const cardCreep = document.getElementById('card-creep');
+                cardCreep.className = 'metric-card ' + (r.isCreepSafe ? 'safe' : 'danger');
+                const pct = Math.min(100, Math.round((r.LN / r.LB) * 100));
+                document.getElementById('res-creep-ratio').textContent = `${pct}% ` + (r.isCreepSafe ? '✅' : '❌');
+                document.getElementById('res-ln').textContent = r.LN.toFixed(1) + ' m';
+                document.getElementById('res-lb').textContent = r.LB.toFixed(1) + ' m';
+
+                // 2. Piping Card
+                const cardPiping = document.getElementById('card-piping');
+                cardPiping.className = 'metric-card ' + (r.isPipingSafe ? 'safe' : 'danger');
+                document.getElementById('res-piping-status').textContent = r.isPipingSafe ? 'آمن ومستقر ✅' : 'فوران نشط! ❌';
+                document.getElementById('res-iexit').textContent = r.I_exit.toFixed(2);
+                document.getElementById('res-iexit').style.color = r.isPipingSafe ? '#10b981' : '#ef4444';
+
+                // 3. Riprap & Uplift Card
+                const cardRiprap = document.getElementById('card-riprap');
+                const isRiprapEnough = this.state2.tr >= r.t_req;
+                cardRiprap.className = 'metric-card ' + (isRiprapEnough ? 'safe' : 'danger');
+                document.getElementById('res-treq-val').textContent = `t_req = ${r.t_req.toFixed(2)} m`;
+                document.getElementById('res-px1').textContent = Math.round(r.Px1) + ' kPa';
+                document.getElementById('res-px2').textContent = Math.round(r.Px2) + ' kPa';
+            },
+
+            updateSeepage3D() {
+                const s = this.state2;
+                const r = this.results2;
+
+                // Dam base spans from x = -11 to x = +11
+                const damStartX = -11;
+                const damEndX = 11;
+                const apronStartX = damStartX - s.L_apron;
+
+                // 1. Upstream Apron
+                this.meshes2.apron.visible = s.L_apron > 0.2;
+                this.meshes2.apron.scale.set(Math.max(0.1, s.L_apron), 1, 1);
+                this.meshes2.apron.position.set(damStartX - s.L_apron / 2, 0.6, 0);
+
+                // Joint Crack Indicator
+                this.meshes2.crackIndicator.visible = (s.joint === 'cracked' && s.L_apron > 0);
+
+                // 2. Sheet Piles S1 & S2
+                this.meshes2.pileS1.scale.set(1, s.S1, 1);
+                this.meshes2.pileS1.position.set(damStartX, -s.S1 / 2, 0);
+
+                this.meshes2.pileS2.scale.set(1, s.S2, 1);
+                this.meshes2.pileS2.position.set(damEndX, -s.S2 / 2, 0);
+
+                // 3. Downstream Riprap Filter (tr)
+                this.meshes2.riprap.visible = s.tr > 0.05;
+                this.meshes2.riprap.scale.set(1, Math.max(0.1, s.tr * 1.4), 1);
+                this.meshes2.riprap.position.set(damEndX + 6.2, (s.tr * 1.4) / 2, 0);
+
+                // 4. Upstream Water Head
+                this.meshes2.upstreamWater.scale.set(1, s.HB * 0.75, 1);
+                this.meshes2.upstreamWater.position.set(-30.5, (s.HB * 0.75) / 2, 0);
+
+                // 5. Uplift Diagram under Dam Base
+                const uShape = new THREE.Shape();
+                const h1Plot = Math.min(10, r.H_up1 * 0.45);
+                const h2Plot = Math.min(10, r.H_up2 * 0.45);
+                uShape.moveTo(damStartX, 0);
+                uShape.lineTo(damEndX, 0);
+                uShape.lineTo(damEndX, h2Plot);
+                uShape.lineTo(damStartX, h1Plot);
+                uShape.closePath();
+
+                if (this.meshes2.upliftDiagram.geometry) this.meshes2.upliftDiagram.geometry.dispose();
+                const uGeo = new THREE.ExtrudeGeometry(uShape, { depth: 3, bevelEnabled: false });
+                uGeo.translate(0, 0, 5.6);
+                this.meshes2.upliftDiagram.geometry = uGeo;
+
+                // 6. Construct Seepage Path Waypoints for Particles
+                const startEntryX = (s.joint === 'intact') ? apronStartX : damStartX;
+                const pts = [
+                    new THREE.Vector3(startEntryX, -0.3, 7.2),
+                    new THREE.Vector3(damStartX - 0.6, -0.3, 7.2),
+                    new THREE.Vector3(damStartX - 0.6, -s.S1 - 0.5, 7.2),
+                    new THREE.Vector3(damStartX + 0.6, -s.S1 - 0.5, 7.2),
+                    new THREE.Vector3(damStartX + 0.6, -0.5, 7.2),
+                    new THREE.Vector3(damEndX - 0.6, -0.5, 7.2),
+                    new THREE.Vector3(damEndX - 0.6, -s.S2 - 0.5, 7.2),
+                    new THREE.Vector3(damEndX + 0.6, -s.S2 - 0.5, 7.2),
+                    new THREE.Vector3(damEndX + 0.6, 0.2, 7.2)
+                ];
+
+                this.seepageCurve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.08);
+                if (this.meshes2.seepageLine.geometry) this.meshes2.seepageLine.geometry.dispose();
+                this.meshes2.seepageLine.geometry = new THREE.BufferGeometry().setFromPoints(this.seepageCurve.getPoints(80));
+            },
+
+            /**
+             * Animation Loop (60 FPS)
+             */
+            animate() {
+                this.animationId = requestAnimationFrame(this.animate.bind(this));
+
+                const elapsed = this.clock.getElapsedTime();
+                this.controls.update();
+
+                if (this.isRunning) {
+                    if (this.mode === 'stability') {
+                        // Subtle tilt / vibration when dam fails Overturning or Sliding
+                        if (this.meshes1.damPivot) {
+                            if (!this.results1.isKoSafe) {
+                                // Symbolic overturning rotation around downstream toe
+                                const dangerAngle = -0.045 - Math.sin(elapsed * 6) * 0.015;
+                                this.meshes1.damPivot.rotation.z = THREE.MathUtils.lerp(this.meshes1.damPivot.rotation.z, dangerAngle, 0.1);
+                            } else {
+                                this.meshes1.damPivot.rotation.z = THREE.MathUtils.lerp(this.meshes1.damPivot.rotation.z, 0, 0.12);
+                            }
+
+                            if (!this.results1.isKcSafe) {
+                                // Subtle sliding vibration
+                                this.meshes1.damPivot.position.x = (this.state1.b / 2) + Math.sin(elapsed * 20) * 0.12;
+                            } else {
+                                this.meshes1.damPivot.position.x = (this.state1.b / 2);
+                            }
+                        }
+                    } else if (this.mode === 'seepage') {
+                        // Move Seepage Particles along creep path
+                        if (this.seepageCurve) {
+                            const speed = this.results2.isCreepSafe ? 0.0022 : 0.0055;
+                            for (const p of this.seepageParticles) {
+                                p.userData.t = (p.userData.t + speed) % 1.0;
+                                const pos = this.seepageCurve.getPointAt(p.userData.t);
+                                p.position.copy(pos);
+                            }
+                        }
+
+                        // Animate Boiling / Piping Sand Particles at Downstream Exit
+                        const showBoiling = !this.results2.isPipingSafe;
+                        for (const b of this.boilingParticles) {
+                            b.visible = showBoiling;
+                            if (showBoiling) {
+                                const yCycle = ((elapsed * b.userData.speed + b.userData.phase) % 4.5);
+                                b.position.set(
+                                    b.userData.offsetX + Math.sin(elapsed * 5 + b.userData.phase) * 0.35,
+                                    yCycle,
+                                    b.userData.offsetZ
+                                );
+                                const s = Math.max(0.2, 1.0 - yCycle / 4.5);
+                                b.scale.set(s, s, s);
+                            }
+                        }
+                    }
+                }
+
+                this.renderer.render(this.scene, this.camera);
+            },
+
+            /**
+             * Interactive Challenge Generator
+             */
+            generateChallenge() {
+                if (this.mode === 'stability') {
+                    const randomH1 = (24 + Math.floor(Math.random() * 6));
+                    document.getElementById('slider-b').value = 12.5;
+                    document.getElementById('slider-slope').value = 0.0;
+                    document.getElementById('slider-key').value = 0.0;
+                    document.getElementById('slider-alpha').value = 0.95;
+                    document.getElementById('slider-h1').value = randomH1;
+                    this.onInputChange();
+                    this.showToast(`🚨 تحدي جديد: فيضان رفع المنسوب إلى ${randomH1}m! أنقذ السد الآن.`);
+                } else {
+                    const cbOptions = [18, 12];
+                    const randomCB = cbOptions[Math.floor(Math.random() * cbOptions.length)];
+                    const randomHB = 19 + Math.floor(Math.random() * 6);
+                    document.getElementById('select-cb').value = randomCB;
+                    document.getElementById('slider-hb').value = randomHB;
+                    document.getElementById('slider-apron').value = 2;
+                    document.getElementById('select-joint').value = 'cracked';
+                    document.getElementById('slider-s1').value = 2.5;
+                    document.getElementById('slider-s2').value = 2.5;
+                    document.getElementById('slider-tr').value = 0;
+                    this.onInputChange();
+                    this.showToast(`🚨 تحدي جديد: تشقق في الحصيرة وفرق ضاغط ${randomHB}m! عالج الفوران.`);
+                }
+            },
+
+            /**
+             * Evaluate Current Student Design
+             */
+            testDesign() {
+                if (this.mode === 'stability') {
+                    if (this.results1.isSafe) {
+                        this.showToast('🎉 أحسنت يا باشمهندس! السد يحقق جميع شروط التوازن والإجهادات بأمان تام.');
+                    } else {
+                        this.showToast('⚠️ التصميم لم يكتمل بعد! راجع المؤشرات الحمراء في اللوحة اليسرى.');
+                    }
+                } else {
+                    if (this.results2.isSafe) {
+                        this.showToast('🎉 تصميم ممتاز! مسار التسرب كافٍ وتم القضاء على ظاهرة الفوران تماماً.');
+                    } else {
+                        this.showToast('⚠️ لا يزال هناك خطر رشح أو فوران! زد أطوال الصفائح أو الرصف الحجري.');
+                    }
+                }
+            },
+
+            toggleSimulation() {
+                this.isRunning = !this.isRunning;
+                const btn = document.getElementById('btn-toggle-sim');
+                btn.innerHTML = this.isRunning ? '⏸️ إيقاف مؤقت' : '▶️ استئناف المحاكاة';
+            },
+
+            reset() {
+                if (this.mode === 'stability') {
+                    document.getElementById('slider-b').value = 14;
+                    document.getElementById('slider-slope').value = 0;
+                    document.getElementById('slider-key').value = 0;
+                    document.getElementById('slider-alpha').value = 0.95;
+                    document.getElementById('slider-h1').value = 24;
+                } else {
+                    document.getElementById('select-cb').value = 18;
+                    document.getElementById('slider-hb').value = 18;
+                    document.getElementById('slider-apron').value = 4;
+                    document.getElementById('select-joint').value = 'intact';
+                    document.getElementById('slider-s1').value = 3;
+                    document.getElementById('slider-s2').value = 3;
+                    document.getElementById('slider-tr').value = 0;
+                }
+                this.onInputChange();
+                this.showToast('🔄 تمت إعادة التمرين إلى حالة الطوارئ الابتدائية.');
+            },
+
+            showToast(msg) {
+                const toast = document.getElementById('toast-modal');
+                toast.textContent = msg;
+                toast.classList.add('show');
+                clearTimeout(this._toastTimer);
+                this._toastTimer = setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 4000);
+            },
+
+            onWindowResize() {
+                if (!this.camera || !this.renderer) return;
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            },
+
+            /**
+             * Mandatory WebGL Memory Cleanup Function
+             */
+            destroy() {
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                }
+                window.removeEventListener('resize', this._onResize);
+
+                if (this.scene) {
+                    this.scene.traverse((object) => {
+                        if (object.geometry) object.geometry.dispose();
+                        if (object.material) {
+                            if (Array.isArray(object.material)) {
+                                object.material.forEach(mat => mat.dispose());
+                            } else {
+                                object.material.dispose();
+                            }
+                        }
+                    });
+                }
+
+                if (this.renderer) {
+                    this.renderer.dispose();
+                    if (this.renderer.domElement && this.renderer.domElement.parentNode) {
+                        this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+                    }
+                }
+            }
+        };
+
+        // Boot the laboratory when DOM is ready
+        window.addEventListener('DOMContentLoaded', () => {
+            HydraulicDamLab.init('canvas-container');
+        });
+    </script>
+</body>
+</html>

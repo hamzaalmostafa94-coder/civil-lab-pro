@@ -1,0 +1,1738 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مختبر هيدروليك 2 التفاعلي ثلاثي الأبعاد | منصة لمسة</title>
+    
+    <!-- Google Font: Tajawal -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Three.js r128 & OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            --bg-deep: #0f172a;
+            --glass-bg: rgba(15, 23, 42, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --hydraulic-blue: #0284c7;
+            --hgl-cyan: #38bdf8;
+            --egl-red: #ef4444;
+            --hazard-red: #dc2626;
+            --warning-amber: #f59e0b;
+            --safety-green: #10b981;
+            --card-radius: 14px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Tajawal', sans-serif;
+            background-color: var(--bg-deep);
+            color: var(--text-primary);
+        }
+
+        /* 3D Viewport Container */
+        #webgl-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Glassmorphism Common Class */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--card-radius);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            z-index: 10;
+        }
+
+        /* Top Navigation Bar */
+        .top-bar {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            left: 16px;
+            height: 68px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+        }
+
+        .brand-section {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-logo {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--hydraulic-blue), var(--hgl-cyan));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 20px;
+            color: #fff;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+        }
+
+        .brand-title h1 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .brand-title span {
+            font-size: 0.8rem;
+            color: var(--hgl-cyan);
+            font-weight: 500;
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.35);
+            padding: 6px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-family: 'Tajawal', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 700;
+            padding: 10px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-btn.active {
+            background: var(--hydraulic-blue);
+            color: #ffffff;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.45);
+        }
+
+        .legend-pills {
+            display: flex;
+            gap: 14px;
+            font-size: 0.82rem;
+            font-weight: 500;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 4px;
+            border-radius: 2px;
+        }
+        .dot-egl { background: var(--egl-red); box-shadow: 0 0 8px var(--egl-red); }
+        .dot-hgl { background: var(--hgl-cyan); box-shadow: 0 0 8px var(--hgl-cyan); }
+
+        /* Right Sidebar - Controls */
+        .sidebar-controls {
+            position: absolute;
+            top: 100px;
+            right: 16px;
+            width: 340px;
+            max-height: calc(100vh - 185px);
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .sidebar-controls::-webkit-scrollbar {
+            width: 5px;
+        }
+        .sidebar-controls::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+        }
+
+        .panel-header {
+            font-size: 1.02rem;
+            font-weight: 700;
+            color: var(--hgl-cyan);
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.88rem;
+            font-weight: 500;
+        }
+
+        .control-value {
+            color: var(--hgl-cyan);
+            font-weight: 700;
+            font-family: monospace;
+            font-size: 0.95rem;
+            direction: ltr;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--hgl-cyan);
+            border: 2px solid #fff;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+            transition: transform 0.15s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+
+        .segmented-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+
+        .seg-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+            padding: 7px 4px;
+            border-radius: 6px;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .seg-btn.active {
+            background: rgba(2, 132, 199, 0.35);
+            border-color: var(--hgl-cyan);
+            color: #fff;
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .valve-btn {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            font-family: 'Tajawal', sans-serif;
+            font-weight: 700;
+            font-size: 0.92rem;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+
+        .valve-open {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid var(--safety-green);
+            color: #34d399;
+        }
+
+        .valve-closed {
+            background: rgba(220, 38, 38, 0.2);
+            border: 1px solid var(--hazard-red);
+            color: #f87171;
+        }
+
+        /* Left Sidebar - Telemetry & Equations Dashboard */
+        .telemetry-panel {
+            position: absolute;
+            top: 100px;
+            left: 16px;
+            width: 360px;
+            max-height: calc(100vh - 185px);
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .metric-card {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 10px;
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .metric-card.full-width {
+            grid-column: span 2;
+        }
+
+        .metric-title {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+
+        .metric-val {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #fff;
+            font-family: monospace;
+            direction: ltr;
+            text-align: right;
+        }
+
+        .metric-sub {
+            font-size: 0.72rem;
+            color: var(--hgl-cyan);
+        }
+
+        .equation-box {
+            background: rgba(2, 132, 199, 0.1);
+            border-right: 3px solid var(--hgl-cyan);
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            line-height: 1.6;
+        }
+
+        .equation-formula {
+            font-family: monospace;
+            direction: ltr;
+            text-align: center;
+            display: block;
+            background: rgba(0,0,0,0.35);
+            padding: 6px;
+            border-radius: 4px;
+            margin-top: 6px;
+            color: #e2e8f0;
+            font-weight: 700;
+        }
+
+        /* Status Badges */
+        .status-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .status-safe {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid var(--safety-green);
+            color: #34d399;
+        }
+
+        .status-warning {
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid var(--warning-amber);
+            color: #fbbf24;
+        }
+
+        .status-danger {
+            background: rgba(220, 38, 38, 0.25);
+            border: 1px solid var(--hazard-red);
+            color: #fca5a5;
+            animation: pulse-danger 1.2s infinite alternate;
+        }
+
+        @keyframes pulse-danger {
+            0% { box-shadow: 0 0 0px rgba(220, 38, 38, 0.4); }
+            100% { box-shadow: 0 0 20px rgba(220, 38, 38, 0.8); }
+        }
+
+        /* Hazard Alert Banner (Top Center) */
+        .hazard-banner {
+            position: absolute;
+            top: 96px;
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: 560px;
+            width: 90%;
+            background: rgba(185, 28, 28, 0.92);
+            border: 2px solid #fca5a5;
+            color: #fff;
+            padding: 14px 20px;
+            border-radius: 12px;
+            z-index: 20;
+            display: none;
+            align-items: center;
+            gap: 14px;
+            box-shadow: 0 10px 35px rgba(220, 38, 38, 0.6);
+            backdrop-filter: blur(8px);
+        }
+
+        .hazard-banner.show {
+            display: flex;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            from { transform: translate(-50%, -20px) scale(0.95); opacity: 0; }
+            to { transform: translate(-50%, 0) scale(1); opacity: 1; }
+        }
+
+        /* Bottom Action Bar */
+        .bottom-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .action-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--text-primary);
+            font-family: 'Tajawal', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 700;
+            padding: 9px 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.16);
+            transform: translateY(-2px);
+        }
+
+        .action-btn.primary {
+            background: var(--hydraulic-blue);
+            border-color: var(--hgl-cyan);
+        }
+
+        .action-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1100px) {
+            .sidebar-controls, .telemetry-panel {
+                width: 280px;
+                padding: 14px;
+            }
+            .brand-title span, .legend-pills {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3D WebGL Canvas Container -->
+    <div id="webgl-container"></div>
+
+    <!-- Top Navigation Bar -->
+    <header class="top-bar glass-panel">
+        <div class="brand-section">
+            <div class="brand-logo">H2</div>
+            <div class="brand-title">
+                <h1>مختبر هيدروليك 2 التفاعلي ثلاثي الأبعاد</h1>
+                <span>منصة لمسة التعليمية | الهندسة المدنية والموارد المائية</span>
+            </div>
+        </div>
+
+        <nav class="nav-tabs">
+            <button id="tab-exp1" class="tab-btn active" onclick="HydraulicsLab.switchExperiment(1)">
+                <span>التمرين الأول: تحدي السيفون ومحطة الضخ وصائد التكهف</span>
+            </button>
+            <button id="tab-exp2" class="tab-btn" onclick="HydraulicsLab.switchExperiment(2)">
+                <span>التمرين الثاني: مروّض القنوات المائية والقفزة الهيدروليكية</span>
+            </button>
+        </nav>
+
+        <div class="legend-pills">
+            <div class="legend-item">
+                <span class="dot dot-egl"></span>
+                <span>خط الطاقة الكلي (EGL)</span>
+            </div>
+            <div class="legend-item">
+                <span class="dot dot-hgl"></span>
+                <span>خط الانحدار الهيدروليكي (HGL)</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Dynamic Hazard Alert Banner -->
+    <div id="hazard-banner" class="hazard-banner">
+        <svg style="width:36px;height:36px;flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div id="hazard-text" style="font-size: 0.92rem; font-weight: 700; line-height: 1.5;"></div>
+    </div>
+
+    <!-- Right Sidebar: Interactive Engineering Controls -->
+    <aside class="sidebar-controls glass-panel">
+        <!-- Controls for Experiment 1 -->
+        <div id="controls-exp1">
+            <div class="panel-header">
+                <span>متحكمات السيفون ومحطة الضخ</span>
+                <small style="color:var(--text-secondary)">EXP-01</small>
+            </div>
+
+            <div class="control-group" style="margin-top:12px;">
+                <div class="control-label">
+                    <span>ارتفاع ذروة السيفون ($h_s$)</span>
+                    <span id="val-hs" class="control-value">4.5 m</span>
+                </div>
+                <input type="range" id="slider-hs" min="1.0" max="12.0" step="0.1" value="4.5">
+            </div>
+
+            <div class="control-group" style="margin-top:10px;">
+                <div class="control-label">
+                    <span>قطر الأنبوب الناقل ($d$)</span>
+                    <span id="val-d" class="control-value">0.20 m</span>
+                </div>
+                <input type="range" id="slider-d" min="0.05" max="0.60" step="0.01" value="0.20">
+            </div>
+
+            <div class="control-group" style="margin-top:10px;">
+                <div class="control-label">
+                    <span>نمط ضغط خزان المصدر (فك الضغوط)</span>
+                </div>
+                <div class="segmented-buttons">
+                    <button class="seg-btn" id="pmode-abs" onclick="HydraulicsLab.setPressureMode('abs')">مطلق Abs</button>
+                    <button class="seg-btn active" id="pmode-gauge" onclick="HydraulicsLab.setPressureMode('gauge')">إضافي Gauge</button>
+                    <button class="seg-btn" id="pmode-vac" onclick="HydraulicsLab.setPressureMode('vac')">مخلخل Vac</button>
+                </div>
+                <div class="control-label" style="margin-top:6px;">
+                    <span>قيمة الضغط المقاس ($P$)</span>
+                    <span id="val-p" class="control-value">0.0 kPa</span>
+                </div>
+                <input type="range" id="slider-p" min="0" max="200" step="1" value="0">
+            </div>
+
+            <div class="control-group" style="margin-top:10px;">
+                <div class="control-label">
+                    <span>رفع المضخة المساندة ($H_P$)</span>
+                    <span id="val-hp" class="control-value">12.0 m</span>
+                </div>
+                <input type="range" id="slider-hp" min="0" max="50" step="0.5" value="12.0">
+            </div>
+
+            <div class="control-group" style="margin-top:10px;">
+                <div class="control-label">
+                    <span>محبس التدفق الرئيسي (Valve)</span>
+                </div>
+                <button id="btn-valve" class="valve-btn valve-open" onclick="HydraulicsLab.toggleValve()">
+                    محبس التدفق: مفتوح (نشط) ✓
+                </button>
+            </div>
+        </div>
+
+        <!-- Controls for Experiment 2 -->
+        <div id="controls-exp2" class="hidden">
+            <div class="panel-header">
+                <span>متحكمات القناة والقفزة الهيدروليكية</span>
+                <small style="color:var(--text-secondary)">EXP-02</small>
+            </div>
+
+            <div class="control-group" style="margin-top:12px;">
+                <div class="control-label">
+                    <span>فتحة البوابة الانزلاقية ($a$)</span>
+                    <span id="val-gate" class="control-value">0.45 m</span>
+                </div>
+                <input type="range" id="slider-gate" min="0.10" max="1.50" step="0.02" value="0.45">
+            </div>
+
+            <div class="control-group" style="margin-top:10px;">
+                <div class="control-label">
+                    <span>التصريف المائي الداخل ($Q$)</span>
+                    <span id="val-q2" class="control-value">8.5 m³/s</span>
+                </div>
+                <input type="range" id="slider-q2" min="1.0" max="25.0" step="0.5" value="8.5">
+            </div>
+
+            <div class="control-group" style="margin-top:10px;">
+                <div class="control-label">
+                    <span>الميل الطولي للقاع ($S_0$)</span>
+                    <span id="val-s0" class="control-value">0.0020</span>
+                </div>
+                <input type="range" id="slider-s0" min="0.0005" max="0.0200" step="0.0005" value="0.0020">
+            </div>
+
+            <div class="control-group" style="margin-top:10px;">
+                <div class="control-label">
+                    <span>عرض قاع القناة ($b$)</span>
+                    <span id="val-b" class="control-value">3.0 m</span>
+                </div>
+                <input type="range" id="slider-b" min="1.0" max="6.0" step="0.2" value="3.0">
+            </div>
+
+            <div class="control-group" style="margin-top:10px;">
+                <div class="control-label">
+                    <span>معامل خشونة مانينغ ($n$)</span>
+                    <span id="val-n" class="control-value">0.015</span>
+                </div>
+                <input type="range" id="slider-n" min="0.012" max="0.035" step="0.001" value="0.015">
+            </div>
+        </div>
+    </aside>
+
+    <!-- Left Sidebar: Live Telemetry & Equations -->
+    <aside class="telemetry-panel glass-panel">
+        <!-- Telemetry for Experiment 1 -->
+        <div id="telemetry-exp1">
+            <div class="panel-header">
+                <span>لوحة القياسات الهيدروليكية اللحظية</span>
+                <small style="color:var(--hgl-cyan)">LIVE</small>
+            </div>
+
+            <div id="status-exp1" class="status-badge status-safe" style="margin-top:12px;">
+                ✓ النظام يعمل بأمان هيدروليكي (لا يوجد تكهف)
+            </div>
+
+            <div class="telemetry-grid" style="margin-top:12px;">
+                <div class="metric-card">
+                    <span class="metric-title">ضاغط الفاكوم بالذروة ($H_v$)</span>
+                    <span id="tele-hv" class="metric-val">5.12 m</span>
+                    <span class="metric-sub">الحد الحرج: 7.00 m</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-title">التصريف الفعلي ($Q$)</span>
+                    <span id="tele-q1" class="metric-val">0.085 m³/s</span>
+                    <span class="metric-sub">المطلوب: 0.060 m³/s</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-title">المنسوب البيزومتري ($\nabla_{true}$)</span>
+                    <span id="tele-nabla" class="metric-val">10.00 m</span>
+                    <span class="metric-sub">بعد فك الضغط ($h_p$)</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-title">سرعة الجريان ($v$)</span>
+                    <span id="tele-v1" class="metric-val">2.71 m/s</span>
+                    <span id="tele-re" class="metric-sub">Re: 542,000 (خشنة)</span>
+                </div>
+                <div class="metric-card full-width">
+                    <span class="metric-title">الضاغط الكلي المطلوب للمضخة ($H_{P,req}$) مقابل المتوفر</span>
+                    <span id="tele-hpreq" class="metric-val">9.45 m / 12.0 m</span>
+                    <span class="metric-sub">$H_P = H_{st} + h_f + v^2/2g$</span>
+                </div>
+            </div>
+
+            <div class="equation-box" style="margin-top:12px;">
+                <strong>معادلة فك الضغوط وحد التكهف الحرج:</strong>
+                <span class="equation-formula">∇_true = ∇_geo + h_p | H_v = h_s + (1 + ξ_f)·v²/2g ≤ 7m</span>
+            </div>
+        </div>
+
+        <!-- Telemetry for Experiment 2 -->
+        <div id="telemetry-exp2" class="hidden">
+            <div class="panel-header">
+                <span>قياسات القناة والقفزة الهيدروليكية</span>
+                <small style="color:var(--hgl-cyan)">LIVE</small>
+            </div>
+
+            <div id="status-exp2" class="status-badge status-safe" style="margin-top:12px;">
+                ✓ القفزة الهيدروليكية مستقرة داخل حوض التهدئة
+            </div>
+
+            <div class="telemetry-grid" style="margin-top:12px;">
+                <div class="metric-card">
+                    <span class="metric-title">رقم فرود بعد البوابة ($Fr_1$)</span>
+                    <span id="tele-fr1" class="metric-val">3.85</span>
+                    <span id="tele-regime" class="metric-sub">جريان فوق حرج (Supercritical)</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-title">الأعماق المترافقة ($y_1 \rightarrow y_2$)</span>
+                    <span id="tele-depths" class="metric-val">0.28 → 1.39 m</span>
+                    <span class="metric-sub">معادلة بيلانجر (Bélanger)</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-title">العمق الطبيعي ($y_n$) والحرج ($y_c$)</span>
+                    <span id="tele-ynyc" class="metric-val">1.42 / 0.93 m</span>
+                    <span class="metric-sub">مانينغ (Manning)</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-title">الطاقة المبددة ($\Delta E$)</span>
+                    <span id="tele-de" class="metric-val">0.88 m</span>
+                    <span id="tele-ljump" class="metric-sub">طول القفزة: 5.55 m</span>
+                </div>
+                <div class="metric-card full-width">
+                    <span class="metric-title">سرعة الجريان بالقناة ($v_n$) وحدود النحر والترسيب</span>
+                    <span id="tele-v2" class="metric-val">1.99 m/s</span>
+                    <span id="tele-vlimits" class="metric-sub">المسموح: [0.65 m/s ≤ v ≤ 2.50 m/s]</span>
+                </div>
+            </div>
+
+            <div class="equation-box" style="margin-top:12px;">
+                <strong>معادلة بيلانجر للقفزة وتبديد الطاقة:</strong>
+                <span class="equation-formula">y₂/y₁ = ½(√(1 + 8·Fr₁²) - 1) | ΔE = (y₂ - y₁)³ / (4·y₁·y₂)</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Bottom Action Bar -->
+    <footer class="bottom-bar glass-panel">
+        <button id="btn-play-pause" class="action-btn primary" onclick="HydraulicsLab.togglePlay()">
+            <svg id="icon-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+            <span id="text-play-pause">إيقاف مؤقت ⏸</span>
+        </button>
+
+        <button class="action-btn" onclick="HydraulicsLab.reset()">
+            <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+            <span>إعادة تعيين 🔄</span>
+        </button>
+
+        <button id="btn-autocam" class="action-btn" onclick="HydraulicsLab.toggleAutoCamera()">
+            <svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+            <span id="text-autocam">كاميرا تلقائية 🎥</span>
+        </button>
+    </footer>
+
+    <!-- Encapsulated Application & Physics Engine -->
+    <script>
+        const HydraulicsLab = {
+            // Core WebGL & Three.js references
+            container: null,
+            scene: null,
+            camera: null,
+            renderer: null,
+            controls: null,
+            animFrameId: null,
+            clock: new THREE.Clock(),
+
+            // State & Lifecycle
+            activeExperiment: 1,
+            isRunning: true,
+            autoCamera: false,
+
+            // Scene Groups
+            exp1Group: null,
+            exp2Group: null,
+
+            // Experiment 1 Physical Parameters
+            exp1: {
+                h_s: 4.5,           // Siphon crest height above source (m)
+                d: 0.20,            // Pipe diameter (m)
+                pMode: 'gauge',     // 'abs' | 'gauge' | 'vac'
+                P_val: 0.0,         // Pressure slider kPa
+                H_P: 12.0,          // Pump head boost (m)
+                valveOpen: true,
+                nabla_geo_src: 10.0,
+                nabla_geo_rec: 16.5,
+                // Calculated outputs
+                h_p: 0,
+                nabla_true: 10.0,
+                v: 0,
+                Q: 0,
+                H_v: 0,
+                isCavitating: false,
+                // 3D Meshes
+                crestMesh: null,
+                pipeMesh: null,
+                eglLine: null,
+                hglLine: null,
+                flowParticles: [],
+                cavitationBubbles: [],
+                pumpImpeller: null
+            },
+
+            // Experiment 2 Physical Parameters
+            exp2: {
+                a: 0.45,            // Sluice gate opening (m)
+                Q: 8.5,             // Discharge (m3/s)
+                S_0: 0.0020,        // Slope
+                b: 3.0,             // Base width (m)
+                n: 0.015,           // Manning roughness
+                H_wall: 2.6,        // Flume wall height (m)
+                L_basin: 9.0,       // Stilling basin length (m)
+                // Calculated outputs
+                y_n: 1.4,
+                y_c: 0.9,
+                y_u: 2.1,
+                y_1: 0.28,
+                y_2: 1.39,
+                v_1: 0,
+                v_n: 0,
+                Fr_1: 0,
+                dE: 0,
+                L_jump: 0,
+                jumpStart: 2.0,
+                // 3D Meshes
+                flumeWallL: null,
+                flumeWallR: null,
+                flumeBed: null,
+                gateMesh: null,
+                waterUpstream: null,
+                waterSuper: null,
+                waterJump: null,
+                waterTail: null,
+                foamParticles: [],
+                spillParticles: [],
+                eglLine: null,
+                hglLine: null
+            },
+
+            /**
+             * Initializes the 3D scene, lighting, camera, controls, and both experiment meshes
+             */
+            init(containerId) {
+                this.container = document.getElementById(containerId);
+
+                // 1. Scene Setup
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x0f172a);
+                this.scene.fog = new THREE.FogExp2(0x0f172a, 0.012);
+
+                // 2. Camera Setup
+                this.camera = new THREE.PerspectiveCamera(
+                    45,
+                    window.innerWidth / window.innerHeight,
+                    0.1,
+                    1000
+                );
+                this.camera.position.set(18, 13, 24);
+
+                // 3. Renderer Setup
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                this.container.appendChild(this.renderer.domElement);
+
+                // 4. OrbitControls
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.05;
+                this.controls.maxPolarAngle = Math.PI / 2 - 0.02;
+                this.controls.minDistance = 6;
+                this.controls.maxDistance = 60;
+                this.controls.target.set(0, 3, 0);
+
+                // 5. Lighting & Ground Grid
+                const hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x0f172a, 0.65);
+                this.scene.add(hemiLight);
+
+                const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
+                dirLight.position.set(15, 28, 20);
+                dirLight.castShadow = true;
+                dirLight.shadow.mapSize.width = 2048;
+                dirLight.shadow.mapSize.height = 2048;
+                this.scene.add(dirLight);
+
+                const gridHelper = new THREE.GridHelper(48, 48, 0x334155, 0x1e293b);
+                gridHelper.position.y = -0.01;
+                this.scene.add(gridHelper);
+
+                // 6. Build 3D Experiment Environments
+                this.exp1Group = new THREE.Group();
+                this.exp2Group = new THREE.Group();
+                this.scene.add(this.exp1Group);
+                this.scene.add(this.exp2Group);
+
+                this.buildExperiment1();
+                this.buildExperiment2();
+
+                // 7. Attach Event Listeners
+                this.bindUIListeners();
+                window.addEventListener('resize', this.onWindowResize.bind(this));
+
+                // 8. Initial Calculation & Start Loop
+                this.switchExperiment(1);
+                this.animate();
+            },
+
+            /**
+             * Builds Experiment 1: Siphon, Mountain Crest, Pump Station, Particles, Cavitation Bubbles, EGL/HGL
+             */
+            buildExperiment1() {
+                const matConcrete = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.7 });
+                const matWater = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.2, transparent: true, opacity: 0.8 });
+                const matMountain = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.85, flatShading: true });
+                const matPump = new THREE.MeshStandardMaterial({ color: 0x0ea5e9, metalness: 0.6, roughness: 0.3 });
+
+                // Source Tank (Left: x = -11)
+                const srcTank = new THREE.Mesh(new THREE.BoxGeometry(5, 4, 5), matConcrete);
+                srcTank.position.set(-11, 2, 0);
+                this.exp1Group.add(srcTank);
+
+                const srcWater = new THREE.Mesh(new THREE.BoxGeometry(4.6, 3.4, 4.6), matWater);
+                srcWater.position.set(-11, 2.1, 0);
+                this.exp1Group.add(srcWater);
+
+                // Receiver Tank (Right: x = +11, Elevated)
+                const recPillar = new THREE.Mesh(new THREE.BoxGeometry(5, 6.5, 5), matConcrete);
+                recPillar.position.set(11, 3.25, 0);
+                this.exp1Group.add(recPillar);
+
+                const recWater = new THREE.Mesh(new THREE.BoxGeometry(4.6, 2.5, 4.6), matWater);
+                recWater.position.set(11, 7.0, 0);
+                this.exp1Group.add(recWater);
+
+                // Mountain Crest in the center (x = -1)
+                const mountainGeo = new THREE.ConeGeometry(4.8, 1, 7);
+                this.exp1.crestMesh = new THREE.Mesh(mountainGeo, matMountain);
+                this.exp1.crestMesh.position.set(-1, 3, 0);
+                this.exp1Group.add(this.exp1.crestMesh);
+
+                // Pump Station Housing (x = -6.5)
+                const pumpBody = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 1.4, 20), matPump);
+                pumpBody.rotation.x = Math.PI / 2;
+                pumpBody.position.set(-6.5, 3.2, 0);
+                this.exp1Group.add(pumpBody);
+
+                // Flow Particles inside Siphon
+                const particleGeo = new THREE.SphereGeometry(0.16, 10, 10);
+                const particleMat = new THREE.MeshBasicMaterial({ color: 0x7dd3fc });
+                for (let i = 0; i < 45; i++) {
+                    const p = new THREE.Mesh(particleGeo, particleMat);
+                    p.userData = { t: i / 45 };
+                    this.exp1Group.add(p);
+                    this.exp1.flowParticles.push(p);
+                }
+
+                // Cavitation Vapor Bubbles at the Summit
+                const bubbleGeo = new THREE.SphereGeometry(0.14, 8, 8);
+                const bubbleMat = new THREE.MeshBasicMaterial({ color: 0xfca5a5, transparent: true, opacity: 0.85 });
+                for (let i = 0; i < 35; i++) {
+                    const b = new THREE.Mesh(bubbleGeo, bubbleMat);
+                    b.visible = false;
+                    b.userData = {
+                        offset: new THREE.Vector3(
+                            (Math.random() - 0.5) * 2.2,
+                            (Math.random() - 0.5) * 0.5,
+                            (Math.random() - 0.5) * 0.5
+                        ),
+                        speed: 1 + Math.random() * 2
+                    };
+                    this.exp1Group.add(b);
+                    this.exp1.cavitationBubbles.push(b);
+                }
+
+                // Dynamic Pipe & Grade Lines
+                this.updateExp1Geometry();
+            },
+
+            /**
+             * Updates the 3D Siphon Pipe Curve, Mountain height, and EGL/HGL lines in Experiment 1
+             */
+            updateExp1Geometry() {
+                const e1 = this.exp1;
+                const summitY = 3.5 + e1.h_s * 0.65;
+
+                // Update mountain crest height under the pipe summit
+                e1.crestMesh.scale.set(1, summitY - 0.4, 1);
+                e1.crestMesh.position.y = (summitY - 0.4) / 2;
+
+                // Create smooth CatmullRomCurve3 for Siphon Pipe
+                const curve = new THREE.CatmullRomCurve3([
+                    new THREE.Vector3(-10.0, 3.2, 0),
+                    new THREE.Vector3(-6.5, 3.2, 0),
+                    new THREE.Vector3(-1.0, summitY, 0),
+                    new THREE.Vector3(5.5, 5.8, 0),
+                    new THREE.Vector3(10.0, 7.2, 0)
+                ]);
+                e1.pipeCurve = curve;
+
+                // Rebuild transparent pipe mesh
+                if (e1.pipeMesh) {
+                    e1.pipeMesh.geometry.dispose();
+                    this.exp1Group.remove(e1.pipeMesh);
+                }
+                const radius = 0.18 + e1.d * 0.65;
+                const tubeGeo = new THREE.TubeGeometry(curve, 64, radius, 16, false);
+                const tubeMat = new THREE.MeshPhysicalMaterial({
+                    color: e1.isCavitating ? 0xef4444 : 0xbae6fd,
+                    transparent: true,
+                    opacity: 0.38,
+                    roughness: 0.15,
+                    transmission: 0.5
+                });
+                e1.pipeMesh = new THREE.Mesh(tubeGeo, tubeMat);
+                this.exp1Group.add(e1.pipeMesh);
+
+                // Rebuild 3D EGL (Red) and HGL (Cyan) Lines
+                if (e1.eglLine) { e1.eglLine.geometry.dispose(); this.exp1Group.remove(e1.eglLine); }
+                if (e1.hglLine) { e1.hglLine.geometry.dispose(); this.exp1Group.remove(e1.hglLine); }
+
+                const vHead = (e1.v * e1.v) / (2 * 9.81);
+                const srcHeadY = 3.5 + (e1.h_p * 0.25);
+                const pumpBoostY = srcHeadY + (e1.H_P * 0.22);
+                const crestHglY = summitY - (e1.H_v * 0.25);
+                const endHglY = 7.4;
+
+                const eglPoints = [
+                    new THREE.Vector3(-11, srcHeadY + vHead, 0),
+                    new THREE.Vector3(-6.5, pumpBoostY + vHead, 0),
+                    new THREE.Vector3(-1.0, crestHglY + vHead + 1.2, 0),
+                    new THREE.Vector3(11, endHglY + vHead, 0)
+                ];
+                const hglPoints = [
+                    new THREE.Vector3(-11, srcHeadY, 0),
+                    new THREE.Vector3(-6.5, pumpBoostY, 0),
+                    new THREE.Vector3(-1.0, crestHglY + 0.8, 0),
+                    new THREE.Vector3(11, endHglY, 0)
+                ];
+
+                const eglGeo = new THREE.BufferGeometry().setFromPoints(eglPoints);
+                const hglGeo = new THREE.BufferGeometry().setFromPoints(hglPoints);
+
+                e1.eglLine = new THREE.Line(eglGeo, new THREE.LineBasicMaterial({ color: 0xef4444, linewidth: 3 }));
+                e1.hglLine = new THREE.Line(hglGeo, new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 3 }));
+                this.exp1Group.add(e1.eglLine);
+                this.exp1Group.add(e1.hglLine);
+            },
+
+            /**
+             * Builds Experiment 2: Concrete Open Channel, Sluice Gate, 3-Zone Water Mesh, Stilling Basin Blocks
+             */
+            buildExperiment2() {
+                const e2 = this.exp2;
+                const matConcrete = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.8 });
+                const matGlassWall = new THREE.MeshPhysicalMaterial({
+                    color: 0x94a3b8,
+                    transparent: true,
+                    opacity: 0.28,
+                    roughness: 0.1
+                });
+                const matGate = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.7, roughness: 0.3 });
+                const matWater = new THREE.MeshStandardMaterial({
+                    color: 0x0284c7,
+                    transparent: true,
+                    opacity: 0.82,
+                    roughness: 0.15
+                });
+                const matJumpWater = new THREE.MeshStandardMaterial({
+                    color: 0x38bdf8,
+                    transparent: true,
+                    opacity: 0.88,
+                    roughness: 0.35
+                });
+
+                // Channel Bed (Length = 24m, from x = -12 to +12)
+                e2.flumeBed = new THREE.Mesh(new THREE.BoxGeometry(24, 0.5, 4), matConcrete);
+                e2.flumeBed.position.set(0, 0.25, 0);
+                this.exp2Group.add(e2.flumeBed);
+
+                // Side Walls
+                e2.flumeWallBack = new THREE.Mesh(new THREE.BoxGeometry(24, 3.2, 0.2), matConcrete);
+                e2.flumeWallBack.position.set(0, 1.85, -2.1);
+                this.exp2Group.add(e2.flumeWallBack);
+
+                e2.flumeWallFront = new THREE.Mesh(new THREE.BoxGeometry(24, 3.2, 0.15), matGlassWall);
+                e2.flumeWallFront.position.set(0, 1.85, 2.1);
+                this.exp2Group.add(e2.flumeWallFront);
+
+                // Stilling Basin Baffle Blocks (from x = -4 to x = +5)
+                const blockMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1 });
+                this.basinBlocks = [];
+                for (let z = -1.2; z <= 1.2; z += 0.8) {
+                    const bBlock = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.35, 0.4), blockMat);
+                    bBlock.position.set(3.5, 0.65, z);
+                    this.exp2Group.add(bBlock);
+                    this.basinBlocks.push(bBlock);
+                }
+
+                // Sluice Gate at x = -5
+                e2.gateMesh = new THREE.Mesh(new THREE.BoxGeometry(0.25, 3.4, 3.9), matGate);
+                e2.gateMesh.position.set(-5, 2.5, 0);
+                this.exp2Group.add(e2.gateMesh);
+
+                // Water Zone 1: Upstream Reservoir (x = -12 to -5)
+                e2.waterUpstream = new THREE.Mesh(new THREE.BoxGeometry(7, 1, 3.9), matWater);
+                this.exp2Group.add(e2.waterUpstream);
+
+                // Water Zone 2: Supercritical Vena Contracta Sheet (x = -5 to jumpStart)
+                e2.waterSuper = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 3.9), matWater);
+                this.exp2Group.add(e2.waterSuper);
+
+                // Water Zone 3: Turbulent Hydraulic Jump Roller (Subdivided top for wave vertices)
+                const jumpGeo = new THREE.BoxGeometry(1, 1, 3.9, 16, 4, 4);
+                e2.waterJump = new THREE.Mesh(jumpGeo, matJumpWater);
+                this.exp2Group.add(e2.waterJump);
+
+                // Water Zone 4: Downstream Subcritical Tailwater
+                e2.waterTail = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 3.9), matWater);
+                this.exp2Group.add(e2.waterTail);
+
+                // Aerated White-Water Foam Particles at the Hydraulic Jump
+                const foamGeo = new THREE.SphereGeometry(0.14, 8, 8);
+                const foamMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 });
+                for (let i = 0; i < 60; i++) {
+                    const fp = new THREE.Mesh(foamGeo, foamMat);
+                    fp.userData = {
+                        rx: Math.random(),
+                        rz: (Math.random() - 0.5) * 3.4,
+                        ry: Math.random() * 0.5,
+                        phase: Math.random() * Math.PI * 2
+                    };
+                    this.exp2Group.add(fp);
+                    e2.foamParticles.push(fp);
+                }
+
+                // Overtopping Spill Particles
+                const spillGeo = new THREE.SphereGeometry(0.11, 6, 6);
+                const spillMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+                for (let i = 0; i < 30; i++) {
+                    const sp = new THREE.Mesh(spillGeo, spillMat);
+                    sp.visible = false;
+                    sp.userData = { progress: Math.random() };
+                    this.exp2Group.add(sp);
+                    e2.spillParticles.push(sp);
+                }
+            },
+
+            /**
+             * Switches cleanly between Experiment 1 and Experiment 2
+             */
+            switchExperiment(expId) {
+                this.activeExperiment = expId;
+
+                // Toggle UI Panels
+                document.getElementById('tab-exp1').classList.toggle('active', expId === 1);
+                document.getElementById('tab-exp2').classList.toggle('active', expId === 2);
+
+                document.getElementById('controls-exp1').classList.toggle('hidden', expId !== 1);
+                document.getElementById('controls-exp2').classList.toggle('hidden', expId !== 2);
+
+                document.getElementById('telemetry-exp1').classList.toggle('hidden', expId !== 1);
+                document.getElementById('telemetry-exp2').classList.toggle('hidden', expId !== 2);
+
+                // Toggle 3D Scene Groups
+                this.exp1Group.visible = (expId === 1);
+                this.exp2Group.visible = (expId === 2);
+
+                // Reposition Camera smoothly for active experiment
+                if (expId === 1) {
+                    this.camera.position.set(0, 11, 25);
+                    this.controls.target.set(0, 4.5, 0);
+                } else {
+                    this.camera.position.set(2, 9, 21);
+                    this.controls.target.set(0, 2.0, 0);
+                }
+                this.controls.update();
+
+                this.calculate();
+            },
+
+            /**
+             * Sets the Pressure Decoupling Mode in Experiment 1
+             */
+            setPressureMode(mode) {
+                this.exp1.pMode = mode;
+                document.getElementById('pmode-abs').classList.toggle('active', mode === 'abs');
+                document.getElementById('pmode-gauge').classList.toggle('active', mode === 'gauge');
+                document.getElementById('pmode-vac').classList.toggle('active', mode === 'vac');
+
+                const pSlider = document.getElementById('slider-p');
+                if (mode === 'abs') {
+                    pSlider.min = 50; pSlider.max = 250; pSlider.value = 100;
+                } else if (mode === 'gauge') {
+                    pSlider.min = 0; pSlider.max = 150; pSlider.value = 0;
+                } else {
+                    pSlider.min = 0; pSlider.max = 80; pSlider.value = 15;
+                }
+                this.exp1.P_val = parseFloat(pSlider.value);
+                document.getElementById('val-p').textContent = `${this.exp1.P_val.toFixed(1)} kPa`;
+                this.calculate();
+            },
+
+            /**
+             * Toggles the main flow valve in Experiment 1
+             */
+            toggleValve() {
+                this.exp1.valveOpen = !this.exp1.valveOpen;
+                const btn = document.getElementById('btn-valve');
+                if (this.exp1.valveOpen) {
+                    btn.className = 'valve-btn valve-open';
+                    btn.textContent = 'محبس التدفق: مفتوح (نشط) ✓';
+                } else {
+                    btn.className = 'valve-btn valve-closed';
+                    btn.textContent = 'محبس التدفق: مغلق (متوقف) ✕';
+                }
+                this.calculate();
+            },
+
+            /**
+             * Runs all hydraulic engineering equations and updates telemetry UI & 3D meshes
+             */
+            calculate() {
+                const g = 9.81;
+                const gamma_w = 9810; // N/m^3
+                const hazardBanner = document.getElementById('hazard-banner');
+                const hazardText = document.getElementById('hazard-text');
+                hazardBanner.classList.remove('show');
+
+                if (this.activeExperiment === 1) {
+                    const e1 = this.exp1;
+
+                    // 1. Pressure Decoupling (فك الضغوط)
+                    const P_Pa = e1.P_val * 1000;
+                    if (e1.pMode === 'abs') {
+                        e1.h_p = (P_Pa / gamma_w) - 10.0;
+                    } else if (e1.pMode === 'gauge') {
+                        e1.h_p = P_Pa / gamma_w;
+                    } else {
+                        e1.h_p = -P_Pa / gamma_w;
+                    }
+                    e1.nabla_true = e1.nabla_geo_src + e1.h_p;
+
+                    // 2. Static Head & Driving Head
+                    const H_st = e1.nabla_geo_rec - e1.nabla_true;
+                    const A = (Math.PI * e1.d * e1.d) / 4;
+                    const L_total = 35.0;
+                    const f_darcy = 0.022;
+                    const xi_total = 1.5 + f_darcy * (L_total / e1.d);
+
+                    // Effective driving head with pump boost
+                    const netHead = (e1.nabla_true + e1.H_P) - e1.nabla_geo_rec;
+
+                    if (!e1.valveOpen || netHead <= 0) {
+                        e1.v = 0;
+                        e1.Q = 0;
+                    } else {
+                        e1.v = Math.sqrt((2 * g * netHead) / xi_total);
+                        e1.Q = A * e1.v;
+                    }
+
+                    // 3. Peak Vacuum Head at Siphon Summit (حد التكهف الحرج)
+                    const xi_up = 0.8 + f_darcy * (14.0 / e1.d);
+                    e1.H_v = (e1.h_s - e1.h_p) + (1.0 + xi_up) * ((e1.v * e1.v) / (2 * g));
+
+                    // Cavitation Check (H_v > 7.0 m)
+                    e1.isCavitating = (e1.H_v > 7.0);
+                    if (e1.isCavitating) {
+                        e1.Q = 0; // Column breaks!
+                    }
+
+                    const Re = (e1.v * e1.d) / 1e-6;
+                    const h_f = xi_total * ((e1.v * e1.v) / (2 * g));
+                    const H_P_req = Math.max(0, H_st + h_f + ((e1.v * e1.v) / (2 * g)));
+
+                    // Update Telemetry Cards
+                    document.getElementById('tele-hv').textContent = `${e1.H_v.toFixed(2)} m`;
+                    document.getElementById('tele-hv').style.color = e1.isCavitating ? '#ef4444' : '#ffffff';
+                    document.getElementById('tele-q1').textContent = `${e1.Q.toFixed(3)} m³/s`;
+                    document.getElementById('tele-nabla').textContent = `${e1.nabla_true.toFixed(2)} m`;
+                    document.getElementById('tele-v1').textContent = `${e1.v.toFixed(2)} m/s`;
+                    document.getElementById('tele-re').textContent = `Re: ${Math.round(Re).toLocaleString()} (${Re >= (500 * e1.d / 0.0002) ? 'خشنة' : 'انتقالية'})`;
+                    document.getElementById('tele-hpreq').textContent = `${H_P_req.toFixed(2)} m / ${e1.H_P.toFixed(1)} m`;
+
+                    const statusEl = document.getElementById('status-exp1');
+                    if (e1.isCavitating) {
+                        statusEl.className = 'status-badge status-danger';
+                        statusEl.textContent = '⚠️ انقطاع العمود المائي بسبب التكهف (Q = 0)!';
+                        hazardText.textContent = '⚠️ خطر تكهف كارثي (Cavitation)! ضاغط الفاكوم H_v تجاوز 7.0m مائي. أوقف التدفق لتجنب تدمير الأنبوب. كبّر القطر d أو خفّض منسوب الذروة h_s!';
+                        hazardBanner.classList.add('show');
+                    } else if (!e1.valveOpen || netHead <= 0) {
+                        statusEl.className = 'status-badge status-warning';
+                        statusEl.textContent = '⚠️ التدفق متوقف: افتح المحبس أو ارفع ضاغط المضخة H_P';
+                    } else if (e1.H_v > 5.8) {
+                        statusEl.className = 'status-badge status-warning';
+                        statusEl.textContent = '⚡ اقتراب من منطقة التكهف الحرجة (5.8m < H_v ≤ 7.0m)';
+                    } else {
+                        statusEl.className = 'status-badge status-safe';
+                        statusEl.textContent = '✓ النظام يعمل بأمان هيدروليكي (لا يوجد تكهف)';
+                    }
+
+                    this.updateExp1Geometry();
+
+                } else {
+                    // ================================================================
+                    // EXPERIMENT 2: OPEN CHANNEL & HYDRAULIC JUMP CALCULATIONS
+                    // ================================================================
+                    const e2 = this.exp2;
+
+                    // 1. Solve Normal Depth y_n via Manning Equation (Iterative bisection)
+                    let low = 0.05, high = 8.0;
+                    for (let i = 0; i < 25; i++) {
+                        const mid = (low + high) / 2;
+                        const A = e2.b * mid;
+                        const P = e2.b + 2 * mid;
+                        const R = A / P;
+                        const Q_calc = (1 / e2.n) * A * Math.pow(R, 2 / 3) * Math.sqrt(e2.S_0);
+                        if (Q_calc < e2.Q) low = mid;
+                        else high = mid;
+                    }
+                    e2.y_n = (low + high) / 2;
+                    e2.v_n = e2.Q / (e2.b * e2.y_n);
+
+                    // 2. Critical Depth y_c for Rectangular Channel
+                    const q_unit = e2.Q / e2.b;
+                    e2.y_c = Math.pow((q_unit * q_unit) / g, 1 / 3);
+
+                    // 3. Sluice Gate Vena Contracta & Supercritical Flow
+                    const C_c = 0.62;
+                    e2.y_1 = C_c * e2.a;
+                    e2.v_1 = e2.Q / (e2.b * e2.y_1);
+                    e2.Fr_1 = e2.v_1 / Math.sqrt(g * e2.y_1);
+
+                    // Upstream Specific Energy Backing up behind Gate
+                    e2.y_u = e2.y_1 + (e2.v_1 * e2.v_1) / (2 * g * 0.92);
+
+                    // 4. Bélanger Conjugate Depth y_2 & Energy Dissipation
+                    if (e2.Fr_1 > 1.0) {
+                        e2.y_2 = 0.5 * e2.y_1 * (Math.sqrt(1 + 8 * e2.Fr_1 * e2.Fr_1) - 1);
+                        e2.dE = Math.pow(e2.y_2 - e2.y_1, 3) / (4 * e2.y_1 * e2.y_2);
+                        e2.L_jump = 5.0 * (e2.y_2 - e2.y_1);
+                    } else {
+                        e2.y_2 = e2.y_1;
+                        e2.dE = 0;
+                        e2.L_jump = 0.5;
+                    }
+
+                    // Position of Jump relative to Stilling Basin (depends on Fr_1 vs Tailwater y_n)
+                    e2.jumpStart = Math.min(5.0, Math.max(0.8, (e2.Fr_1 - 1.5) * 0.85));
+                    const jumpEnd = e2.jumpStart + e2.L_jump;
+
+                    // 5. Permissible Velocity Limits (Scour & Sedimentation)
+                    const v_min = 0.55 * Math.pow(e2.y_n, 0.64);
+                    const v_max = 2.50;
+
+                    const isOvertopping = e2.y_u > e2.H_wall;
+                    const isJumpEscaped = jumpEnd > e2.L_basin;
+                    const isScour = e2.v_n > v_max;
+                    const isSediment = e2.v_n < v_min;
+
+                    // Update Telemetry UI
+                    document.getElementById('tele-fr1').textContent = e2.Fr_1.toFixed(2);
+                    document.getElementById('tele-regime').textContent = e2.Fr_1 > 1 ? 'جريان فوق حرج (Supercritical)' : 'جريان تحت حرج (Subcritical)';
+                    document.getElementById('tele-depths').textContent = `${e2.y_1.toFixed(2)} → ${e2.y_2.toFixed(2)} m`;
+                    document.getElementById('tele-ynyc').textContent = `${e2.y_n.toFixed(2)} / ${e2.y_c.toFixed(2)} m`;
+                    document.getElementById('tele-de').textContent = `${e2.dE.toFixed(2)} m`;
+                    document.getElementById('tele-ljump').textContent = `طول القفزة: ${e2.L_jump.toFixed(2)} m`;
+                    document.getElementById('tele-v2').textContent = `${e2.v_n.toFixed(2)} m/s`;
+                    document.getElementById('tele-vlimits').textContent = `المسموح: [${v_min.toFixed(2)} ≤ v ≤ ${v_max.toFixed(2)} m/s]`;
+
+                    const statusEl2 = document.getElementById('status-exp2');
+                    if (isOvertopping) {
+                        statusEl2.className = 'status-badge status-danger';
+                        statusEl2.textContent = '⚠️ خطر طفحان القناة (Overtopping)! ارفع البوابة أو خفّض التصريف';
+                        hazardText.textContent = '⚠️ طفحان كارثي فوق جدران القناة! المنسوب الأمامي تجاوز ارتفاع الجدران (2.6m). افتح البوابة الانزلاقية a أو خفّض التصريف Q فوراً!';
+                        hazardBanner.classList.add('show');
+                    } else if (isJumpEscaped) {
+                        statusEl2.className = 'status-badge status-danger';
+                        statusEl2.textContent = '⚠️ انجراف القفزة خارج حوض التهدئة!';
+                        hazardText.textContent = '⚠️ انتقلت القفزة خارج حوض التهدئة وتسببت بنحر خطير في قاع المجرى الترابي!';
+                        hazardBanner.classList.add('show');
+                    } else if (isScour) {
+                        statusEl2.className = 'status-badge status-warning';
+                        statusEl2.textContent = '⚡ تحذير نحر القاع (Scour): السرعة تجاوزت الحد الأقصى المسموح';
+                    } else if (isSediment) {
+                        statusEl2.className = 'status-badge status-warning';
+                        statusEl2.textContent = '⚡ تحذير ترسيب (Sedimentation): السرعة أقل من سرعة عدم الترسيب';
+                    } else {
+                        statusEl2.className = 'status-badge status-safe';
+                        statusEl2.textContent = '✓ القفزة الهيدروليكية مستقرة داخل حوض التهدئة';
+                    }
+
+                    // Bed Color Indicator for Scour / Sedimentation
+                    if (isScour || isJumpEscaped) {
+                        e2.flumeBed.material.color.setHex(0xb45309); // Orange-brown erosion warning
+                    } else if (isSediment) {
+                        e2.flumeBed.material.color.setHex(0x78716c); // Silt tint
+                    } else {
+                        e2.flumeBed.material.color.setHex(0x475569); // Normal concrete
+                    }
+
+                    this.updateExp2Geometry(isOvertopping);
+                }
+            },
+
+            /**
+             * Updates the 3D Channel width, Sluice Gate height, Water Zones, and EGL/HGL lines in Experiment 2
+             */
+            updateExp2Geometry(isOvertopping) {
+                const e2 = this.exp2;
+                const widthScale = e2.b / 3.9;
+
+                // Scale channel width visually
+                e2.flumeBed.scale.z = widthScale;
+                e2.flumeWallBack.position.z = -2.0 * widthScale - 0.1;
+                e2.flumeWallFront.position.z = 2.0 * widthScale + 0.1;
+                e2.gateMesh.scale.z = widthScale;
+
+                // Gate vertical opening
+                const gateBottomY = 0.5 + e2.a;
+                e2.gateMesh.position.y = gateBottomY + 1.7;
+
+                // Zone 1: Upstream Water (-12 to -5)
+                const yuVisual = Math.min(e2.y_u, 3.1);
+                e2.waterUpstream.scale.set(1, yuVisual, widthScale);
+                e2.waterUpstream.position.set(-8.5, 0.5 + yuVisual / 2, 0);
+
+                // Zone 2: Supercritical Vena Contracta (-5 to -5 + jumpStart)
+                const superLen = Math.max(0.8, e2.jumpStart);
+                const y1Visual = Math.max(0.12, e2.y_1);
+                e2.waterSuper.scale.set(superLen, y1Visual, widthScale);
+                e2.waterSuper.position.set(-5 + superLen / 2, 0.5 + y1Visual / 2, 0);
+
+                // Zone 3: Hydraulic Jump Transition
+                const jumpLen = Math.min(8.0, Math.max(1.2, e2.L_jump * 0.65));
+                const y2Visual = Math.min(2.8, Math.max(0.3, e2.y_2));
+                const jumpCenterX = -5 + superLen + jumpLen / 2;
+                e2.waterJump.scale.set(jumpLen, y2Visual, widthScale);
+                e2.waterJump.position.set(jumpCenterX, 0.5 + y2Visual / 2, 0);
+
+                // Zone 4: Downstream Tailwater
+                const tailStart = -5 + superLen + jumpLen;
+                const tailLen = Math.max(1.0, 12 - tailStart);
+                e2.waterTail.scale.set(tailLen, y2Visual, widthScale);
+                e2.waterTail.position.set(tailStart + tailLen / 2, 0.5 + y2Visual / 2, 0);
+
+                // Show/hide overtopping spill particles
+                e2.spillParticles.forEach(sp => { sp.visible = isOvertopping; });
+
+                // Update 3D EGL & HGL across the Open Channel
+                if (e2.eglLine) { e2.eglLine.geometry.dispose(); this.exp2Group.remove(e2.eglLine); }
+                if (e2.hglLine) { e2.hglLine.geometry.dispose(); this.exp2Group.remove(e2.hglLine); }
+
+                const E_up = yuVisual + 0.35;
+                const E_super = y1Visual + Math.min(2.2, (e2.v_1 * e2.v_1) / (2 * 9.81) * 0.35);
+                const E_tail = y2Visual + 0.25;
+
+                const eglPts = [
+                    new THREE.Vector3(-12, 0.5 + E_up, 0),
+                    new THREE.Vector3(-5, 0.5 + E_up, 0),
+                    new THREE.Vector3(-5 + superLen, 0.5 + E_super, 0),
+                    new THREE.Vector3(tailStart, 0.5 + E_tail, 0),
+                    new THREE.Vector3(12, 0.5 + E_tail - 0.15, 0)
+                ];
+                const hglPts = [
+                    new THREE.Vector3(-12, 0.5 + yuVisual, 0),
+                    new THREE.Vector3(-5, 0.5 + yuVisual, 0),
+                    new THREE.Vector3(-5 + superLen, 0.5 + y1Visual, 0),
+                    new THREE.Vector3(tailStart, 0.5 + y2Visual, 0),
+                    new THREE.Vector3(12, 0.5 + y2Visual - 0.1, 0)
+                ];
+
+                e2.eglLine = new THREE.Line(
+                    new THREE.BufferGeometry().setFromPoints(eglPts),
+                    new THREE.LineBasicMaterial({ color: 0xef4444, linewidth: 3 })
+                );
+                e2.hglLine = new THREE.Line(
+                    new THREE.BufferGeometry().setFromPoints(hglPts),
+                    new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 3 })
+                );
+                this.exp2Group.add(e2.eglLine);
+                this.exp2Group.add(e2.hglLine);
+            },
+
+            /**
+             * Animation Update Loop (Water particles, Cavitation vapor bubbles, Jump roller turbulence)
+             */
+            update() {
+                if (!this.isRunning) return;
+
+                const dt = this.clock.getDelta();
+                const elapsed = this.clock.getElapsedTime();
+
+                // Optional Cinematic Auto-Orbit Camera
+                if (this.autoCamera) {
+                    const radius = 25;
+                    this.camera.position.x = Math.sin(elapsed * 0.25) * radius;
+                    this.camera.position.z = Math.cos(elapsed * 0.25) * radius;
+                    this.controls.update();
+                }
+
+                if (this.activeExperiment === 1) {
+                    const e1 = this.exp1;
+                    const summitPos = e1.pipeCurve.getPoint(0.48);
+
+                    // Animate flow particles along pipe curve
+                    const flowSpeed = e1.isCavitating ? 0 : (e1.v * 0.08);
+                    e1.flowParticles.forEach(p => {
+                        p.visible = (e1.valveOpen && e1.Q > 0 && !e1.isCavitating);
+                        if (p.visible) {
+                            p.userData.t = (p.userData.t + flowSpeed * dt) % 1.0;
+                            const pos = e1.pipeCurve.getPoint(p.userData.t);
+                            p.position.copy(pos);
+                        }
+                    });
+
+                    // Animate cavitation vapor bubbles at the summit when H_v > 7m
+                    e1.cavitationBubbles.forEach((b, idx) => {
+                        b.visible = e1.isCavitating;
+                        if (e1.isCavitating) {
+                            const pulse = Math.sin(elapsed * 6 + idx) * 0.18;
+                            b.position.set(
+                                summitPos.x + b.userData.offset.x,
+                                summitPos.y + b.userData.offset.y + pulse,
+                                summitPos.z + b.userData.offset.z
+                            );
+                        }
+                    });
+
+                } else {
+                    const e2 = this.exp2;
+                    const widthScale = e2.b / 3.9;
+                    const superLen = Math.max(0.8, e2.jumpStart);
+                    const jumpLen = Math.min(8.0, Math.max(1.2, e2.L_jump * 0.65));
+                    const jumpStartX = -5 + superLen;
+                    const y2Visual = Math.min(2.8, Math.max(0.3, e2.y_2));
+
+                    // Animate Turbulent White-Water Foam at the Hydraulic Jump
+                    e2.foamParticles.forEach((fp, i) => {
+                        fp.userData.rx = (fp.userData.rx + dt * 1.4) % 1.0;
+                        const x = jumpStartX + fp.userData.rx * jumpLen;
+                        const y = 0.5 + (fp.userData.rx * y2Visual) + Math.sin(elapsed * 8 + fp.userData.phase) * 0.14;
+                        const z = fp.userData.rz * widthScale;
+                        fp.position.set(x, y, z);
+                    });
+
+                    // Animate Overtopping Water Spill over Flume Walls
+                    e2.spillParticles.forEach((sp, i) => {
+                        if (sp.visible) {
+                            sp.userData.progress = (sp.userData.progress + dt * 1.5) % 1.0;
+                            const prg = sp.userData.progress;
+                            sp.position.set(
+                                -11.5 + (i % 15) * 0.45,
+                                3.2 - prg * 2.8,
+                                (2.05 * widthScale) + prg * 0.8
+                            );
+                        }
+                    });
+                }
+            },
+
+            /**
+             * Main requestAnimationFrame loop
+             */
+            animate() {
+                this.animFrameId = requestAnimationFrame(this.animate.bind(this));
+                this.update();
+                this.controls.update();
+                this.renderer.render(this.scene, this.camera);
+            },
+
+            /**
+             * Play / Pause Simulation Toggle
+             */
+            togglePlay() {
+                this.isRunning = !this.isRunning;
+                const textEl = document.getElementById('text-play-pause');
+                textEl.textContent = this.isRunning ? 'إيقاف مؤقت ⏸' : 'تشغيل المحاكاة ▶';
+            },
+
+            /**
+             * Auto-Orbit Camera Toggle
+             */
+            toggleAutoCamera() {
+                this.autoCamera = !this.autoCamera;
+                const btn = document.getElementById('btn-autocam');
+                btn.classList.toggle('primary', this.autoCamera);
+            },
+
+            /**
+             * Resets active experiment sliders and state to default safe values
+             */
+            reset() {
+                if (this.activeExperiment === 1) {
+                    this.exp1.h_s = 4.5;
+                    this.exp1.d = 0.20;
+                    this.exp1.H_P = 12.0;
+                    this.exp1.valveOpen = true;
+
+                    document.getElementById('slider-hs').value = 4.5;
+                    document.getElementById('val-hs').textContent = '4.5 m';
+                    document.getElementById('slider-d').value = 0.20;
+                    document.getElementById('val-d').textContent = '0.20 m';
+                    document.getElementById('slider-hp').value = 12.0;
+                    document.getElementById('val-hp').textContent = '12.0 m';
+
+                    const btn = document.getElementById('btn-valve');
+                    btn.className = 'valve-btn valve-open';
+                    btn.textContent = 'محبس التدفق: مفتوح (نشط) ✓';
+
+                    this.setPressureMode('gauge');
+                } else {
+                    this.exp2.a = 0.45;
+                    this.exp2.Q = 8.5;
+                    this.exp2.S_0 = 0.0020;
+                    this.exp2.b = 3.0;
+                    this.exp2.n = 0.015;
+
+                    document.getElementById('slider-gate').value = 0.45;
+                    document.getElementById('val-gate').textContent = '0.45 m';
+                    document.getElementById('slider-q2').value = 8.5;
+                    document.getElementById('val-q2').textContent = '8.5 m³/s';
+                    document.getElementById('slider-s0').value = 0.0020;
+                    document.getElementById('val-s0').textContent = '0.0020';
+                    document.getElementById('slider-b').value = 3.0;
+                    document.getElementById('val-b').textContent = '3.0 m';
+                    document.getElementById('slider-n').value = 0.015;
+                    document.getElementById('val-n').textContent = '0.015';
+
+                    this.calculate();
+                }
+            },
+
+            /**
+             * Binds all DOM range sliders to the physical engine
+             */
+            bindUIListeners() {
+                const bindSlider = (id, valId, unit, targetObj, prop, decimals = 2) => {
+                    const slider = document.getElementById(id);
+                    const valSpan = document.getElementById(valId);
+                    slider.addEventListener('input', (e) => {
+                        const val = parseFloat(e.target.value);
+                        targetObj[prop] = val;
+                        valSpan.textContent = `${val.toFixed(decimals)}${unit}`;
+                        this.calculate();
+                    });
+                };
+
+                // Exp 1 Sliders
+                bindSlider('slider-hs', 'val-hs', ' m', this.exp1, 'h_s', 1);
+                bindSlider('slider-d', 'val-d', ' m', this.exp1, 'd', 2);
+                bindSlider('slider-p', 'val-p', ' kPa', this.exp1, 'P_val', 1);
+                bindSlider('slider-hp', 'val-hp', ' m', this.exp1, 'H_P', 1);
+
+                // Exp 2 Sliders
+                bindSlider('slider-gate', 'val-gate', ' m', this.exp2, 'a', 2);
+                bindSlider('slider-q2', 'val-q2', ' m³/s', this.exp2, 'Q', 1);
+                bindSlider('slider-s0', 'val-s0', '', this.exp2, 'S_0', 4);
+                bindSlider('slider-b', 'val-b', ' m', this.exp2, 'b', 1);
+                bindSlider('slider-n', 'val-n', '', this.exp2, 'n', 3);
+            },
+
+            /**
+             * Responsive Window Resize Handler
+             */
+            onWindowResize() {
+                if (!this.camera || !this.renderer) return;
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            },
+
+            /**
+             * MANDATORY Lamsa Platform Cleanup Method to prevent WebGL Memory Leaks
+             */
+            destroy() {
+                if (this.animFrameId) {
+                    cancelAnimationFrame(this.animFrameId);
+                }
+                window.removeEventListener('resize', this.onWindowResize);
+
+                if (this.scene) {
+                    this.scene.traverse((object) => {
+                        if (object.geometry) object.geometry.dispose();
+                        if (object.material) {
+                            if (Array.isArray(object.material)) {
+                                object.material.forEach(mat => mat.dispose());
+                            } else {
+                                object.material.dispose();
+                            }
+                        }
+                    });
+                }
+
+                if (this.renderer) {
+                    this.renderer.dispose();
+                    this.renderer.forceContextLoss();
+                    if (this.renderer.domElement && this.renderer.domElement.parentNode) {
+                        this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+                    }
+                }
+            }
+        };
+
+        // Boot the 3D Hydraulics Laboratory when DOM is ready
+        window.addEventListener('DOMContentLoaded', () => {
+            HydraulicsLab.init('webgl-container');
+        });
+    </script>
+</body>
+</html>

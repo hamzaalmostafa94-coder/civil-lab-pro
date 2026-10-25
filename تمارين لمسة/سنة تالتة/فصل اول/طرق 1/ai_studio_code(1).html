@@ -1,0 +1,1827 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مختبر هندسة الطرق 1 التفاعلي | منصة لمسة (AASHTO 3D Lab)</title>
+    <!-- خط تجوال من Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <!-- مكتبة Three.js r128 و OrbitControls عبر CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --panel-bg: rgba(15, 23, 42, 0.92);
+            --card-bg: rgba(30, 41, 59, 0.85);
+            --border-color: rgba(148, 163, 184, 0.22);
+            --accent-blue: #38bdf8;
+            --accent-teal: #14b8a6;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-green: #22c55e;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Tajawal', sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* الشريط العلوي والتبويبات */
+        .top-header {
+            height: 62px;
+            background: rgba(15, 23, 42, 0.96);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 20;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .brand-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-badge {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-teal));
+            color: #0f172a;
+            font-weight: 800;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
+        }
+
+        .brand-title h1 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .mode-tabs {
+            display: flex;
+            gap: 10px;
+            background: rgba(30, 41, 59, 0.9);
+            padding: 5px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .tab-btn {
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            padding: 8px 18px;
+            border-radius: 7px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #0284c7, #0d9488);
+            color: #ffffff;
+            box-shadow: 0 2px 10px rgba(2, 132, 199, 0.4);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            background: var(--card-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            border-color: var(--accent-blue);
+            background: rgba(56, 189, 248, 0.15);
+        }
+
+        .action-btn.primary {
+            background: var(--accent-teal);
+            color: #0f172a;
+            border-color: transparent;
+        }
+
+        /* الحاوية الرئيسية */
+        .workspace {
+            flex: 1;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* لوحة التحكم الجانبية */
+        .control-sidebar {
+            width: 430px;
+            height: 100%;
+            background: var(--panel-bg);
+            border-left: 1px solid var(--border-color);
+            overflow-y: auto;
+            padding: 16px;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            backdrop-filter: blur(12px);
+        }
+
+        .control-sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .control-sidebar::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.3);
+            border-radius: 3px;
+        }
+
+        /* لوحة القراءات الهندسية العائمة على اليسار */
+        .telemetry-overlay {
+            width: 390px;
+            max-height: calc(100% - 28px);
+            position: absolute;
+            left: 14px;
+            top: 14px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px;
+            z-index: 10;
+            overflow-y: auto;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .telemetry-overlay::-webkit-scrollbar {
+            width: 5px;
+        }
+        .telemetry-overlay::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.3);
+            border-radius: 3px;
+        }
+
+        /* حاوية المشهد ثلاثي الأبعاد */
+        #canvas-container {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            background: #0f172a;
+        }
+
+        /* البطاقات والأقسام */
+        .panel-section {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px 14px;
+        }
+
+        .section-title {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--accent-blue);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+            padding-bottom: 6px;
+        }
+
+        /* عناصر التحكم والمنزلقات */
+        .control-group {
+            margin-bottom: 11px;
+        }
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.84rem;
+            margin-bottom: 4px;
+            color: #e2e8f0;
+            font-weight: 500;
+        }
+
+        .val-badge {
+            background: rgba(15, 23, 42, 0.8);
+            color: var(--accent-blue);
+            padding: 1px 8px;
+            border-radius: 5px;
+            font-weight: 700;
+            font-size: 0.82rem;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            direction: ltr;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: #1e293b;
+            border-radius: 4px;
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent-blue);
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #0f172a;
+            box-shadow: 0 0 6px rgba(56, 189, 248, 0.8);
+        }
+
+        select {
+            width: 100%;
+            background: #0f172a;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 8px 10px;
+            border-radius: 7px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+        }
+
+        select:focus {
+            border-color: var(--accent-blue);
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            background: rgba(15, 23, 42, 0.55);
+            padding: 9px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        .checkbox-row input[type="checkbox"] {
+            margin-top: 3px;
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent-teal);
+            cursor: pointer;
+        }
+
+        .checkbox-row span {
+            font-size: 0.83rem;
+            line-height: 1.4;
+            color: #e2e8f0;
+            font-weight: 600;
+        }
+
+        /* الصناديق الرقمية */
+        .readout-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .readout-box {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 8px;
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .readout-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .readout-value {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: #f8fafc;
+            direction: ltr;
+            text-align: right;
+        }
+
+        .readout-formula {
+            font-size: 0.68rem;
+            color: var(--accent-teal);
+            direction: ltr;
+            text-align: right;
+            font-family: monospace;
+        }
+
+        /* رسائل الفخاخ والتنبيهات الهندسية */
+        .alert-box {
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            line-height: 1.5;
+            font-weight: 600;
+            border-right: 4px solid;
+            margin-top: 6px;
+        }
+
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.16);
+            border-color: var(--accent-red);
+            color: #fecaca;
+        }
+
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.16);
+            border-color: var(--accent-amber);
+            color: #fde68a;
+        }
+
+        .alert-success {
+            background: rgba(34, 197, 94, 0.16);
+            border-color: var(--accent-green);
+            color: #bbf7d0;
+        }
+
+        .fix-btn {
+            margin-top: 8px;
+            width: 100%;
+            background: linear-gradient(135deg, var(--accent-amber), #ea580c);
+            color: #fff;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-weight: 800;
+            font-size: 0.82rem;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(234, 88, 12, 0.4);
+            transition: transform 0.15s;
+        }
+
+        .fix-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        /* جدول الأوتاد في التمرين الثاني */
+        .stakes-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.76rem;
+            text-align: center;
+            margin-top: 6px;
+        }
+
+        .stakes-table th {
+            background: rgba(15, 23, 42, 0.9);
+            color: var(--accent-blue);
+            padding: 6px 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        .stakes-table td {
+            padding: 5px 4px;
+            border: 1px solid var(--border-color);
+            direction: ltr;
+            font-weight: 700;
+        }
+
+        .cut-cell { color: #fb923c; }
+        .fill-cell { color: #38bdf8; }
+
+        /* وسيلة الإيضاح العائمة أسفل المشهد */
+        .scene-legend {
+            position: absolute;
+            bottom: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.88);
+            border: 1px solid var(--border-color);
+            padding: 7px 16px;
+            border-radius: 20px;
+            display: flex;
+            gap: 16px;
+            font-size: 0.78rem;
+            z-index: 8;
+            backdrop-filter: blur(6px);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- الشريط العلوي والتبديل بين التمرينين -->
+    <header class="top-header">
+        <div class="brand-title">
+            <span class="brand-badge">منصة لمسة 3D</span>
+            <h1>مختبر محاكاة هندسة الطرق (AASHTO Geometric & Earthwork Lab)</h1>
+        </div>
+
+        <div class="mode-tabs">
+            <button id="tab-btn-1" class="tab-btn active" onclick="HighwayExpLab.switchExercise(1)">
+                <span>🛣️ التمرين 1: محاكي المنحنيات والرؤية </span>
+            </button>
+            <button id="tab-btn-2" class="tab-btn" onclick="HighwayExpLab.switchExercise(2)">
+                <span>⛰️ التمرين 2: توازن الأتربة والمقطع الطولي </span>
+            </button>
+        </div>
+
+        <div class="header-actions">
+            <button id="btn-play-pause" class="action-btn primary" onclick="HighwayExpLab.toggleSimulation()">⏸️ إيقاف مؤقت</button>
+            <button class="action-btn" onclick="HighwayExpLab.reset()">🔄 إعادة تعيين</button>
+        </div>
+    </header>
+
+    <!-- منطقة العمل الرئيسية -->
+    <div class="workspace">
+
+        <!-- ========================================================== -->
+        <!-- لوحة تحكم التمرين الأول: المنحنيات الأفقية والكلوتوئيد والرؤية -->
+        <!-- ========================================================== -->
+        <aside id="controls-ex1" class="control-sidebar">
+            <div class="panel-section">
+                <div class="section-title">
+                    <span>1. المركبة التصميمية والسرعة (AASHTO)</span>
+                </div>
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>فئة المركبة التصميمية:</span>
+                    </div>
+                    <select id="ex1-vehicle" onchange="HighwayExpLab.update()">
+                        <option value="P">سيارة سياحية (P) — L=5.75m, W=2.15m, Rmin=7.3m</option>
+                        <option value="SU">شاحنة إفرادية (SU) — L=9.10m, W=2.60m, Rmin=12.8m</option>
+                        <option value="WB50" selected>قاطرة ومقطورة (WB-50) — L=16.75m, W=2.60m, Rmin=13.7m</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>السرعة التصميمية (V):</span>
+                        <span id="val-ex1-V" class="val-badge">80 km/h</span>
+                    </div>
+                    <input type="range" id="ex1-V" min="40" max="120" step="5" value="80" oninput="HighwayExpLab.update()">
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="section-title">
+                    <span>2. هندسة المنحني الدائري والكلوتوئيد</span>
+                </div>
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>نصف قطر المنحني الدائري (R):</span>
+                        <span id="val-ex1-R" class="val-badge">260 m</span>
+                    </div>
+                    <input type="range" id="ex1-R" min="60" max="800" step="10" value="260" oninput="HighwayExpLab.update()">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>زاوية الدوران الكلية (Δ):</span>
+                        <span id="val-ex1-delta" class="val-badge">65°</span>
+                    </div>
+                    <input type="range" id="ex1-delta" min="20" max="120" step="1" value="65" oninput="HighwayExpLab.update()">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>طول المنحني الانتقالي الكلوتوئيد (Ls):</span>
+                        <span id="val-ex1-Ls" class="val-badge">80 m</span>
+                    </div>
+                    <input type="range" id="ex1-Ls" min="0" max="180" step="5" value="80" oninput="HighwayExpLab.update()">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>ميل العلو الإضافي (Superelevation is):</span>
+                        <span id="val-ex1-is" class="val-badge">6.0 %</span>
+                    </div>
+                    <input type="range" id="ex1-is" min="2" max="8" step="0.5" value="6" oninput="HighwayExpLab.update()">
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="section-title">
+                    <span>3. تدوير العلو الإضافي وعائق الرؤية الجانبي</span>
+                </div>
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>طريقة تنفيذ تدوير العلو الإضافي (is):</span>
+                    </div>
+                    <select id="ex1-super-method" onchange="HighwayExpLab.update()">
+                        <option value="A" selected>أ) تنفيذ التدوير كاملاً على طول المنحني الانتقالي (Ls)</option>
+                        <option value="B">ب) تنفيذ ثلثي (2/3) التدوير على الاستقامة و (1/3) داخل القوس</option>
+                        <option value="C">ج) تنفيذ التدوير كاملاً دفعة واحدة عند بداية القوس الدائري</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>المسافة المتوفرة للعائق الجانبي (M_actual):</span>
+                        <span id="val-ex1-M" class="val-badge">8.5 m</span>
+                    </div>
+                    <input type="range" id="ex1-M" min="1" max="25" step="0.5" value="8.5" oninput="HighwayExpLab.update()">
+                </div>
+            </div>
+
+            <!-- صندوق التشخيص الهندسي والفخاخ للتمرين الأول -->
+            <div class="panel-section">
+                <div class="section-title">
+                    <span>4. المراقب الهندسي واكتشاف الفخاخ</span>
+                </div>
+                <div id="ex1-diagnostics"></div>
+            </div>
+        </aside>
+
+        <!-- ========================================================== -->
+        <!-- لوحة تحكم التمرين الثاني: توازن الأتربة والمقطع الطولي -->
+        <!-- ========================================================== -->
+        <aside id="controls-ex2" class="control-sidebar hidden">
+            <div class="panel-section">
+                <div class="section-title">
+                    <span>1. طبيعة المنطقة وأسلوب التصميم الطولي</span>
+                </div>
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>اختر طبيعة التضاريس وأسلوب التصميم:</span>
+                    </div>
+                    <select id="ex2-terrain-mode" onchange="HighwayExpLab.onTerrainModeChange()">
+                        <option value="hilly" selected>منطقة هضبية/جبلية — أسلوب القطع (Cut & Fill)</option>
+                        <option value="flat">منطقة سهلية — أسلوب التغليف (حماية الطابق الترابي بالردم)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="section-title">
+                    <span>2. تصميم خط المشروع والمقطع العرضي</span>
+                </div>
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>منسوب بداية خط المشروع (Z_start عند الوتد 1):</span>
+                        <span id="val-ex2-zstart" class="val-badge">101.5 m</span>
+                    </div>
+                    <input type="range" id="ex2-zstart" min="90" max="115" step="0.2" value="101.5" oninput="HighwayExpLab.update()">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>الميل الطولي لخط المشروع (i%):</span>
+                        <span id="val-ex2-grade" class="val-badge">+2.5 %</span>
+                    </div>
+                    <input type="range" id="ex2-grade" min="-5.0" max="7.0" step="0.25" value="2.5" oninput="HighwayExpLab.update()">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>عرض الطابق الترابي للطريق (B):</span>
+                        <span id="val-ex2-B" class="val-badge">12.0 m</span>
+                    </div>
+                    <input type="range" id="ex2-B" min="8" max="16" step="0.5" value="12" oninput="HighwayExpLab.update()">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>معامل ميل المنحدرات الجانبية (1:m):</span>
+                        <span id="val-ex2-m" class="val-badge">1 : 1.5</span>
+                    </div>
+                    <input type="range" id="ex2-m" min="1.0" max="2.5" step="0.25" value="1.5" oninput="HighwayExpLab.update()">
+                </div>
+
+                <label class="checkbox-row">
+                    <input type="checkbox" id="ex2-half-end" checked onchange="HighwayExpLab.update()">
+                    <span>تطبيق معامل النصف (1/2 h) للأوتاد الطرفية (الأول والأخير) في الحد التربيعي (m·hi²) بطريقة النغر</span>
+                </label>
+
+                <label class="checkbox-row">
+                    <input type="checkbox" id="ex2-climbing-lane" onchange="HighwayExpLab.update()">
+                    <span>إنشاء حارة صعود إضافية للشاحنات (Climbing Lane بعرض 3.5m مع خط دهان متصل)</span>
+                </label>
+            </div>
+
+            <!-- صندوق التشخيص الهندسي والفخاخ للتمرين الثاني -->
+            <div class="panel-section">
+                <div class="section-title">
+                    <span>3. تشخيص توازن الأتربة وحركة الشاحنات</span>
+                </div>
+                <div id="ex2-diagnostics"></div>
+            </div>
+        </aside>
+
+        <!-- حاوية المشهد ثلاثي الأبعاد -->
+        <main id="canvas-container">
+            <!-- شاشة القراءات الرقمية العائمة للتمرين الأول -->
+            <div id="telemetry-ex1" class="telemetry-overlay">
+                <div class="section-title">
+                    <span>📐 الصناديق الرقمية والمعادلات (التمرين 1)</span>
+                </div>
+                <div class="readout-grid">
+                    <div class="readout-box">
+                        <span class="readout-label">نصف القطر الأدنى (R_min)</span>
+                        <span id="ro-rmin" class="readout-value">240.0 m</span>
+                        <span class="readout-formula">V² / [127*(0.15 + is)]</span>
+                    </div>
+                    <div class="readout-box">
+                        <span class="readout-label">طول الكلوتوئيد الأدنى (Ls_min)</span>
+                        <span id="ro-lsmin" class="readout-value">52.3 m</span>
+                        <span class="readout-formula">V³ / (47 * R * J)</span>
+                    </div>
+                    <div class="readout-box">
+                        <span class="readout-label">طول المماس (T / T_total)</span>
+                        <span id="ro-tangent" class="readout-value">165.4 m</span>
+                        <span class="readout-formula">X0 + (R+P)*tan(Δ/2)</span>
+                    </div>
+                    <div class="readout-box">
+                        <span class="readout-label">طول القوس الدائري (Lc)</span>
+                        <span id="ro-lc" class="readout-value">214.8 m</span>
+                        <span class="readout-formula">π*R*(Δ - 2τ)/180</span>
+                    </div>
+                    <div class="readout-box">
+                        <span class="readout-label">السهم (E) والتوفير (D)</span>
+                        <span id="ro-ed" class="readout-value">E:48m | D:36m</span>
+                        <span class="readout-formula">E=R(sec(Δ/2)-1), D=2T-Lc</span>
+                    </div>
+                    <div class="readout-box">
+                        <span class="readout-label">زاوية الكلوتوئيد (τ) وإزاحة (P)</span>
+                        <span id="ro-taup" class="readout-value">τ:8.8° | P:1.03m</span>
+                        <span class="readout-formula">τ=Ls/2R, P=Ls²/24R</span>
+                    </div>
+                    <div class="readout-box">
+                        <span class="readout-label">تعريض الحارة الواحدة (Δw)</span>
+                        <span id="ro-widening" class="readout-value">0.79 m</span>
+                        <span class="readout-formula">L²/2R + 0.05V/√R</span>
+                    </div>
+                    <div class="readout-box">
+                        <span class="readout-label">مسافة التوقف على الفرملة (Sd)</span>
+                        <span id="ro-ssd" class="readout-value">121.4 m</span>
+                        <span class="readout-formula">(V/3.6)t + V²/(254*0.35)+5</span>
+                    </div>
+                    <div class="readout-box" style="grid-column: span 2;">
+                        <span class="readout-label">مسافة القص الجانبي للرؤية: المطلوبة (M_req) مقابل المتوفرة (M_actual)</span>
+                        <span id="ro-sight-m" class="readout-value">M_req = 7.05 m | M_actual = 8.50 m</span>
+                        <span class="readout-formula">M_req = R * [ 1 - cos((90 * Sd) / (π * R)) ]</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- شاشة القراءات الرقمية والجدول العائم للتمرين الثاني -->
+            <div id="telemetry-ex2" class="telemetry-overlay hidden">
+                <div class="section-title">
+                    <span>📊 جدول الأوتاد وحجوم الأتربة بطريقة النغر (التمرين 2)</span>
+                </div>
+                <div class="readout-grid">
+                    <div class="readout-box">
+                        <span class="readout-label">إجمالي حجم الحفر (V_cut)</span>
+                        <span id="ro-vcut" class="readout-value" style="color:#fb923c;">0 m³</span>
+                        <span class="readout-formula">[B*Σh_cut + m*Σh²]*L</span>
+                    </div>
+                    <div class="readout-box">
+                        <span class="readout-label">إجمالي حجم الردم (V_fill)</span>
+                        <span id="ro-vfill" class="readout-value" style="color:#38bdf8;">0 m³</span>
+                        <span class="readout-formula">[B*Σh_fill + m*Σh²]*L</span>
+                    </div>
+                    <div class="readout-box">
+                        <span class="readout-label">نسبة الحفر إلى الردم (Ratio)</span>
+                        <span id="ro-ratio" class="readout-value">72.5 %</span>
+                        <span class="readout-formula">(V_cut / V_fill) * 100%</span>
+                    </div>
+                    <div class="readout-box">
+                        <span class="readout-label">سرعة الشاحنة على الميل</span>
+                        <span id="ro-truck-speed" class="readout-value">65 km/h</span>
+                        <span class="readout-formula">تأثير الميل الطولي i%</span>
+                    </div>
+                </div>
+
+                <table class="stakes-table">
+                    <thead>
+                        <tr>
+                            <th>الوتد (المسافة)</th>
+                            <th>الأرض Z_g</th>
+                            <th>المشروع Z_p</th>
+                            <th>العمل hi</th>
+                            <th>الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stakes-tbody"></tbody>
+                </table>
+            </div>
+
+            <!-- شريط الإيضاح السفلي -->
+            <div id="legend-ex1" class="scene-legend">
+                <div class="legend-item"><span class="legend-dot" style="background:#38bdf8;"></span> استقامة (Tangent)</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#f59e0b;"></span> منحني انتقالي كلوتوئيد (Ls)</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#22c55e;"></span> قوس دائري (R)</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#ef4444;"></span> خط الرؤية / منطقة حرجة</div>
+            </div>
+
+            <div id="legend-ex2" class="scene-legend hidden">
+                <div class="legend-item"><span class="legend-dot" style="background:#fb923c;"></span> منطقة حفر / قطع (Cut)</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#38bdf8;"></span> منطقة ردم / تغليف (Fill)</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#22c55e;"></span> سطح الأرض الطبيعية</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#facc15;"></span> حارة صعود الشاحنات (Climbing Lane)</div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ==================================================================== -->
+    <!-- الكائن البرمجي الموحد والمغلق لمختبر هندسة الطرق (HighwayExpLab)      -->
+    <!-- ==================================================================== -->
+    <script>
+        const HighwayExpLab = {
+            // متغيرات حالة النظام و Three.js
+            container: null,
+            scene: null,
+            camera: null,
+            renderer: null,
+            controls: null,
+            animFrameId: null,
+            isRunning: true,
+            activeExercise: 1, // 1: المنحنيات والرؤية، 2: توازن الأتربة والمقطع الطولي
+            boundResizeHandler: null,
+
+            // مجموعات المجسمات لفصل وتنظيف الذاكرة بدقة
+            exerciseGroup: null,
+
+            // بيانات المركبات التصميمية حسب كود AASHTO
+            vehicleSpecs: {
+                P:    { name: 'سيارة سياحية (P)', L: 5.75, W: 2.15, H: 1.50, Rmin: 7.30, color: 0x38bdf8 },
+                SU:   { name: 'شاحنة إفرادية (SU)', L: 9.10, W: 2.60, H: 4.10, Rmin: 12.80, color: 0xf59e0b },
+                WB50: { name: 'قاطرة ومقطورة (WB-50)', L: 16.75, W: 2.60, H: 4.10, Rmin: 13.70, color: 0x10b981 }
+            },
+
+            // حالة الحركة في التمرين الأول
+            ex1State: {
+                pathPoints: [],
+                vehicleMesh: null,
+                sightLineMesh: null,
+                targetMarkerMesh: null,
+                obstacleMesh: null,
+                progress: 0.12,
+                speedFactor: 0.0012,
+                superTrapActive: false,
+                overlapTrapActive: false,
+                sightTrapActive: false,
+                M_req: 7.0
+            },
+
+            // بيانات التضاريس وحالة الحركة في التمرين الثاني (5 أوتاد بمسافة L=100m، الطول الكلي 400m)
+            ex2State: {
+                L_stake: 100,
+                groundProfiles: {
+                    // تضاريس هضبية متموجة تتطلب القطع والردم
+                    hilly: [108.0, 114.5, 102.0, 99.5, 112.0],
+                    // تضاريس سهلية منبسطة يفضل فيها التغليف بالردم
+                    flat:  [100.0, 100.6, 99.8, 100.4, 100.2]
+                },
+                convoyMeshes: [],
+                warningBeacon: null,
+                convoyProgress: 0.05,
+                truckBottleneck: false
+            },
+
+            // -------------------------------------------------------------------------
+            // 1. دالة التهيئة الأساسية init(containerId)
+            // -------------------------------------------------------------------------
+            init: function(containerId) {
+                this.container = document.getElementById(containerId);
+                if (!this.container) return;
+
+                // إنشاء المشهد بخلفية كحلية داكنة (#0f172a)
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x0f172a);
+                this.scene.fog = new THREE.FogExp2(0x0f172a, 0.0012);
+
+                // إعداد الكاميرا
+                const w = this.container.clientWidth;
+                const h = this.container.clientHeight;
+                this.camera = new THREE.PerspectiveCamera(45, w / h, 1, 3000);
+                this.camera.position.set(0, 190, 260);
+
+                // إعداد المصير (Renderer)
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+                this.renderer.setSize(w, h);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                this.container.appendChild(this.renderer.domElement);
+
+                // إعداد متحكمات الكاميرا OrbitControls
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.06;
+                this.controls.maxPolarAngle = Math.PI / 2 - 0.03;
+                this.controls.minDistance = 25;
+                this.controls.maxDistance = 900;
+
+                // إعداد الإضاءة والشبكة الأرضية الهندسية
+                this.setupLightsAndGrid();
+
+                // مجموعة خاصة بمجسمات التمرين النشط
+                this.exerciseGroup = new THREE.Group();
+                this.scene.add(this.exerciseGroup);
+
+                // مستمع تغيير حجم النافذة
+                this.boundResizeHandler = this.onWindowResize.bind(this);
+                window.addEventListener('resize', this.boundResizeHandler);
+
+                // بناء التمرين النشط وتحديث الحسابات
+                this.update();
+
+                // بدء حلقة التحريك
+                this.animate();
+            },
+
+            setupLightsAndGrid: function() {
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+                this.scene.add(ambientLight);
+
+                const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
+                dirLight.position.set(150, 300, 180);
+                dirLight.castShadow = true;
+                dirLight.shadow.mapSize.width = 2048;
+                dirLight.shadow.mapSize.height = 2048;
+                this.scene.add(dirLight);
+
+                const hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x0f172a, 0.25);
+                this.scene.add(hemiLight);
+
+                const gridHelper = new THREE.GridHelper(900, 60, 0x334155, 0x1e293b);
+                gridHelper.position.y = -0.2;
+                this.scene.add(gridHelper);
+            },
+
+            // -------------------------------------------------------------------------
+            // 2. التبديل بين التمرين الأول والتمرين الثاني مع تنظيف الذاكرة
+            // -------------------------------------------------------------------------
+            switchExercise: function(exNum) {
+                if (this.activeExercise === exNum) return;
+                this.activeExercise = exNum;
+
+                // تحديث حالة أزرار التبويبات واللوحات
+                document.getElementById('tab-btn-1').classList.toggle('active', exNum === 1);
+                document.getElementById('tab-btn-2').classList.toggle('active', exNum === 2);
+
+                document.getElementById('controls-ex1').classList.toggle('hidden', exNum !== 1);
+                document.getElementById('controls-ex2').classList.toggle('hidden', exNum !== 2);
+
+                document.getElementById('telemetry-ex1').classList.toggle('hidden', exNum !== 1);
+                document.getElementById('telemetry-ex2').classList.toggle('hidden', exNum !== 2);
+
+                document.getElementById('legend-ex1').classList.toggle('hidden', exNum !== 1);
+                document.getElementById('legend-ex2').classList.toggle('hidden', exNum !== 2);
+
+                // تنظيف مجسمات التمرين السابق من الذاكرة
+                this.clearExerciseMeshes();
+
+                // ضبط زاوية الكاميرا المناسبة لكل تمرين
+                if (exNum === 1) {
+                    this.camera.position.set(0, 210, 250);
+                    this.controls.target.set(0, 0, -20);
+                } else {
+                    this.camera.position.set(0, 95, 250);
+                    this.controls.target.set(0, 15, 0);
+                }
+                this.controls.update();
+
+                this.update();
+            },
+
+            // -------------------------------------------------------------------------
+            // 3. دالة التحديث والحسابات الشاملة calculate() / update()
+            // -------------------------------------------------------------------------
+            calculate: function() {
+                this.update();
+            },
+
+            update: function() {
+                this.clearExerciseMeshes();
+                if (this.activeExercise === 1) {
+                    this.updateExercise1();
+                } else {
+                    this.updateExercise2();
+                }
+            },
+
+            // =========================================================================
+            // منطق وحسابات ومجسمات التمرين الأول: محاكي المنحنيات والرؤية (Curve & Clothoid)
+            // =========================================================================
+            updateExercise1: function() {
+                // قراءة المدخلات
+                const vehType = document.getElementById('ex1-vehicle').value;
+                const V = parseFloat(document.getElementById('ex1-V').value);
+                const R = parseFloat(document.getElementById('ex1-R').value);
+                const deltaDeg = parseFloat(document.getElementById('ex1-delta').value);
+                const Ls = parseFloat(document.getElementById('ex1-Ls').value);
+                const isPercent = parseFloat(document.getElementById('ex1-is').value);
+                const M_actual = parseFloat(document.getElementById('ex1-M').value);
+                const superMethod = document.getElementById('ex1-super-method').value;
+
+                // تحديث شارات العرض بجانب المنزلقات
+                document.getElementById('val-ex1-V').textContent = `${V} km/h`;
+                document.getElementById('val-ex1-R').textContent = `${R} m`;
+                document.getElementById('val-ex1-delta').textContent = `${deltaDeg}°`;
+                document.getElementById('val-ex1-Ls').textContent = `${Ls} m`;
+                document.getElementById('val-ex1-is').textContent = `${isPercent.toFixed(1)} %`;
+                document.getElementById('val-ex1-M').textContent = `${M_actual.toFixed(1)} m`;
+
+                const veh = this.vehicleSpecs[vehType];
+                const is = isPercent / 100.0;
+                const mu = 0.15; // معامل الاحتكاك العرضي
+                const J = 0.8;   // معدل تغير التسارع القطري m/sec³
+                const deltaRad = THREE.MathUtils.degToRad(deltaDeg);
+
+                // 1. نصف القطر التصميمي الأدنى للاستقرار
+                const R_min = (V * V) / (127 * (mu + is));
+
+                // 2. عناصر المنحني الدائري والانتقالي (الكلوتوئيد)
+                const Ls_min = (Math.pow(V, 3)) / (47 * R * J);
+
+                let tauRad = 0, tauDeg = 0, P = 0, X0 = 0, T_total = 0, Lc_final = 0;
+                const E = R * ((1 / Math.cos(deltaRad / 2)) - 1);
+
+                if (Ls > 0) {
+                    tauRad = Ls / (2 * R);
+                    tauDeg = THREE.MathUtils.radToDeg(tauRad);
+                    P = (Ls * Ls) / (24 * R);
+                    X0 = Ls - (Math.pow(Ls, 3) / (40 * R * R));
+                    T_total = X0 + (R + P) * Math.tan(deltaRad / 2);
+                    Lc_final = (Math.PI * R * (deltaDeg - 2 * tauDeg)) / 180;
+                } else {
+                    T_total = R * Math.tan(deltaRad / 2);
+                    Lc_final = (Math.PI * R * deltaDeg) / 180;
+                }
+                const D_saving = 2 * (R * Math.tan(deltaRad / 2)) - ((Math.PI * R * deltaDeg) / 180);
+
+                // 3. تعريض حارة المرور الواحدة
+                const delta_w = ((veh.L * veh.L) / (2 * R)) + ((0.05 * V) / Math.sqrt(R));
+
+                // 4. مسافة التوقف على الفرملة ومسافة القص الجانبي للرؤية
+                const t_react = 2.0;
+                const Sd = (V / 3.6) * t_react + ((V * V) / (254 * 0.35)) + 5;
+                const angleSightRad = THREE.MathUtils.degToRad((90 * Sd) / (Math.PI * R));
+                const M_req = R * (1 - Math.cos(angleSightRad));
+
+                this.ex1State.M_req = M_req;
+                this.ex1State.speedFactor = 0.0006 + (V / 120) * 0.0018;
+
+                // تحديث الصناديق الرقمية
+                const rminEl = document.getElementById('ro-rmin');
+                rminEl.textContent = `${R_min.toFixed(1)} m`;
+                rminEl.style.color = (R < R_min) ? '#ef4444' : '#22c55e';
+
+                document.getElementById('ro-lsmin').textContent = `${Ls_min.toFixed(1)} m`;
+                document.getElementById('ro-tangent').textContent = `${T_total.toFixed(1)} m`;
+                document.getElementById('ro-lc').textContent = `${Math.max(0, Lc_final).toFixed(1)} m`;
+                document.getElementById('ro-ed').textContent = `E:${E.toFixed(1)}m | D:${D_saving.toFixed(1)}m`;
+                document.getElementById('ro-taup').textContent = `τ:${tauDeg.toFixed(1)}° | P:${P.toFixed(2)}m`;
+                document.getElementById('ro-widening').textContent = `${delta_w.toFixed(2)} m`;
+                document.getElementById('ro-ssd').textContent = `${Sd.toFixed(1)} m`;
+
+                const sightEl = document.getElementById('ro-sight-m');
+                sightEl.textContent = `M_req = ${M_req.toFixed(2)} m | M_actual = ${M_actual.toFixed(2)} m`;
+                sightEl.style.color = (M_actual < M_req) ? '#ef4444' : '#22c55e';
+
+                // فحص الفخاخ الهندسية للتمرين الأول
+                const overlapTrap = (Ls > 0 && (2 * tauDeg > deltaDeg));
+                this.ex1State.overlapTrapActive = overlapTrap;
+
+                let superTrap = false;
+                let superMsg = '';
+                if (Ls > 0 && superMethod !== 'A') {
+                    superTrap = true;
+                    superMsg = 'فخ تدوير العلو الإضافي: بوجود منحني انتقالي (Ls > 0)، يجب تنفيذ التدوير تدريجياً وبشكل كامل على امتداد المنحني الانتقالي Ls (الخيار أ).';
+                } else if (Ls === 0 && superMethod !== 'B') {
+                    superTrap = true;
+                    superMsg = 'فخ تدوير العلو الإضافي: في المنحني الدائري البسيط (Ls = 0)، القاعدة الهندسية تقضي بتنفيذ ثلثي (2/3) التدوير على الاستقامة والثلث (1/3) داخل القوس الدائري (الخيار ب).';
+                }
+                if (superMethod === 'C') {
+                    superTrap = true;
+                    superMsg = 'خطأ هندسي خطير (الخيار ج): تنفيذ العلو الإضافي دفعة واحدة عند بداية القوس يسبب صدمة جانبية وانقلاباً للمركبات!';
+                }
+                this.ex1State.superTrapActive = superTrap;
+
+                const sightTrap = (M_actual < M_req);
+                this.ex1State.sightTrapActive = sightTrap;
+
+                // عرض التنبيهات التفاعلية في لوحة المراقب الهندسي
+                let diagHTML = '';
+                if (overlapTrap) {
+                    diagHTML += `<div class="alert-box alert-danger">
+                        🚨 <b>خطأ هندسي حرج:</b> شرط التوضع (2τ ≤ Δ) غير محقق! (${(2 * tauDeg).toFixed(1)}° > ${deltaDeg}°). تداخل فرعا الكلوتوئيد واختفى القوس الدائري، يجب زيادة R أو تقليل Ls.
+                    </div>`;
+                }
+                if (R < R_min) {
+                    diagHTML += `<div class="alert-box alert-danger">
+                        ⚠️ <b>خطر انزلاق عرضي:</b> نصف القطر المختار (${R}m) أصغر من الحد الأدنى للاستقرار (${R_min.toFixed(1)}m) للسرعة ${V} km/h.
+                    </div>`;
+                }
+                if (superTrap) {
+                    diagHTML += `<div class="alert-box alert-warning">
+                        🔄 <b>اهتزاز المركبة:</b> ${superMsg}
+                    </div>`;
+                }
+                if (sightTrap) {
+                    diagHTML += `<div class="alert-box alert-danger">
+                        👁️ <b>الرؤية محجوبة بالجدار/الأشجار!</b> المسافة المتوفرة (${M_actual}m) أقل من المطلوبة (${M_req.toFixed(2)}m). يجب إزاحة الجدار أو قص التربة لمسافة لا تقل عن M_req.
+                        <button class="fix-btn" onclick="HighwayExpLab.fixSightObstacle()">🚜 تنفيذ قص التربة وإزاحة الجدار تلقائياً إلى ${(M_req + 1.0).toFixed(1)}m</button>
+                    </div>`;
+                }
+                if (!overlapTrap && R >= R_min && !superTrap && !sightTrap) {
+                    diagHTML = `<div class="alert-box alert-success">
+                        ✅ <b>تصميم هندسي آمن ومثالي:</b> شرط التوضع (2τ ≤ Δ) محقق، ونصف القطر مستقر، وتدوير العلو الإضافي صحيح، ومسافة الرؤية الجانبية خالية من العوائق.
+                    </div>`;
+                }
+                document.getElementById('ex1-diagnostics').innerHTML = diagHTML;
+
+                // بناء المشهد ثلاثي الأبعاد للتمرين الأول
+                this.buildExercise1Scene(R, deltaRad, Ls, is, delta_w, M_actual, veh, overlapTrap, sightTrap);
+            },
+
+            fixSightObstacle: function() {
+                const safeM = Math.min(25, Math.ceil((this.ex1State.M_req + 1.0) * 2) / 2);
+                const slider = document.getElementById('ex1-M');
+                slider.value = safeM;
+                this.update();
+            },
+
+            buildExercise1Scene: function(R, deltaRad, Ls, is, delta_w, M_actual, veh, overlapTrap, sightTrap) {
+                // تحجيم بصري متناسق للمشهد مع الحفاظ على الدقة الهندسية
+                const visualScale = 0.45;
+                const R_vis = Math.max(35, R * visualScale);
+                const Ls_vis = Ls * visualScale;
+                const tanLen_vis = 85;
+
+                const baseRoadWidth = (7.2 + delta_w * 2) * 1.3;
+                const pointsData = [];
+
+                // توليد نقاط المسار المركب: استقامة 1 -> كلوتوئيد 1 -> قوس دائري -> كلوتوئيد 2 -> استقامة 2
+                // نضع قمة المنحني في المنتصف ليكون المشهد متمركزاً أمام الكاميرا
+                const tauVis = (Ls > 0) ? Math.min(deltaRad * 0.45, Ls / (2 * R)) : 0;
+                const circularAngle = Math.max(0.05, deltaRad - 2 * tauVis);
+
+                const totalSamples = 140;
+                let currX = -150;
+                let currZ = 110;
+                let currHeading = -Math.PI / 4; // متجه للأمام واليمين
+
+                for (let i = 0; i <= totalSamples; i++) {
+                    const u = i / totalSamples;
+                    let segType = 'tangent';
+                    let curvature = 0;
+                    let bankRatio = 0;
+
+                    if (u < 0.2) {
+                        segType = 'tangent';
+                        curvature = 0;
+                        bankRatio = 0;
+                    } else if (u < 0.38 && Ls > 0) {
+                        segType = 'clothoid';
+                        const localT = (u - 0.2) / 0.18;
+                        curvature = localT / R_vis;
+                        bankRatio = localT;
+                    } else if (u <= 0.62) {
+                        segType = 'circular';
+                        curvature = 1 / R_vis;
+                        bankRatio = 1.0;
+                    } else if (u <= 0.8 && Ls > 0) {
+                        segType = 'clothoid';
+                        const localT = 1 - ((u - 0.62) / 0.18);
+                        curvature = localT / R_vis;
+                        bankRatio = localT;
+                    } else {
+                        segType = 'tangent';
+                        curvature = 0;
+                        bankRatio = 0;
+                    }
+
+                    const ds = 2.6;
+                    currHeading += curvature * ds * (deltaRad / 1.1);
+                    currX += Math.cos(currHeading) * ds;
+                    currZ += Math.sin(currHeading) * ds;
+
+                    pointsData.push({
+                        pos: new THREE.Vector3(currX, 0.5, currZ),
+                        heading: currHeading,
+                        segType: segType,
+                        bankAngle: bankRatio * is * 2.2, // تضخيم بصري طفيف لميل العلو الإضافي ليظهر بوضوح
+                        widenFactor: bankRatio
+                    });
+                }
+
+                this.ex1State.pathPoints = pointsData;
+
+                // بناء شرائح الطريق ثلاثية الأبعاد مع إظهار العلو الإضافي والتعريض والألوان
+                for (let i = 0; i < pointsData.length - 1; i++) {
+                    const p1 = pointsData[i];
+                    const p2 = pointsData[i + 1];
+
+                    const segLen = p1.pos.distanceTo(p2.pos);
+                    const w = baseRoadWidth + p1.widenFactor * (delta_w * 3.0);
+
+                    let segColor = 0x334155;
+                    let edgeColor = 0x38bdf8;
+                    if (overlapTrap) {
+                        segColor = 0x991b1b;
+                        edgeColor = 0xef4444;
+                    } else if (p1.segType === 'clothoid') {
+                        segColor = 0x475569;
+                        edgeColor = 0xf59e0b;
+                    } else if (p1.segType === 'circular') {
+                        segColor = 0x3b4252;
+                        edgeColor = 0x22c55e;
+                    }
+
+                    const slabGeo = new THREE.BoxGeometry(segLen + 0.35, 0.6, w);
+                    const slabMat = new THREE.MeshStandardMaterial({ color: segColor, roughness: 0.7 });
+                    const slab = new THREE.Mesh(slabGeo, slabMat);
+
+                    slab.position.copy(p1.pos).lerp(p2.pos, 0.5);
+                    slab.rotation.y = -p1.heading;
+                    slab.rotation.x = p1.bankAngle; // إمالة عرضية تمثل العلو الإضافي Superelevation
+                    this.exerciseGroup.add(slab);
+
+                    // خط محور الطريق وخطوط الحواف
+                    if (i % 2 === 0) {
+                        const stripeGeo = new THREE.BoxGeometry(segLen * 0.7, 0.66, 0.35);
+                        const stripeMat = new THREE.MeshBasicMaterial({ color: edgeColor });
+                        const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+                        stripe.position.copy(slab.position);
+                        stripe.rotation.copy(slab.rotation);
+                        this.exerciseGroup.add(stripe);
+                    }
+                }
+
+                // بناء العائق الجانبي الداخلي (جدار ضجيج + تل صخري وأشجار) على الكتف الداخلي للمنحني
+                const midIdx = Math.floor(pointsData.length * 0.5);
+                const midPt = pointsData[midIdx];
+                const inwardNormal = new THREE.Vector3(-Math.sin(midPt.heading), 0, Math.cos(midPt.heading)).normalize();
+
+                const offsetDist = (baseRoadWidth * 0.5) + M_actual * 1.4;
+                const obstaclePos = midPt.pos.clone().add(inwardNormal.clone().multiplyScalar(offsetDist));
+
+                const obstacleGroup = new THREE.Group();
+                obstacleGroup.position.copy(obstaclePos);
+                obstacleGroup.rotation.y = -midPt.heading;
+
+                // جدار منع الضجيج / التل الصخري
+                const wallGeo = new THREE.BoxGeometry(48, 9, 4.5);
+                const wallMat = new THREE.MeshStandardMaterial({
+                    color: sightTrap ? 0xdc2626 : 0x64748b,
+                    roughness: 0.8
+                });
+                const wallMesh = new THREE.Mesh(wallGeo, wallMat);
+                wallMesh.position.y = 4.5;
+                obstacleGroup.add(wallMesh);
+
+                // أشجار على الكتف الداخلي
+                for (let t = -18; t <= 18; t += 9) {
+                    const trunk = new THREE.Mesh(
+                        new THREE.CylinderGeometry(0.6, 0.8, 4, 8),
+                        new THREE.MeshStandardMaterial({ color: 0x78350f })
+                    );
+                    trunk.position.set(t, 2, 4.5);
+                    const crown = new THREE.Mesh(
+                        new THREE.ConeGeometry(3.2, 8, 8),
+                        new THREE.MeshStandardMaterial({ color: 0x15803d })
+                    );
+                    crown.position.set(t, 7, 4.5);
+                    obstacleGroup.add(trunk, crown);
+                }
+
+                this.exerciseGroup.add(obstacleGroup);
+                this.ex1State.obstacleMesh = obstacleGroup;
+
+                // إنشاء المركبة التصميمية المختارة (P, SU, WB-50)
+                this.ex1State.vehicleMesh = this.createVehicleMesh(veh);
+                this.exerciseGroup.add(this.ex1State.vehicleMesh);
+
+                // إنشاء هدف الرؤية على المسار وخط الرؤية (Sight Line)
+                const targetGeo = new THREE.SphereGeometry(1.8, 16, 16);
+                const targetMat = new THREE.MeshBasicMaterial({ color: sightTrap ? 0xef4444 : 0x22c55e });
+                this.ex1State.targetMarkerMesh = new THREE.Mesh(targetGeo, targetMat);
+                this.exerciseGroup.add(this.ex1State.targetMarkerMesh);
+
+                const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+                const lineMat = new THREE.LineBasicMaterial({
+                    color: sightTrap ? 0xef4444 : 0x22c55e,
+                    linewidth: 3
+                });
+                this.ex1State.sightLineMesh = new THREE.Line(lineGeo, lineMat);
+                this.exerciseGroup.add(this.ex1State.sightLineMesh);
+
+                this.updateEx1VehiclePosition();
+            },
+
+            createVehicleMesh: function(veh) {
+                const group = new THREE.Group();
+                const scale = 0.85;
+                const L = veh.L * scale;
+                const W = veh.W * scale;
+                const H = veh.H * scale;
+
+                const bodyGeo = new THREE.BoxGeometry(L, H, W);
+                const bodyMat = new THREE.MeshStandardMaterial({ color: veh.color, roughness: 0.3, metalness: 0.2 });
+                const body = new THREE.Mesh(bodyGeo, bodyMat);
+                body.position.y = H / 2 + 0.6;
+                group.add(body);
+
+                // كبينة القيادة الأمامية
+                const cabGeo = new THREE.BoxGeometry(L * 0.28, H * 0.75, W * 0.95);
+                const cabMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0 });
+                const cab = new THREE.Mesh(cabGeo, cabMat);
+                cab.position.set(L * 0.4, H * 0.45 + 0.6, 0);
+                group.add(cab);
+
+                return group;
+            },
+
+            updateEx1VehiclePosition: function() {
+                const pts = this.ex1State.pathPoints;
+                if (!pts || pts.length < 5 || !this.ex1State.vehicleMesh) return;
+
+                const idx = Math.floor(this.ex1State.progress * (pts.length - 25));
+                const currPt = pts[idx];
+                const targetPt = pts[Math.min(pts.length - 1, idx + 22)];
+
+                this.ex1State.vehicleMesh.position.copy(currPt.pos);
+                this.ex1State.vehicleMesh.rotation.y = -currPt.heading;
+
+                // تطبيق اهتزاز المركبة إذا وقع الطالب في فخ تدوير العلو الإضافي
+                if (this.ex1State.superTrapActive) {
+                    this.ex1State.vehicleMesh.rotation.x = currPt.bankAngle + Math.sin(Date.now() * 0.035) * 0.18;
+                    this.ex1State.vehicleMesh.position.y = 0.5 + Math.abs(Math.sin(Date.now() * 0.04)) * 0.9;
+                } else {
+                    this.ex1State.vehicleMesh.rotation.x = currPt.bankAngle;
+                }
+
+                // تحديث موقع الهدف وخط الرؤية (Sight Line)
+                if (this.ex1State.targetMarkerMesh && this.ex1State.sightLineMesh) {
+                    const eyePos = currPt.pos.clone().add(new THREE.Vector3(0, 2.5, 0));
+                    const objPos = targetPt.pos.clone().add(new THREE.Vector3(0, 1.8, 0));
+                    this.ex1State.targetMarkerMesh.position.copy(objPos);
+
+                    const posAttr = this.ex1State.sightLineMesh.geometry.attributes.position;
+                    posAttr.setXYZ(0, eyePos.x, eyePos.y, eyePos.z);
+                    posAttr.setXYZ(1, objPos.x, objPos.y, objPos.z);
+                    posAttr.needsUpdate = true;
+                }
+            },
+
+            // =========================================================================
+            // منطق وحسابات ومجسمات التمرين الثاني: توازن الأتربة والمقطع الطولي
+            // =========================================================================
+            onTerrainModeChange: function() {
+                const mode = document.getElementById('ex2-terrain-mode').value;
+                const zSlider = document.getElementById('ex2-zstart');
+                const gradeSlider = document.getElementById('ex2-grade');
+
+                if (mode === 'flat') {
+                    // في المناطق السهلية نرفع خط المشروع للتغليف بالردم
+                    zSlider.value = 102.2;
+                    gradeSlider.value = 0.5;
+                } else {
+                    // في المناطق الهضبية نضبط خط المشروع للقطع والردم
+                    zSlider.value = 101.5;
+                    gradeSlider.value = 2.5;
+                }
+                this.update();
+            },
+
+            updateExercise2: function() {
+                const terrainMode = document.getElementById('ex2-terrain-mode').value;
+                const Z_start = parseFloat(document.getElementById('ex2-zstart').value);
+                const gradePercent = parseFloat(document.getElementById('ex2-grade').value);
+                const B_base = parseFloat(document.getElementById('ex2-B').value);
+                const m_slope = parseFloat(document.getElementById('ex2-m').value);
+                const useHalfEnd = document.getElementById('ex2-half-end').checked;
+                const hasClimbingLane = document.getElementById('ex2-climbing-lane').checked;
+
+                // تحديث شارات المنزلقات
+                document.getElementById('val-ex2-zstart').textContent = `${Z_start.toFixed(1)} m`;
+                document.getElementById('val-ex2-grade').textContent = `${gradePercent > 0 ? '+' : ''}${gradePercent.toFixed(2)} %`;
+                document.getElementById('val-ex2-B').textContent = `${B_base.toFixed(1)} m`;
+                document.getElementById('val-ex2-m').textContent = `1 : ${m_slope.toFixed(2)}`;
+
+                const B_effective = hasClimbingLane ? (B_base + 3.5) : B_base;
+                const L = this.ex2State.L_stake; // 100m بين كل وتدين
+                const groundZ = this.ex2State.groundProfiles[terrainMode];
+
+                const stakesData = [];
+                let sumH_cut = 0, sumH_fill = 0;
+                let sumH2_cut_correct = 0, sumH2_fill_correct = 0;
+                let sumH2_cut_wrong = 0, sumH2_fill_wrong = 0;
+
+                let tbodyHTML = '';
+
+                for (let i = 0; i < 5; i++) {
+                    const dist = i * L;
+                    const Zg = groundZ[i];
+                    const Zp = Z_start + (gradePercent / 100.0) * dist;
+                    const hi = Zp - Zg; // موجب ردم، سالب حفر
+                    const absH = Math.abs(hi);
+                    const isEndStake = (i === 0 || i === 4);
+
+                    // في الحد التربيعي m*hi² تعوض الأوتاد الطرفية بنصف قيمتها (0.5 * h)
+                    const h_for_sq_correct = isEndStake ? (0.5 * absH) : absH;
+                    const h_for_sq_wrong = absH;
+
+                    if (hi >= 0) {
+                        sumH_fill += (isEndStake ? 0.5 * absH : absH);
+                        sumH2_fill_correct += (h_for_sq_correct * h_for_sq_correct);
+                        sumH2_fill_wrong += (h_for_sq_wrong * h_for_sq_wrong);
+                    } else {
+                        sumH_cut += (isEndStake ? 0.5 * absH : absH);
+                        sumH2_cut_correct += (h_for_sq_correct * h_for_sq_correct);
+                        sumH2_cut_wrong += (h_for_sq_wrong * h_for_sq_wrong);
+                    }
+
+                    stakesData.push({ index: i + 1, dist, Zg, Zp, hi });
+
+                    const statusClass = hi >= 0 ? 'fill-cell' : 'cut-cell';
+                    const statusText = hi >= 0 ? 'ردم (Fill)' : 'حفر (Cut)';
+                    tbodyHTML += `<tr>
+                        <td>وتد ${i + 1} (${dist}m)</td>
+                        <td>${Zg.toFixed(2)}</td>
+                        <td>${Zp.toFixed(2)}</td>
+                        <td class="${statusClass}">${hi > 0 ? '+' : ''}${hi.toFixed(2)}m</td>
+                        <td class="${statusClass}">${statusText}</td>
+                    </tr>`;
+                }
+
+                document.getElementById('stakes-tbody').innerHTML = tbodyHTML;
+
+                // حساب الحجوم بطريقة النغر / التجميع: V = [ B * Σ(hi) + m * Σ(hi²) ] * L
+                const V_cut_correct = (B_effective * sumH_cut + m_slope * sumH2_cut_correct) * L;
+                const V_fill_correct = (B_effective * sumH_fill + m_slope * sumH2_fill_correct) * L;
+
+                const V_cut_wrong = (B_effective * sumH_cut + m_slope * sumH2_cut_wrong) * L;
+                const V_fill_wrong = (B_effective * sumH_fill + m_slope * sumH2_fill_wrong) * L;
+
+                const V_cut = useHalfEnd ? V_cut_correct : V_cut_wrong;
+                const V_fill = useHalfEnd ? V_fill_correct : V_fill_wrong;
+                const inflationError = ((V_cut_wrong + V_fill_wrong) - (V_cut_correct + V_fill_correct));
+
+                const ratio = V_fill > 1 ? ((V_cut / V_fill) * 100) : (V_cut > 0 ? 999 : 0);
+
+                // تحديث الصناديق الرقمية
+                document.getElementById('ro-vcut').textContent = `${Math.round(V_cut).toLocaleString()} m³`;
+                document.getElementById('ro-vfill').textContent = `${Math.round(V_fill).toLocaleString()} m³`;
+
+                const ratioEl = document.getElementById('ro-ratio');
+                ratioEl.textContent = V_fill > 1 ? `${ratio.toFixed(1)} %` : 'حفر كامل';
+                ratioEl.style.color = (ratio >= 68 && ratio <= 77) ? '#22c55e' : '#f59e0b';
+
+                // فحص اختناق الشاحنات على الصعود الحاد (i > 3.5%)
+                const bottleneck = (gradePercent > 3.5 && !hasClimbingLane);
+                this.ex2State.truckBottleneck = bottleneck;
+
+                const speedEl = document.getElementById('ro-truck-speed');
+                if (bottleneck) {
+                    speedEl.textContent = `12 km/h (اختناق!)`;
+                    speedEl.style.color = '#ef4444';
+                } else {
+                    const normalSpeed = Math.max(45, Math.round(75 - Math.max(0, gradePercent) * 4));
+                    speedEl.textContent = `${normalSpeed} km/h (انسيابي)`;
+                    speedEl.style.color = '#22c55e';
+                }
+
+                // تشخيص الفخاخ الهندسية للتمرين الثاني
+                let diagHTML = '';
+
+                // 1. فخ مساواة الحفر بالردم (قاعدة 25% - 30%)
+                if (terrainMode === 'hilly') {
+                    if (ratio >= 92 && ratio <= 108) {
+                        diagHTML += `<div class="alert-box alert-danger">
+                            ⚠️ <b>انتبه للفخ الهندسي!</b> مساواة مساحة الحفر بالردم تماماً (${ratio.toFixed(1)}%) على المقطع الطولي تؤدي لعجز ميداني؛ لأن تربة الحفر تقل بالرص والانكماش وتفقد القشرة النباتية. التصميم الأمثل في القطع يتطلب جعل الحفر أقل من الردم بنسبة 25% إلى 30% (أي الحفر يشكل 70% إلى 75% من الردم).
+                        </div>`;
+                    } else if (ratio >= 68 && ratio <= 76) {
+                        diagHTML += `<div class="alert-box alert-success">
+                            🏆 <b>توازن حجمي ميداني مثالي (${ratio.toFixed(1)}%):</b> حققت قاعدة (الحفر أقل من الردم بنحو 25%–30%) لتعويض الرص والانكماش وقشط التربة النباتية!
+                        </div>`;
+                    } else {
+                        diagHTML += `<div class="alert-box alert-warning">
+                            ⚖️ <b>نسبة الحفر إلى الردم الحالية (${ratio.toFixed(1)}%):</b> عدّل منسوب البداية Z_start أو الميل الطولي للوصول للنسبة المثالية (70% - 75%).
+                        </div>`;
+                    }
+                } else {
+                    // منطقة سهلية - أسلوب التغليف
+                    const minFill = Math.min(...stakesData.map(s => s.hi));
+                    if (minFill >= 0.5) {
+                        diagHTML += `<div class="alert-box alert-success">
+                            ✅ <b>أسلوب التغليف محقق بنجاح:</b> كامل الطريق في حالة ردم بارتفاع آمن لحماية الطابق الترابي من الرطوبة والمياه السطحية.
+                        </div>`;
+                    } else {
+                        diagHTML += `<div class="alert-box alert-warning">
+                            💧 <b>تنبيه أسلوب التغليف (منطقة سهلية):</b> يفضل رفع خط المشروع ليكون في حالة ردم كامل (+0.5m على الأقل) لحماية الطابق الترابي من الرطوبة.
+                        </div>`;
+                    }
+                }
+
+                // 2. فخ الأوتاد الطرفية (1/2 h)
+                if (!useHalfEnd) {
+                    diagHTML += `<div class="alert-box alert-danger">
+                        📐 <b>خطأ حسابي شائع:</b> لقد عوضت الوتدين الأول والأخير بقيمتهما الكاملة في حد المربع (m·hi²) مما أدى لتضخيم الكميات بمقدار <b>${Math.round(inflationError).toLocaleString()} متر مكعب</b>! فعّل خيار (1/2 h) للأوتاد الطرفية.
+                    </div>`;
+                }
+
+                // 3. فخ اختناق الشاحنات على الصعود الحاد
+                if (bottleneck) {
+                    diagHTML += `<div class="alert-box alert-danger">
+                        🚛 <b>فخ الحالة الميدانية (اختناق مروري):</b> الميل الطولي الصاعد (${gradePercent}%) أكبر من 3.5%! انخفضت سرعة الشاحنة إلى 12 km/h وتكدست السيارات السياحية خلفها. قم بتفعيل "إنشاء حارة صعود إضافية للشاحنات (Climbing Lane)".
+                    </div>`;
+                } else if (gradePercent > 3.5 && hasClimbingLane) {
+                    diagHTML += `<div class="alert-box alert-success">
+                        🛣️ <b>حارة الصعود الإضافية مفعّلة (+3.5m):</b> انتقلت الشاحنة الثقيلة لحارة الصعود مع خط دهان متصل، وانطلقت السيارات السياحية بحرية وأمان.
+                    </div>`;
+                }
+
+                document.getElementById('ex2-diagnostics').innerHTML = diagHTML;
+
+                // بناء المشهد ثلاثي الأبعاد للتمرين الثاني
+                this.buildExercise2Scene(stakesData, B_effective, m_slope, hasClimbingLane);
+            },
+
+            buildExercise2Scene: function(stakesData, B_effective, m_slope, hasClimbingLane) {
+                // تحجيم الأبعاد في المشهد ثلاثي الأبعاد لتمثيل الـ 400m بوضوح
+                const xSpan = 280; // يمثل 400m طولية
+                const zBase = 100; // المنسوب المرجعي
+                const yScale = 2.8; // تضخيم رأسي (Vertical Exaggeration) لإبراز الحفر والردم بوضوح هندسي
+                const wScale = 1.6;
+
+                const stakeCoords = stakesData.map((s, idx) => {
+                    const x = -xSpan / 2 + (idx / 4) * xSpan;
+                    const yG = (s.Zg - zBase) * yScale + 10;
+                    const yP = (s.Zp - zBase) * yScale + 10;
+                    return { x, yG, yP, hi: s.hi, index: s.index, Zg: s.Zg, Zp: s.Zp };
+                });
+
+                // 1. رسم الأوتاد الخمسة وعلاماتها
+                stakeCoords.forEach(st => {
+                    const poleH = Math.max(st.yG, st.yP) + 8;
+                    const poleGeo = new THREE.CylinderGeometry(0.4, 0.4, poleH, 8);
+                    const poleMat = new THREE.MeshBasicMaterial({ color: 0x94a3b8 });
+                    const pole = new THREE.Mesh(poleGeo, poleMat);
+                    pole.position.set(st.x, poleH / 2, 0);
+                    this.exerciseGroup.add(pole);
+                });
+
+                // 2. بناء المقاطع بين الأوتاد (الأرض الطبيعية + مجسمات الحفر Cut والردم Fill + الميول الجانبية 1:m)
+                const subSteps = 28;
+                for (let s = 0; s < 4; s++) {
+                    const st1 = stakeCoords[s];
+                    const st2 = stakeCoords[s + 1];
+
+                    for (let k = 0; k < subSteps; k++) {
+                        const t1 = k / subSteps;
+                        const t2 = (k + 1) / subSteps;
+                        const tm = (t1 + t2) * 0.5;
+
+                        const x1 = THREE.MathUtils.lerp(st1.x, st2.x, t1);
+                        const x2 = THREE.MathUtils.lerp(st1.x, st2.x, t2);
+                        const dx = x2 - x1;
+                        const xm = (x1 + x2) * 0.5;
+
+                        const yG = THREE.MathUtils.lerp(st1.yG, st2.yG, tm);
+                        const yP = THREE.MathUtils.lerp(st1.yP, st2.yP, tm);
+                        const diffY = yP - yG; // موجب ردم، سالب حفر
+
+                        const roadW = B_effective * wScale;
+                        const slopeExpand = Math.abs(diffY) * m_slope * 1.1;
+
+                        // شريحة سطح الأرض الطبيعية الجانبية
+                        const terrainGeo = new THREE.BoxGeometry(dx + 0.2, Math.max(1, yG), 95);
+                        const terrainMat = new THREE.MeshStandardMaterial({
+                            color: 0x1e293b,
+                            roughness: 0.9,
+                            transparent: true,
+                            opacity: 0.65
+                        });
+                        const terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
+                        terrainMesh.position.set(xm, yG / 2, 0);
+                        this.exerciseGroup.add(terrainMesh);
+
+                        // خط سطح الأرض الطبيعية الأخضر
+                        const greenStrip = new THREE.Mesh(
+                            new THREE.BoxGeometry(dx + 0.25, 0.6, 95.5),
+                            new THREE.MeshStandardMaterial({ color: 0x15803d })
+                        );
+                        greenStrip.position.set(xm, yG, 0);
+                        this.exerciseGroup.add(greenStrip);
+
+                        // مجسم الحفر (برتقالي/أحمر) أو الردم (سماوي/أخضر) شبه المنحرف بالميل الجانبي 1:m
+                        if (Math.abs(diffY) > 0.2) {
+                            const isFill = diffY > 0;
+                            const hPrism = Math.abs(diffY);
+                            const topW = isFill ? roadW : (roadW + slopeExpand * 2);
+                            const botW = isFill ? (roadW + slopeExpand * 2) : roadW;
+                            const avgW = (topW + botW) * 0.5;
+
+                            const prismGeo = new THREE.BoxGeometry(dx + 0.15, hPrism, avgW);
+                            const prismMat = new THREE.MeshStandardMaterial({
+                                color: isFill ? 0x0284c7 : 0xea580c,
+                                roughness: 0.6
+                            });
+                            const prism = new THREE.Mesh(prismGeo, prismMat);
+                            prism.position.set(xm, Math.min(yG, yP) + hPrism / 2, 0);
+                            this.exerciseGroup.add(prism);
+                        }
+
+                        // سطح الطريق الأسفلتي (خط المشروع)
+                        const pitchAngle = Math.atan2(st2.yP - st1.yP, st2.x - st1.x);
+                        const asphGeo = new THREE.BoxGeometry(dx + 0.35, 0.8, roadW);
+                        const asphMat = new THREE.MeshStandardMaterial({ color: 0x334155 });
+                        const asph = new THREE.Mesh(asphGeo, asphMat);
+                        asph.position.set(xm, yP + 0.4, 0);
+                        asph.rotation.z = pitchAngle;
+                        this.exerciseGroup.add(asph);
+
+                        // إذا تم تفعيل حارة الصعود الإضافية للشاحنات، نظهر الحارة وخط الدهان المتصل الأصفر
+                        if (hasClimbingLane) {
+                            const lineSolid = new THREE.Mesh(
+                                new THREE.BoxGeometry(dx + 0.35, 0.9, 0.45),
+                                new THREE.MeshBasicMaterial({ color: 0xfacc15 })
+                            );
+                            lineSolid.position.set(xm, yP + 0.45, roadW * 0.22);
+                            lineSolid.rotation.z = pitchAngle;
+                            this.exerciseGroup.add(lineSolid);
+                        }
+                    }
+                }
+
+                // 3. بناء الرتل المروري (شاحنة WB-50 + 3 سيارات سياحية P) على المقطع الطولي
+                this.ex2State.convoyMeshes = [];
+                this.ex2State.stakeCoords = stakeCoords;
+                this.ex2State.roadW = B_effective * wScale;
+                this.ex2State.hasClimbingLane = hasClimbingLane;
+
+                const truckMesh = this.createVehicleMesh(this.vehicleSpecs.WB50);
+                this.exerciseGroup.add(truckMesh);
+                this.ex2State.convoyMeshes.push({ mesh: truckMesh, type: 'truck', offset: 0 });
+
+                // منارة تحذيرية حمراء فوق الشاحنة تومض عند الاختناق المروري
+                const beaconGeo = new THREE.SphereGeometry(1.4, 12, 12);
+                const beaconMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+                this.ex2State.warningBeacon = new THREE.Mesh(beaconGeo, beaconMat);
+                this.ex2State.warningBeacon.position.set(0, 6.2, 0);
+                truckMesh.add(this.ex2State.warningBeacon);
+
+                for (let c = 1; c <= 3; c++) {
+                    const carMesh = this.createVehicleMesh(this.vehicleSpecs.P);
+                    this.exerciseGroup.add(carMesh);
+                    this.ex2State.convoyMeshes.push({ mesh: carMesh, type: 'car', index: c });
+                }
+
+                this.updateEx2ConvoyPositions();
+            },
+
+            updateEx2ConvoyPositions: function() {
+                const coords = this.ex2State.stakeCoords;
+                if (!coords || coords.length < 2 || this.ex2State.convoyMeshes.length === 0) return;
+
+                const xMin = coords[0].x;
+                const xMax = coords[coords.length - 1].x;
+                const yStart = coords[0].yP;
+                const yEnd = coords[coords.length - 1].yP;
+                const pitchAngle = Math.atan2(yEnd - yStart, xMax - xMin);
+
+                const bottleneck = this.ex2State.truckBottleneck;
+                const hasClimb = this.ex2State.hasClimbingLane;
+                const roadW = this.ex2State.roadW;
+
+                // وميض تحذيري عند تكدس السيارات خلف الشاحنة
+                if (this.ex2State.warningBeacon) {
+                    this.ex2State.warningBeacon.visible = bottleneck && (Math.floor(Date.now() / 220) % 2 === 0);
+                }
+
+                const baseProg = this.ex2State.convoyProgress;
+
+                this.ex2State.convoyMeshes.forEach(item => {
+                    let prog = baseProg;
+                    let zLane = 0;
+
+                    if (item.type === 'truck') {
+                        zLane = hasClimb ? (roadW * 0.34) : 0;
+                    } else {
+                        if (bottleneck) {
+                            // السيارات السياحية محجوزة ومتكدسة مباشرة خلف الشاحنة البطيئة
+                            prog = baseProg - (item.index * 0.045);
+                            zLane = 0;
+                        } else {
+                            // السيارات السياحية تنطلق بحرية وتتجاوز الشاحنة
+                            prog = (baseProg * 1.9 + item.index * 0.18) % 1.0;
+                            zLane = hasClimb ? (-roadW * 0.15) : (-roadW * 0.22);
+                        }
+                    }
+
+                    prog = ((prog % 1.0) + 1.0) % 1.0;
+                    const xPos = THREE.MathUtils.lerp(xMin, xMax, prog);
+                    const yPos = THREE.MathUtils.lerp(yStart, yEnd, prog) + 0.8;
+
+                    item.mesh.position.set(xPos, yPos, zLane);
+                    item.mesh.rotation.set(0, 0, pitchAngle);
+                });
+            },
+
+            // -------------------------------------------------------------------------
+            // 4. حلقة التحريك المستمرة والتحكم بالتشغيل
+            // -------------------------------------------------------------------------
+            animate: function() {
+                this.animFrameId = requestAnimationFrame(this.animate.bind(this));
+
+                if (this.isRunning) {
+                    if (this.activeExercise === 1) {
+                        this.ex1State.progress += this.ex1State.speedFactor;
+                        if (this.ex1State.progress > 0.95) this.ex1State.progress = 0.05;
+                        this.updateEx1VehiclePosition();
+                    } else {
+                        const speed = this.ex2State.truckBottleneck ? 0.00055 : 0.0018;
+                        this.ex2State.convoyProgress = (this.ex2State.convoyProgress + speed) % 1.0;
+                        this.updateEx2ConvoyPositions();
+                    }
+                }
+
+                if (this.controls) this.controls.update();
+                if (this.renderer && this.scene && this.camera) {
+                    this.renderer.render(this.scene, this.camera);
+                }
+            },
+
+            toggleSimulation: function() {
+                this.isRunning = !this.isRunning;
+                const btn = document.getElementById('btn-play-pause');
+                btn.innerHTML = this.isRunning ? '⏸️ إيقاف مؤقت' : '▶️ تشغيل المحاكاة';
+            },
+
+            // -------------------------------------------------------------------------
+            // 5. دالة إعادة التعيين reset()
+            // -------------------------------------------------------------------------
+            reset: function() {
+                if (this.activeExercise === 1) {
+                    document.getElementById('ex1-vehicle').value = 'WB50';
+                    document.getElementById('ex1-V').value = 80;
+                    document.getElementById('ex1-R').value = 260;
+                    document.getElementById('ex1-delta').value = 65;
+                    document.getElementById('ex1-Ls').value = 80;
+                    document.getElementById('ex1-is').value = 6;
+                    document.getElementById('ex1-super-method').value = 'A';
+                    document.getElementById('ex1-M').value = 8.5;
+                    this.ex1State.progress = 0.1;
+                } else {
+                    document.getElementById('ex2-terrain-mode').value = 'hilly';
+                    document.getElementById('ex2-zstart').value = 101.5;
+                    document.getElementById('ex2-grade').value = 2.5;
+                    document.getElementById('ex2-B').value = 12;
+                    document.getElementById('ex2-m').value = 1.5;
+                    document.getElementById('ex2-half-end').checked = true;
+                    document.getElementById('ex2-climbing-lane').checked = false;
+                    this.ex2State.convoyProgress = 0.05;
+                }
+                this.update();
+            },
+
+            onWindowResize: function() {
+                if (!this.container || !this.renderer || !this.camera) return;
+                const w = this.container.clientWidth;
+                const h = this.container.clientHeight;
+                this.camera.aspect = w / h;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(w, h);
+            },
+
+            // -------------------------------------------------------------------------
+            // 6. دوال تنظيف الذاكرة الصارمة لمنع تسريب ذاكرة كرت الشاشة (WebGL Memory Leaks)
+            // -------------------------------------------------------------------------
+            clearExerciseMeshes: function() {
+                if (!this.exerciseGroup) return;
+                while (this.exerciseGroup.children.length > 0) {
+                    const child = this.exerciseGroup.children[0];
+                    this.disposeNode(child);
+                    this.exerciseGroup.remove(child);
+                }
+            },
+
+            disposeNode: function(node) {
+                if (!node) return;
+                if (node.children && node.children.length > 0) {
+                    for (let i = node.children.length - 1; i >= 0; i--) {
+                        this.disposeNode(node.children[i]);
+                    }
+                }
+                if (node.geometry) {
+                    node.geometry.dispose();
+                }
+                if (node.material) {
+                    if (Array.isArray(node.material)) {
+                        node.material.forEach(mat => {
+                            if (mat.map) mat.map.dispose();
+                            mat.dispose();
+                        });
+                    } else {
+                        if (node.material.map) node.material.map.dispose();
+                        node.material.dispose();
+                    }
+                }
+            },
+
+            destroy: function() {
+                // إيقاف حلقة التحريك
+                if (this.animFrameId) {
+                    cancelAnimationFrame(this.animFrameId);
+                    this.animFrameId = null;
+                }
+
+                // إزالة مستمعات الأحداث
+                if (this.boundResizeHandler) {
+                    window.removeEventListener('resize', this.boundResizeHandler);
+                    this.boundResizeHandler = null;
+                }
+
+                // تفريغ جميع المجسمات والـ Geometries والـ Materials
+                if (this.scene) {
+                    this.disposeNode(this.scene);
+                }
+
+                if (this.controls) {
+                    this.controls.dispose();
+                    this.controls = null;
+                }
+
+                if (this.renderer) {
+                    this.renderer.dispose();
+                    if (this.renderer.domElement && this.renderer.domElement.parentNode) {
+                        this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+                    }
+                    this.renderer = null;
+                }
+
+                this.scene = null;
+                this.camera = null;
+            }
+        };
+
+        // تشغيل المختبر فور تحميل الصفحة
+        window.addEventListener('DOMContentLoaded', () => {
+            HighwayExpLab.init('canvas-container');
+        });
+    </script>
+</body>
+</html>

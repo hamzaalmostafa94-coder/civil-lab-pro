@@ -1,0 +1,1996 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مختبر الهياكل المعدنية التفاعلي: محاكي الوصلات والجوائز الشبكية (BS 5950)</title>
+    <!-- خط تجوال من Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <!-- مكتبة Three.js r128 و OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-panel: #1e293b;
+            --bg-card: #0b1120;
+            --border-color: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-blue: #38bdf8;
+            --accent-indigo: #6366f1;
+            --safe-green: #22c55e;
+            --warn-amber: #f59e0b;
+            --danger-red: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Tajawal', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* الشريط العلوي */
+        header {
+            background: rgba(15, 23, 42, 0.95);
+            border-bottom: 1px solid var(--border-color);
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 20;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 18px;
+            color: #fff;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+        }
+
+        .brand h1 {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .brand span {
+            font-size: 0.75rem;
+            color: var(--accent-blue);
+            display: block;
+        }
+
+        /* أزرار التبويب بين التمرينين */
+        .module-tabs {
+            display: flex;
+            gap: 8px;
+            background: var(--bg-card);
+            padding: 4px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .tab-btn {
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 7px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.88rem;
+            transition: all 0.25s ease;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #0284c7, #4f46e5);
+            color: #fff;
+            box-shadow: 0 2px 10px rgba(56, 189, 248, 0.35);
+        }
+
+        /* شريط التلعيب والكفاءة الاقتصادية */
+        .gamification-bar {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .score-badge {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stars {
+            color: #fbbf24;
+            letter-spacing: 2px;
+            font-size: 0.95rem;
+        }
+
+        /* الحاوية الرئيسية */
+        .main-workspace {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* لوحة التحكم الجانبية */
+        .sidebar {
+            width: 440px;
+            background: var(--bg-panel);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            z-index: 15;
+            padding: 12px;
+            gap: 12px;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+
+        .panel-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px;
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            font-weight: 800;
+            color: var(--accent-blue);
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.6);
+            padding-bottom: 6px;
+        }
+
+        .sub-tabs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .sub-tab-btn {
+            background: #1e293b;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            padding: 7px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.82rem;
+            transition: 0.2s;
+        }
+
+        .sub-tab-btn.active {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+
+        .control-group {
+            margin-bottom: 9px;
+        }
+
+        .control-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            margin-bottom: 3px;
+            color: #e2e8f0;
+        }
+
+        .val-badge {
+            color: var(--accent-blue);
+            font-weight: 700;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent-blue);
+            cursor: pointer;
+            height: 6px;
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        select {
+            width: 100%;
+            background: #1e293b;
+            color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 6px 8px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            cursor: pointer;
+        }
+
+        .grid-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .btn-helper {
+            background: rgba(99, 102, 241, 0.2);
+            color: #a5b4fc;
+            border: 1px solid #6366f1;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            font-weight: 700;
+            transition: 0.2s;
+        }
+
+        .btn-helper:hover {
+            background: #6366f1;
+            color: #fff;
+        }
+
+        .btn-storm {
+            width: 100%;
+            background: linear-gradient(135deg, #f59e0b, #dc2626);
+            color: #fff;
+            border: none;
+            padding: 8px;
+            border-radius: 7px;
+            font-weight: 800;
+            font-size: 0.85rem;
+            cursor: pointer;
+            margin-top: 6px;
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.35);
+            transition: transform 0.15s;
+        }
+
+        .btn-storm:hover {
+            transform: scale(1.01);
+        }
+
+        /* صناديق المعادلات والنتائج */
+        .calc-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .calc-box {
+            background: #151f32;
+            border: 1px solid #26354d;
+            padding: 7px 9px;
+            border-radius: 6px;
+        }
+
+        .calc-box .lbl {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            display: block;
+        }
+
+        .calc-box .num {
+            font-size: 0.92rem;
+            font-weight: 800;
+            color: #fff;
+            font-family: monospace;
+        }
+
+        .formula-log {
+            background: #090d16;
+            border: 1px solid #1e293b;
+            border-radius: 6px;
+            padding: 8px;
+            font-size: 0.76rem;
+            line-height: 1.55;
+            color: #cbd5e1;
+        }
+
+        .formula-log code {
+            color: #38bdf8;
+            font-family: monospace;
+        }
+
+        /* رادار الأخطاء الهندسية الشائعة */
+        .radar-box {
+            border-radius: 8px;
+            padding: 10px;
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid var(--warn-amber);
+        }
+
+        .radar-title {
+            font-size: 0.83rem;
+            font-weight: 800;
+            color: var(--warn-amber);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .radar-list {
+            list-style: none;
+            font-size: 0.76rem;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .radar-item {
+            padding: 5px 8px;
+            border-radius: 5px;
+            background: rgba(239, 68, 68, 0.15);
+            border-right: 3px solid var(--danger-red);
+            color: #fecaca;
+        }
+
+        .radar-item.ok {
+            background: rgba(34, 197, 94, 0.12);
+            border-right-color: var(--safe-green);
+            color: #bbf7d0;
+        }
+
+        /* منطقة الـ 3D Viewport */
+        .viewport-area {
+            flex: 1;
+            position: relative;
+            background: #0f172a;
+            overflow: hidden;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* البطاقات العائمة فوق الـ 3D */
+        .hud-overlay {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+            z-index: 10;
+            max-width: 340px;
+        }
+
+        .hud-card {
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 10px 14px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.45);
+        }
+
+        .status-pill {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 800;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+        }
+
+        .status-safe {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+            border: 1px solid #22c55e;
+        }
+
+        .status-danger {
+            background: rgba(239, 68, 68, 0.22);
+            color: #f87171;
+            border: 1px solid #ef4444;
+        }
+
+        .sr-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: #1e293b;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .sr-bar-fill {
+            height: 100%;
+            width: 50%;
+            background: var(--safe-green);
+            transition: width 0.3s ease, background 0.3s ease;
+        }
+
+        /* شريط أزرار المحاكاة السفلي */
+        .sim-controls-bar {
+            position: absolute;
+            bottom: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--border-color);
+            padding: 8px 14px;
+            border-radius: 12px;
+            display: flex;
+            gap: 10px;
+            z-index: 12;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .sim-btn {
+            padding: 9px 18px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 800;
+            font-size: 0.86rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.2s;
+        }
+
+        .sim-btn.play {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: #fff;
+        }
+
+        .sim-btn.pause {
+            background: #334155;
+            color: #e2e8f0;
+        }
+
+        .sim-btn.reset {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid #ef4444;
+        }
+
+        .sim-btn:hover {
+            filter: brightness(1.12);
+        }
+
+        .legend-overlay {
+            position: absolute;
+            bottom: 18px;
+            right: 16px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            margin: 6px 0;
+            cursor: pointer;
+            color: #e2e8f0;
+        }
+
+        @media (max-width: 980px) {
+            .main-workspace {
+                flex-direction: column-reverse;
+            }
+            .sidebar {
+                width: 100%;
+                height: 52%;
+            }
+            .viewport-area {
+                height: 48%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- الشريط العلوي -->
+    <header>
+        <div class="brand">
+            <div class="brand-icon">BS</div>
+            <div>
+                <h1>مختبر الهياكل المعدنية التفاعلي (BS 5950)</h1>
+                <span>محاكي انهيار الوصلات المسمارية والملحومة & تحدي الجائز الشبكي والرياح</span>
+            </div>
+        </div>
+
+        <div class="module-tabs">
+            <button id="tab-connections" class="tab-btn active" onclick="SteelStructureLab.switchModule('connections')">
+                🔩 التمرين الأول: محاكي انهيار الوصلات
+            </button>
+            <button id="tab-truss" class="tab-btn" onclick="SteelStructureLab.switchModule('truss')">
+                🏗️ التمرين الثاني: الجائز الشبكي والرياح العاصفة
+            </button>
+        </div>
+
+        <div class="gamification-bar">
+            <div class="score-badge">
+                <span>الكفاءة الاقتصادية:</span>
+                <span id="economy-stars" class="stars">★★★★☆</span>
+            </div>
+            <div class="score-badge">
+                <span>نقاط المختبر:</span>
+                <strong id="lab-score" style="color: var(--accent-blue);">850</strong>
+            </div>
+        </div>
+    </header>
+
+    <!-- مساحة العمل الرئيسية -->
+    <div class="main-workspace">
+
+        <!-- اللوحة الجانبية للمدخلات والحسابات -->
+        <aside class="sidebar">
+
+            <!-- ================= عناصر تحكم التمرين الأول: الوصلات ================= -->
+            <div id="controls-connections">
+                <div class="panel-section">
+                    <div class="section-title">
+                        <span>1. اختيار نوع الوصلة المعدنية</span>
+                    </div>
+                    <div class="sub-tabs">
+                        <button id="subtab-bolted" class="sub-tab-btn active" onclick="SteelStructureLab.setConnectionType('bolted')">وصلة مسمارية (Bolted)</button>
+                        <button id="subtab-welded" class="sub-tab-btn" onclick="SteelStructureLab.setConnectionType('welded')">وصلة ملحومة (Welded)</button>
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-header">
+                            <span>قوة الشد المحورية المصعدة H (kN)</span>
+                            <span id="val-conn-H" class="val-badge">140 kN</span>
+                        </div>
+                        <input type="range" id="inp-conn-H" min="0" max="500" step="5" value="140">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-header">
+                            <span>قوة القص الشاقولية المصعدة T (kN)</span>
+                            <span id="val-conn-T" class="val-badge">110 kN</span>
+                        </div>
+                        <input type="range" id="inp-conn-T" min="0" max="500" step="5" value="110">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-header">
+                            <span>عزم الانعطاف المصعد M (kN.m)</span>
+                            <span id="val-conn-M" class="val-badge">18 kN.m</span>
+                        </div>
+                        <input type="range" id="inp-conn-M" min="0" max="150" step="1" value="18">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-header"><span>مستوي تأثير العزم M:</span></div>
+                        <select id="inp-conn-momentPlane">
+                            <option value="in-plane">عزم في مستوي الوصلة (In-Plane: يسبب قصاً إضافياً)</option>
+                            <option value="out-plane">عزم خارج مستوي الوصلة (Out-of-Plane: يسبب شداً ناظمياً)</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-header">
+                            <span>أصغر ثخانة للصفيحة t_min (mm)</span>
+                            <span id="val-conn-tmin" class="val-badge">10 mm</span>
+                        </div>
+                        <input type="range" id="inp-conn-tmin" min="6" max="24" step="1" value="10">
+                    </div>
+                </div>
+
+                <!-- إعدادات البراغي -->
+                <div id="bolted-settings" class="panel-section">
+                    <div class="section-title">
+                        <span>2. بارامترات البراغي وشبكة التوزيع</span>
+                        <span id="hint-d0-approx" style="font-size:0.72rem; color:#94a3b8;">d0_approx: 20mm</span>
+                    </div>
+
+                    <div class="grid-2col">
+                        <div class="control-group">
+                            <div class="control-header"><span>صنف البرغي:</span></div>
+                            <select id="inp-bolt-grade">
+                                <option value="4.6">صنف 4.6 (Rf=160, Rp=430)</option>
+                                <option value="8.8" selected>صنف 8.8 (Rf=375, Rp=650)</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <div class="control-header"><span>قطر البرغي d0 (mm):</span></div>
+                            <select id="inp-bolt-d0">
+                                <option value="12">M12 (12 mm)</option>
+                                <option value="16">M16 (16 mm)</option>
+                                <option value="20" selected>M20 (20 mm)</option>
+                                <option value="22">M22 (22 mm)</option>
+                                <option value="24">M24 (24 mm)</option>
+                                <option value="27">M27 (27 mm)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid-2col">
+                        <div class="control-group">
+                            <div class="control-header"><span>مستويات القص n_s:</span></div>
+                            <select id="inp-bolt-ns">
+                                <option value="1" selected>مستوي قص واحد (ns = 1)</option>
+                                <option value="2">مستويا قص (ns = 2)</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <div class="control-header"><span>توزيع الشبكة (صفوف×أعمدة):</span></div>
+                            <select id="inp-bolt-grid">
+                                <option value="2x2" selected>2 × 2 (4 براغي)</option>
+                                <option value="3x2">3 × 2 (6 براغي)</option>
+                                <option value="3x3">3 × 3 (9 براغي)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid-2col">
+                        <div class="control-group">
+                            <div class="control-header">
+                                <span>مسافة الحافة e1 (mm)</span>
+                                <span id="val-bolt-e1" class="val-badge">35 mm</span>
+                            </div>
+                            <input type="range" id="inp-bolt-e1" min="15" max="80" step="1" value="35">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-header">
+                                <span>التباعد e2 (mm)</span>
+                                <span id="val-bolt-e2" class="val-badge">70 mm</span>
+                            </div>
+                            <input type="range" id="inp-bolt-e2" min="35" max="200" step="5" value="70">
+                        </div>
+                    </div>
+
+                    <label class="checkbox-row">
+                        <input type="checkbox" id="inp-bolt-holeRule" checked>
+                        <span>تطبيق التسامح الكودي لقطر الثقب d' (إلغاء التفعيل يحاكي خطأ d'=d0)</span>
+                    </label>
+                </div>
+
+                <!-- إعدادات اللحام -->
+                <div id="welded-settings" class="panel-section hidden">
+                    <div class="section-title">
+                        <span>2. بارامترات اللحام الزاوي (Fillet Weld)</span>
+                        <button class="btn-helper" onclick="SteelStructureLab.suggestWeldThroat()">اقتراح كودي a = 0.7 t_min</button>
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-header">
+                            <span>ثخانة خط اللحام الفعالة (الحلق a) (mm)</span>
+                            <span id="val-weld-a" class="val-badge">7 mm</span>
+                        </div>
+                        <input type="range" id="inp-weld-a" min="3" max="16" step="0.5" value="7">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-header">
+                            <span>الطول الفعلي المنفذ للشريط الواحد L (mm)</span>
+                            <span id="val-weld-L" class="val-badge">160 mm</span>
+                        </div>
+                        <input type="range" id="inp-weld-L" min="50" max="400" step="5" value="160">
+                    </div>
+
+                    <label class="checkbox-row">
+                        <input type="checkbox" id="inp-weld-deduct2a" checked>
+                        <span>طرح فوهتي البداية والنهاية (Ls = L - 2a) لكل شريط مفتوح</span>
+                    </label>
+
+                    <label class="checkbox-row">
+                        <input type="checkbox" id="inp-weld-closedBox">
+                        <span>لحام صندوقي محيطي مغلق (لا يطرح 2a؛ Ls = L)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- ================= عناصر تحكم التمرين الثاني: الجائز الشبكي والرياح ================= -->
+            <div id="controls-truss" class="hidden">
+                <div class="panel-section">
+                    <div class="section-title">
+                        <span>1. الأحمال الخدمية وعاصفة الرياح (Service Loads)</span>
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-header">
+                            <span>الحمل الميت DL (شد موجب في العنصر السفلي)</span>
+                            <span id="val-truss-DL" class="val-badge">90 kN</span>
+                        </div>
+                        <input type="range" id="inp-truss-DL" min="10" max="300" step="5" value="90">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-header">
+                            <span>الحمل الحي LL (شد موجب في العنصر السفلي)</span>
+                            <span id="val-truss-LL" class="val-badge">110 kN</span>
+                        </div>
+                        <input type="range" id="inp-truss-LL" min="10" max="300" step="5" value="110">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-header">
+                            <span>حمل الرياح WL (سالب = سحب للأعلى يقلب القوة لضغط!)</span>
+                            <span id="val-truss-WL" class="val-badge">40 kN</span>
+                        </div>
+                        <input type="range" id="inp-truss-WL" min="-400" max="300" step="5" value="40">
+                    </div>
+
+                    <button class="btn-storm" onclick="SteelStructureLab.triggerWindStorm()">
+                        🌪️ محاكاة هبوب عاصفة رياح ساحبة معاكسة (WL = -220 kN)
+                    </button>
+                </div>
+
+                <div class="panel-section">
+                    <div class="section-title">
+                        <span>2. خصائص الفولاذ والمقطع وشروط التحنيب</span>
+                    </div>
+
+                    <div class="grid-2col">
+                        <div class="control-group">
+                            <div class="control-header"><span>صنف الفولاذ:</span></div>
+                            <select id="inp-truss-grade">
+                                <option value="43" selected>Grade 43 (Py = 275 MPa)</option>
+                                <option value="50">Grade 50 (Py = 355 MPa)</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <div class="control-header"><span>مقطع الزاوية القياسي:</span></div>
+                            <select id="inp-truss-section">
+                                <option value="L60x60x6">L 60×60×6 (A=691mm²)</option>
+                                <option value="L75x75x8">L 75×75×8 (A=1140mm²)</option>
+                                <option value="L90x90x10" selected>L 90×90×10 (A=1710mm²)</option>
+                                <option value="L100x100x12">L 100×100×12 (A=2270mm²)</option>
+                                <option value="L120x120x12">L 120×120×12 (A=2750mm²)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-header"><span>توضع المقطع وطريقة الوصل مع لوح الوصل:</span></div>
+                        <select id="inp-truss-config">
+                            <option value="single-bolted">زاوية مفردة موصولة من ساق واحدة بالبراغي (لامركزي)</option>
+                            <option value="double-concentric" selected>زاويتان متظاهرتان على جانبي لوح الوصل (مركزي 2L)</option>
+                            <option value="double-oneside">زاويتان في جهة واحدة من لوح الوصل (لامركزي 2L)</option>
+                            <option value="welded">وصل باللحام بدون ثقوب (d' = 0)</option>
+                        </select>
+                    </div>
+
+                    <div class="grid-2col">
+                        <div class="control-group">
+                            <div class="control-header">
+                                <span>طول العنصر L (m)</span>
+                                <span id="val-truss-L" class="val-badge">3.2 m</span>
+                            </div>
+                            <input type="range" id="inp-truss-L" min="1.5" max="6.0" step="0.1" value="3.2">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-header"><span>معامل طول التحنيب k:</span></div>
+                            <select id="inp-truss-k">
+                                <option value="0.7">0.70 (وثاقة جزئية)</option>
+                                <option value="0.85" selected>0.85 (وصلة جائزية قياسية)</option>
+                                <option value="1.0">1.00 (مفصلي الطرفين)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <label class="checkbox-row">
+                        <input type="checkbox" id="inp-truss-tierod">
+                        <span>إضافة قضيب ربط عرضي بالمنتصف (Tie Rod: يقسم Ly إلى L/2)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- ================= لوحة النتائج الرقمية والمعادلات اللحظية ================= -->
+            <div class="panel-section">
+                <div class="section-title">
+                    <span>📊 المخرجات الهندسية والمعادلات الحاكمة (BS 5950)</span>
+                </div>
+                <div id="calc-boxes-container" class="calc-grid"></div>
+                <div id="formula-log-container" class="formula-log"></div>
+            </div>
+
+            <!-- ================= رادار الأخطاء الهندسية الشائعة ================= -->
+            <div class="radar-box">
+                <div class="radar-title">
+                    <span>🚨 رادار الأخطاء الهندسية الشائعة (BS 5950 Detector)</span>
+                </div>
+                <ul id="radar-list" class="radar-list"></ul>
+            </div>
+
+        </aside>
+
+        <!-- منطقة العرض ثلاثي الأبعاد -->
+        <main class="viewport-area">
+            <div id="canvas-container"></div>
+
+            <!-- البطاقات العائمة HUD -->
+            <div class="hud-overlay">
+                <div class="hud-card">
+                    <div id="hud-status-pill" class="status-pill status-safe">الحالة: التصميم آمن ✅</div>
+                    <div style="font-size: 0.82rem; color: #cbd5e1; margin-bottom: 4px;">
+                        <span id="hud-mode-label">نمط التحقق الحاكم:</span>
+                        <strong id="hud-governing-mode" style="color: #fff;">قص البراغي والمحصلة</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.78rem; color:#94a3b8;">
+                        <span>نسبة الاستثمار (S / R):</span>
+                        <strong id="hud-sr-value" style="color:#38bdf8; font-family:monospace;">0.74 (74%)</strong>
+                    </div>
+                    <div class="sr-bar-bg">
+                        <div id="hud-sr-bar" class="sr-bar-fill"></div>
+                    </div>
+                </div>
+
+                <div id="hud-failure-banner" class="hud-card hidden" style="border-color: var(--danger-red); background: rgba(127, 29, 29, 0.88);">
+                    <div style="font-weight:800; color:#fecaca; font-size:0.86rem; margin-bottom:4px;">⚠️ تحليل الانهيار الفيزيائي:</div>
+                    <div id="hud-failure-desc" style="font-size:0.78rem; color:#fff; line-height:1.45;"></div>
+                </div>
+            </div>
+
+            <!-- أزرار التحكم بالمحاكاة -->
+            <div class="sim-controls-bar">
+                <button class="sim-btn play" onclick="SteelStructureLab.startSimulation()">
+                    ▶ تشغيل اختبار التحميل
+                </button>
+                <button class="sim-btn pause" onclick="SteelStructureLab.pauseSimulation()">
+                    ⏸ إيقاف مؤقت
+                </button>
+                <button class="sim-btn reset" onclick="SteelStructureLab.reset()">
+                    ↺ إعادة تعيين
+                </button>
+            </div>
+
+            <!-- دليل الألوان -->
+            <div class="legend-overlay">
+                <div>🖱️ تدوير: سحب بالماوس | تقريب: عجلة الماوس</div>
+                <div style="margin-top:3px;">
+                    <span style="color:#22c55e;">● آمن</span> |
+                    <span style="color:#f59e0b;">● برغي أخطر / أطراف 2a</span> |
+                    <span style="color:#ef4444;">● منطقة انهيار أو انبعاج</span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- الكود البرمجي الكامل داخل الكائن SteelStructureLab -->
+    <script>
+        const SteelStructureLab = {
+            // مراجع Three.js
+            scene: null,
+            camera: null,
+            renderer: null,
+            controls: null,
+            animFrameId: null,
+            container: null,
+
+            // مجموعات المجسمات المفصولة للتمرينين
+            connectionGroup: null,
+            trussGroup: null,
+
+            // حالة التطبيق النشطة
+            activeModule: 'connections', // 'connections' | 'truss'
+            connectionType: 'bolted',    // 'bolted' | 'welded'
+            simRunning: false,
+            simProgress: 0,
+
+            // جداول المقاطع القياسية للزوايا المتساوية (BS 5950)
+            angleSections: {
+                'L60x60x6':   { b: 60,  t: 6,  A: 691,  rx: 18.2, ry: 11.7 },
+                'L75x75x8':   { b: 75,  t: 8,  A: 1140, rx: 22.8, ry: 14.6 },
+                'L90x90x10':  { b: 90,  t: 10, A: 1710, rx: 27.4, ry: 17.6 },
+                'L100x100x12':{ b: 100, t: 12, A: 2270, rx: 30.2, ry: 19.4 },
+                'L120x120x12':{ b: 120, t: 12, A: 2750, rx: 36.8, ry: 23.6 }
+            },
+
+            // نتائج الحسابات الحالية
+            state: {
+                isSafe: true,
+                srRatio: 0.5,
+                failureMode: 'NONE',
+                failureMessage: '',
+                score: 850
+            },
+
+            // مرجع معالج تغيير الحجم لإزالته عند التدمير
+            boundResizeHandler: null,
+
+            /**
+             * 1. تهيئة المشهد ثلاثي الأبعاد والواجهة
+             */
+            init(containerId) {
+                this.container = document.getElementById(containerId);
+                if (!this.container) return;
+
+                const w = this.container.clientWidth || 800;
+                const h = this.container.clientHeight || 600;
+
+                // إنشاء المشهد بخلفية كحلية داكنة
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x0f172a);
+                this.scene.fog = new THREE.FogExp2(0x0f172a, 0.018);
+
+                // الكاميرا
+                this.camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 200);
+                this.camera.position.set(8, 6, 11);
+
+                // المصير WebGLRenderer
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+                this.renderer.setSize(w, h);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                this.container.innerHTML = '';
+                this.container.appendChild(this.renderer.domElement);
+
+                // متحكمات الكاميرا
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.06;
+                this.controls.maxDistance = 40;
+                this.controls.minDistance = 3;
+
+                // الإضاءة
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+                this.scene.add(ambientLight);
+
+                const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.9);
+                dirLight1.position.set(12, 18, 14);
+                dirLight1.castShadow = true;
+                dirLight1.shadow.mapSize.width = 1024;
+                dirLight1.shadow.mapSize.height = 1024;
+                this.scene.add(dirLight1);
+
+                const dirLight2 = new THREE.DirectionalLight(0x38bdf8, 0.35);
+                dirLight2.position.set(-12, -8, -10);
+                this.scene.add(dirLight2);
+
+                // الشبكة الأرضية الهندسية
+                const grid = new THREE.GridHelper(30, 30, 0x334155, 0x1e293b);
+                grid.position.y = -3.2;
+                this.scene.add(grid);
+
+                // مجموعات التمرينين
+                this.connectionGroup = new THREE.Group();
+                this.trussGroup = new THREE.Group();
+                this.scene.add(this.connectionGroup);
+                this.scene.add(this.trussGroup);
+
+                // ربط مدخلات الواجهة
+                this.bindUIEvents();
+
+                // ربط حدث تغيير حجم النافذة
+                this.boundResizeHandler = () => this.onWindowResize();
+                window.addEventListener('resize', this.boundResizeHandler);
+
+                // بناء المشهد الابتدائي والحساب
+                this.switchModule('connections');
+
+                // بدء حلقة التحريك
+                this.animateLoop();
+            },
+
+            /**
+             * ربط جميع أشرطة التمرير والقوائم بدالة الحساب الفوري
+             */
+            bindUIEvents() {
+                const inputs = document.querySelectorAll('input, select');
+                inputs.forEach(el => {
+                    el.addEventListener('input', () => {
+                        this.simRunning = false;
+                        this.simProgress = 0;
+                        this.calculate();
+                        this.rebuildActive3DModel();
+                    });
+                });
+            },
+
+            /**
+             * 2. التبديل النظيف والمفصول بين التمرين الأول والتمرين الثاني
+             */
+            switchModule(moduleName) {
+                this.activeModule = moduleName;
+                this.simRunning = false;
+                this.simProgress = 0;
+
+                // تحديث التبويبات العلوية
+                document.getElementById('tab-connections').classList.toggle('active', moduleName === 'connections');
+                document.getElementById('tab-truss').classList.toggle('active', moduleName === 'truss');
+
+                // إظهار/إخفاء لوحات التحكم الجانبية
+                document.getElementById('controls-connections').classList.toggle('hidden', moduleName !== 'connections');
+                document.getElementById('controls-truss').classList.toggle('hidden', moduleName !== 'truss');
+
+                // فصل المجموعات ثلاثية الأبعاد وتنظيف التمرين غير النشط
+                if (moduleName === 'connections') {
+                    this.clearGroupMemory(this.trussGroup);
+                    this.connectionGroup.visible = true;
+                    this.trussGroup.visible = false;
+                    this.camera.position.set(6.5, 4.5, 8.5);
+                    this.controls.target.set(0, 0, 0);
+                } else {
+                    this.clearGroupMemory(this.connectionGroup);
+                    this.connectionGroup.visible = false;
+                    this.trussGroup.visible = true;
+                    this.camera.position.set(0, 3.5, 13.5);
+                    this.controls.target.set(0, 0.5, 0);
+                }
+
+                this.controls.update();
+                this.calculate();
+                this.rebuildActive3DModel();
+            },
+
+            /**
+             * التبديل الفرعي داخل التمرين الأول بين البراغي واللحام
+             */
+            setConnectionType(type) {
+                this.connectionType = type;
+                this.simRunning = false;
+                this.simProgress = 0;
+
+                document.getElementById('subtab-bolted').classList.toggle('active', type === 'bolted');
+                document.getElementById('subtab-welded').classList.toggle('active', type === 'welded');
+
+                document.getElementById('bolted-settings').classList.toggle('hidden', type !== 'bolted');
+                document.getElementById('welded-settings').classList.toggle('hidden', type !== 'welded');
+
+                this.calculate();
+                this.rebuildActive3DModel();
+            },
+
+            /**
+             * زر اقتراح ثخانة اللحام الكودية a = 0.7 * t_min
+             */
+            suggestWeldThroat() {
+                const tmin = parseFloat(document.getElementById('inp-conn-tmin').value);
+                const suggestedA = Math.max(3, Math.min(16, Math.round(0.7 * tmin * 2) / 2));
+                document.getElementById('inp-weld-a').value = suggestedA;
+                this.calculate();
+                this.rebuildActive3DModel();
+            },
+
+            /**
+             * زر هبوب عاصفة رياح ساحبة معاكسة في التمرين الثاني
+             */
+            triggerWindStorm() {
+                const wlSlider = document.getElementById('inp-truss-WL');
+                wlSlider.value = -220;
+                this.calculate();
+                this.rebuildActive3DModel();
+                this.startSimulation();
+            },
+
+            /**
+             * 3. إجراء الحسابات الهندسية الدقيقة وفق BS 5950 وتحديث الواجهة
+             */
+            calculate() {
+                // تحديث نصوص القيم بجانب الـ Sliders
+                this.syncSliderLabels();
+
+                if (this.activeModule === 'connections') {
+                    if (this.connectionType === 'bolted') {
+                        this.calculateBoltedConnection();
+                    } else {
+                        this.calculateWeldedConnection();
+                    }
+                } else {
+                    this.calculateTrussMember();
+                }
+
+                this.updateHUDAndEconomy();
+            },
+
+            syncSliderLabels() {
+                const setTxt = (id, txt) => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = txt;
+                };
+                setTxt('val-conn-H', document.getElementById('inp-conn-H').value + ' kN');
+                setTxt('val-conn-T', document.getElementById('inp-conn-T').value + ' kN');
+                setTxt('val-conn-M', document.getElementById('inp-conn-M').value + ' kN.m');
+                setTxt('val-conn-tmin', document.getElementById('inp-conn-tmin').value + ' mm');
+                setTxt('val-bolt-e1', document.getElementById('inp-bolt-e1').value + ' mm');
+                setTxt('val-bolt-e2', document.getElementById('inp-bolt-e2').value + ' mm');
+                setTxt('val-weld-a', document.getElementById('inp-weld-a').value + ' mm');
+                setTxt('val-weld-L', document.getElementById('inp-weld-L').value + ' mm');
+
+                setTxt('val-truss-DL', document.getElementById('inp-truss-DL').value + ' kN');
+                setTxt('val-truss-LL', document.getElementById('inp-truss-LL').value + ' kN');
+                setTxt('val-truss-WL', document.getElementById('inp-truss-WL').value + ' kN');
+                setTxt('val-truss-L', document.getElementById('inp-truss-L').value + ' m');
+            },
+
+            /**
+             * حسابات التمرين الأول (أ): الوصلة المسمارية بالبراغي
+             */
+            calculateBoltedConnection() {
+                const H = parseFloat(document.getElementById('inp-conn-H').value);
+                const T = parseFloat(document.getElementById('inp-conn-T').value);
+                const M = parseFloat(document.getElementById('inp-conn-M').value); // kN.m
+                const momentPlane = document.getElementById('inp-conn-momentPlane').value;
+                const tmin = parseFloat(document.getElementById('inp-conn-tmin').value);
+                const grade = document.getElementById('inp-bolt-grade').value;
+                const d0 = parseFloat(document.getElementById('inp-bolt-d0').value);
+                const ns = parseInt(document.getElementById('inp-bolt-ns').value, 10);
+                const gridStr = document.getElementById('inp-bolt-grid').value;
+                const e1 = parseFloat(document.getElementById('inp-bolt-e1').value);
+                const e2 = parseFloat(document.getElementById('inp-bolt-e2').value);
+                const applyHoleRule = document.getElementById('inp-bolt-holeRule').checked;
+
+                // القطر التقريبي للاستئناس: d0_approx = sqrt(5 * t_min(cm)) - 0.2 cm
+                const tmin_cm = tmin / 10;
+                const d0_approx_mm = (Math.sqrt(5 * tmin_cm) - 0.2) * 10;
+                document.getElementById('hint-d0-approx').textContent = `d0_approx ≈ ${d0_approx_mm.toFixed(1)} mm`;
+
+                // قطر الثقب الكودي d'
+                let tolerance = 2;
+                if (d0 <= 16) tolerance = 1;
+                else if (d0 >= 27) tolerance = 3;
+                const dPrimeCode = d0 + tolerance;
+                const dPrimeUsed = applyHoleRule ? dPrimeCode : d0;
+
+                // مقاومات مادة البرغي والصفيحة (N/mm²)
+                const Rf = grade === '8.8' ? 375 : 160;
+                const Rp = grade === '8.8' ? 650 : 430;
+                const Ri = grade === '8.8' ? 450 : 195;
+
+                // قدرة تحمل البرغي الواحد على القص N_cf وعلى الدهس N_cp
+                const Ab = (Math.PI * d0 * d0) / 4;
+                const Ncf = (ns * Ab * Rf) / 1000; // kN
+                const Ncp = (d0 * tmin * Rp) / 1000; // kN
+                const Nc = Math.min(Ncf, Ncp);
+
+                // إحداثيات شبكة البراغي
+                const [rows, cols] = gridStr.split('x').map(Number);
+                const nBolts = rows * cols;
+                const coords = [];
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        const x = (c - (cols - 1) / 2) * e2;
+                        const y = (r - (rows - 1) / 2) * e2;
+                        coords.push({ x, y });
+                    }
+                }
+
+                const sumR2 = coords.reduce((acc, pt) => acc + (pt.x * pt.x + pt.y * pt.y), 0) || 1;
+                const sumY2 = coords.reduce((acc, pt) => acc + (pt.y * pt.y), 0) || 1;
+                const xmax = ((cols - 1) / 2) * e2;
+                const ymax = ((rows - 1) / 2) * e2;
+
+                // القوى المباشرة على كل برغي
+                const Nx_H = H / nBolts;
+                const Ny_T = T / nBolts;
+
+                let Nmax = 0;
+                let Nx_M = 0, Ny_M = 0, Ni_M = 0;
+                let srRatio = 0;
+
+                if (momentPlane === 'in-plane') {
+                    // عزم في مستوي الوصلة (M بوحدة kN.mm = M * 1000)
+                    Nx_M = (M * 1000 * ymax) / sumR2;
+                    Ny_M = (M * 1000 * xmax) / sumR2;
+                    Nmax = Math.sqrt(Math.pow(Nx_H + Nx_M, 2) + Math.pow(Ny_T + Ny_M, 2));
+                    srRatio = Nmax / Nc;
+                } else {
+                    // عزم خارج مستوي الوصلة -> شد ناظمي Ni_M + قص مباشر
+                    Ni_M = ymax > 0 ? (M * 1000 * ymax) / sumY2 : 0;
+                    const V_direct = Math.sqrt(Nx_H * Nx_H + Ny_T * Ny_T);
+                    const tau = (V_direct * 1000) / (ns * Ab);
+                    const sigma = (Ni_M * 1000) / Ab;
+                    const sigma_e = Math.sqrt(sigma * sigma + 3 * tau * tau);
+                    Nmax = V_direct;
+                    srRatio = Math.max(V_direct / Nc, sigma_e / Ri);
+                }
+
+                // التحقق من مسافات الحواف الكودية
+                const minE1 = 1.2 * dPrimeCode;
+                const minE2 = 2.5 * dPrimeCode;
+                const maxE2 = 14 * tmin;
+                const edgeFail = e1 < minE1;
+                const pitchWarn = e2 < minE2 || e2 > maxE2;
+
+                // تحديد نمط الانهيار الحاكم
+                let failureMode = 'NONE';
+                let failureMessage = '';
+                let governingText = Ncf < Ncp ? 'قص البراغي (Bolt Shear)' : 'الدهس والارتكان (Bearing)';
+
+                if (edgeFail) {
+                    failureMode = 'EDGE_TEAR';
+                    srRatio = Math.max(srRatio, minE1 / e1);
+                    governingText = 'انهيار الحافة / التمزق الكتلي (Edge Tearout)';
+                    failureMessage = `المسافة عن الحافة e1 = ${e1}mm أصغر من الحد الكودي 1.2d' (${minE1.toFixed(1)}mm) مما يسبب انقلاع الحافة!`;
+                } else if (srRatio > 1.0) {
+                    if (Ncf <= Ncp) {
+                        failureMode = 'BOLT_SHEAR';
+                        failureMessage = `القوة المحصلة على البرغي الأخطر (${Nmax.toFixed(1)} kN) تجاوزت قدرة القص (${Ncf.toFixed(1)} kN) فانقطع ساق البرغي!`;
+                    } else {
+                        failureMode = 'BEARING';
+                        failureMessage = `القوة المحصلة (${Nmax.toFixed(1)} kN) تجاوزت قدرة الدهس (${Ncp.toFixed(1)} kN) فتشوه ثقب الصفيحة الرقيقة!`;
+                    }
+                }
+
+                this.state.isSafe = srRatio <= 1.0 && !edgeFail;
+                this.state.srRatio = srRatio;
+                this.state.failureMode = failureMode;
+                this.state.failureMessage = failureMessage;
+                document.getElementById('hud-governing-mode').textContent = governingText;
+
+                // تحديث الصناديق الرقمية
+                const boxesHTML = `
+                    <div class="calc-box"><span class="lbl">قطر الثقب الكودي d'</span><span class="num">${dPrimeUsed} mm</span></div>
+                    <div class="calc-box"><span class="lbl">قدرة القص للبرغي N_cf</span><span class="num">${Ncf.toFixed(1)} kN</span></div>
+                    <div class="calc-box"><span class="lbl">قدرة الدهس للبرغي N_cp</span><span class="num">${Ncp.toFixed(1)} kN</span></div>
+                    <div class="calc-box"><span class="lbl">محصلة البرغي الأخطر N_max</span><span class="num" style="color:${srRatio>1?'#f87171':'#4ade80'}">${Nmax.toFixed(1)} kN</span></div>
+                `;
+                document.getElementById('calc-boxes-container').innerHTML = boxesHTML;
+
+                // سجل المعادلات
+                document.getElementById('formula-log-container').innerHTML = `
+                    <div>• قدرة البرغي الحاكمة: <code>Nc = min(Ncf, Ncp) = ${Nc.toFixed(1)} kN</code> (عدد البراغي = ${nBolts})</div>
+                    <div>• القوى المباشرة: <code>Nx^H = ${Nx_H.toFixed(1)} kN</code> , <code>Ny^T = ${Ny_T.toFixed(1)} kN</code></div>
+                    ${momentPlane === 'in-plane'
+                        ? `<div>• أثر العزم في المستوي: <code>Nx^M = ${Nx_M.toFixed(1)} kN</code> , <code>Ny^M = ${Ny_M.toFixed(1)} kN</code></div>`
+                        : `<div>• شد العزم خارج المستوي: <code>Ni^M = ${Ni_M.toFixed(1)} kN</code> (إجهاد مكافئ √(σ²+3τ²))</div>`
+                    }
+                    <div>• شرط الحافة الكودي: <code>e1 ≥ 1.2d' (${minE1.toFixed(1)}mm)</code> | التباعد: <code>${minE2.toFixed(0)} ≤ e2 ≤ ${maxE2.toFixed(0)}mm</code></div>
+                `;
+
+                // رادار الأخطاء الشائعة
+                const alerts = [];
+                if (!applyHoleRule) {
+                    alerts.push({ ok: false, txt: `خطأ شائع: استخدمت قطر البرغي d0=${d0}mm بدلاً من قطر الثقب الكودي d'=${dPrimeCode}mm!` });
+                }
+                if (edgeFail) {
+                    alerts.push({ ok: false, txt: `خطر انهيار الحافة: المسافة e1=${e1}mm أقل من 1.2d' (${minE1.toFixed(1)}mm).` });
+                }
+                if (pitchWarn) {
+                    alerts.push({ ok: false, txt: `تنبيه التباعد e2=${e2}mm خارج المجال الكودي [${minE2.toFixed(0)}mm - ${maxE2.toFixed(0)}mm].` });
+                }
+                if (alerts.length === 0) {
+                    alerts.push({ ok: true, txt: 'ممتاز! تم تطبيق تسامح الثقب d\' ومسافات الحواف الكودية بشكل سليم.' });
+                }
+                this.renderRadarAlerts(alerts);
+            },
+
+            /**
+             * حسابات التمرين الأول (ب): الوصلة الملحومة
+             */
+            calculateWeldedConnection() {
+                const H = parseFloat(document.getElementById('inp-conn-H').value);
+                const T = parseFloat(document.getElementById('inp-conn-T').value);
+                const M = parseFloat(document.getElementById('inp-conn-M').value);
+                const tmin = parseFloat(document.getElementById('inp-conn-tmin').value);
+                const a = parseFloat(document.getElementById('inp-weld-a').value);
+                const L = parseFloat(document.getElementById('inp-weld-L').value);
+                const deduct2a = document.getElementById('inp-weld-deduct2a').checked;
+                const closedBox = document.getElementById('inp-weld-closedBox').checked;
+
+                // الطول الفعال للشريط الواحد Ls
+                const Ls_single = (closedBox || !deduct2a) ? L : Math.max(10, L - 2 * a);
+                const totalLs = 2 * Ls_single; // شريطان علوي وسفلي
+
+                // القوة الكلية المؤثرة وإجهاد اللحام
+                const P_total = Math.sqrt(H * H + T * T); // kN
+                const tau_direct = (P_total * 1000) / (a * totalLs); // N/mm²
+                // أثر العزم التقريبي على خطي اللحام المتوازيين (المسافة بينهما ~ 120mm)
+                const h_weld = 120;
+                const tau_moment = (M * 1e6) / (a * Ls_single * h_weld);
+                const tau_total = tau_direct + tau_moment;
+
+                const Rf_weld = 220; // مقاومة قص اللحام التصميمية القياسية (N/mm²)
+                const srRatio = tau_total / Rf_weld;
+                const maxRecommendedA = 0.7 * tmin;
+
+                let failureMode = 'NONE';
+                let failureMessage = '';
+                if (srRatio > 1.0) {
+                    failureMode = 'WELD_RUPTURE';
+                    failureMessage = `إجهاد القص الكلي في اللحام (${tau_total.toFixed(1)} MPa) تجاوز المقاومة المسموحة (${Rf_weld} MPa) فتصدع خط اللحام!`;
+                }
+
+                this.state.isSafe = srRatio <= 1.0;
+                this.state.srRatio = srRatio;
+                this.state.failureMode = failureMode;
+                this.state.failureMessage = failureMessage;
+                document.getElementById('hud-governing-mode').textContent = 'قص أشرطة اللحام الزاوي (Fillet Weld)';
+
+                document.getElementById('calc-boxes-container').innerHTML = `
+                    <div class="calc-box"><span class="lbl">الطول المنفذ للشريط L</span><span class="num">${L} mm</span></div>
+                    <div class="calc-box"><span class="lbl">الطول الحسابي الفعال Ls</span><span class="num">${Ls_single} mm</span></div>
+                    <div class="calc-box"><span class="lbl">إجهاد القص الفعلي τ</span><span class="num" style="color:${srRatio>1?'#f87171':'#4ade80'}">${tau_total.toFixed(1)} MPa</span></div>
+                    <div class="calc-box"><span class="lbl">مقاومة اللحام R_f</span><span class="num">${Rf_weld} MPa</span></div>
+                `;
+
+                document.getElementById('formula-log-container').innerHTML = `
+                    <div>• الطول الفعال للشريط: <code>Ls = ${closedBox ? 'L (مغلق)' : (deduct2a ? 'L - 2a' : 'L (بدون طرح!)')} = ${Ls_single} mm</code></div>
+                    <div>• مساحة اللحام الفعالة (شريطان): <code>Aw = 2 × a × Ls = ${(2 * a * Ls_single).toFixed(0)} mm²</code></div>
+                    <div>• التحقق: <code>τ = P / (a·ΣLs) + τ_M = ${tau_total.toFixed(1)} MPa ≤ ${Rf_weld} MPa</code></div>
+                `;
+
+                const alerts = [];
+                if (!deduct2a && !closedBox) {
+                    alerts.push({ ok: false, txt: `خطأ شائع خطير: أغفلت طرح فوهتي اللحام (2a = ${2*a}mm) من الطول المنفذ L في شريط لحام مفتوح!` });
+                }
+                if (a > maxRecommendedA + 0.5) {
+                    alerts.push({ ok: false, txt: `تنبيه كودي: ثخانة اللحام a=${a}mm تتجاوز الحد الكودي الأقصى 0.7×t_min (${maxRecommendedA.toFixed(1)}mm).` });
+                }
+                if (alerts.length === 0) {
+                    alerts.push({ ok: true, txt: 'ممتاز! تم حساب الطول الفعال Ls = L - 2a وثخانة الحلق الكودية بشكل صحيح.' });
+                }
+                this.renderRadarAlerts(alerts);
+            },
+
+            /**
+             * حسابات التمرين الثاني: الجائز الشبكي والرياح العاصفة (BS 5950)
+             */
+            calculateTrussMember() {
+                const DL = parseFloat(document.getElementById('inp-truss-DL').value);
+                const LL = parseFloat(document.getElementById('inp-truss-LL').value);
+                const WL = parseFloat(document.getElementById('inp-truss-WL').value);
+                const grade = document.getElementById('inp-truss-grade').value;
+                const secKey = document.getElementById('inp-truss-section').value;
+                const config = document.getElementById('inp-truss-config').value;
+                const L_m = parseFloat(document.getElementById('inp-truss-L').value);
+                const k = parseFloat(document.getElementById('inp-truss-k').value);
+                const hasTieRod = document.getElementById('inp-truss-tierod').checked;
+
+                const sec = this.angleSections[secKey];
+                const isDouble = config === 'double-concentric' || config === 'double-oneside';
+                const numAngles = isDouble ? 2 : 1;
+                const Agross_total = sec.A * numAngles;
+
+                // مقاومة الفولاذ Py مع التخفيض للسماكات > 16mm
+                let Py = grade === '50' ? 355 : 275;
+                if (sec.t > 16) Py -= 10;
+                const fy = Py / 1.07;
+
+                // تراكيب الأحمال المصعدة الثلاثة (BS 5950)
+                const Pu1 = 1.4 * DL + 1.6 * LL;
+                const Pu2 = 1.0 * DL + 1.4 * WL;
+                const Pu3 = 1.2 * (DL + LL + WL);
+
+                const maxTension = Math.max(0, Pu1, Pu2, Pu3);
+                const minForce = Math.min(Pu1, Pu2, Pu3); // إذا كانت سالبة فهذا يعني انقلاب القوة إلى ضغط!
+                const hasReversal = minForce < 0;
+                const maxCompression = hasReversal ? Math.abs(minForce) : 0;
+
+                // حساب المساحة الصافية الفعالة للشد Ae
+                const dPrime = config === 'welded' ? 0 : 22; // برغي M20 -> d' = 22mm
+                const holeArea = dPrime * sec.t;
+                const a1 = (sec.b - sec.t / 2) * sec.t - holeArea;
+                const a2 = (sec.b - sec.t / 2) * sec.t;
+
+                let Ae = 0;
+                let aeFormulaText = '';
+                if (config === 'welded') {
+                    Ae = Agross_total;
+                    aeFormulaText = 'وصل ملحوم بدون ثقوب: Ae = Agross';
+                } else if (config === 'double-concentric') {
+                    Ae = Agross_total - 2 * holeArea;
+                    aeFormulaText = 'زاويتان متناظرتان (مركزي): Ae = Agross - 2(d\'·t)';
+                } else if (config === 'single-bolted') {
+                    const k_ecc = (3 * a1) / (3 * a1 + a2);
+                    Ae = a1 + k_ecc * a2;
+                    aeFormulaText = `زاوية مفردة (لامركزي): Ae = a1 + [3a1/(3a1+a2)]·a2 (معامل=${k_ecc.toFixed(2)})`;
+                } else if (config === 'double-oneside') {
+                    const k_ecc2 = (5 * a1) / (5 * a1 + a2);
+                    Ae = (a1 + k_ecc2 * a2) * 2;
+                    aeFormulaText = `زاويتان بجهة واحدة: Ae = 2×[a1 + (5a1/(5a1+a2))·a2] (معامل=${k_ecc2.toFixed(2)})`;
+                }
+
+                // قدرة تحمل الشد Pt (kN)
+                const Pt = (Ae * Py) / 1000;
+                const srTension = maxTension / Pt;
+
+                // حسابات التحنيب والضغط (Compression & Slenderness)
+                const L_mm = L_m * 1000;
+                const Lex = k * L_mm;
+                const Ley = k * (hasTieRod ? L_mm / 2 : L_mm);
+                const lambda_x = Lex / sec.rx;
+                const lambda_y = Ley / sec.ry;
+                const lambda_max = Math.max(lambda_x, lambda_y);
+
+                // حساب إجهاد الضغط المسموح pc وفق معادلة Perry-Robertson (BS 5950 Table 24c)
+                const E = 205000;
+                const lambda_0 = 0.2 * Math.sqrt((Math.PI * Math.PI * E) / Py);
+                const alpha = 0.0055; // ثابت Robertson للمنحنى c
+                const eta = Math.max(0, alpha * (lambda_max - lambda_0));
+                const pe = (Math.PI * Math.PI * E) / (lambda_max * lambda_max);
+                const phi = (Py + (eta + 1) * pe) / 2;
+                const pc = (pe * Py) / (phi + Math.sqrt(Math.max(0, phi * phi - pe * Py)));
+
+                const Pc = (Agross_total * pc) / 1000; // kN
+                const srCompression = hasReversal ? (maxCompression / Pc) : 0;
+                const slendernessFail = hasReversal && lambda_max > 180;
+
+                // تحديد الحالة الحاكمة
+                let srRatio = Math.max(srTension, srCompression);
+                let failureMode = 'NONE';
+                let failureMessage = '';
+                let governingText = 'تحقق الشد المحوري (Tension Pt)';
+
+                if (hasReversal && (srCompression >= srTension || slendernessFail)) {
+                    governingText = `انقلاب القوة بالرياح إلى ضغط (λ_max = ${lambda_max.toFixed(0)})`;
+                    if (slendernessFail || srCompression > 1.0) {
+                        failureMode = 'BUCKLING';
+                        srRatio = Math.max(srRatio, lambda_max / 180, 1.05);
+                        failureMessage = `انبعاج كلي (Global Buckling)! عاصفة الرياح قلبت القوة في التركيب الثاني (1.0DL+1.4WL = ${Pu2.toFixed(0)} kN) إلى ضغط، وتجاوز العنصر حد التحنيب (λ=${lambda_max.toFixed(0)}, Pc=${Pc.toFixed(1)} kN)!`;
+                    }
+                } else if (srTension > 1.0) {
+                    failureMode = 'TENSION_RUPTURE';
+                    failureMessage = `تمزق شدي للمقطع الصافي (Net Section Rupture)! قوة الشد المصعدة (${maxTension.toFixed(1)} kN) تجاوزت قدرة المقطع الصافي (${Pt.toFixed(1)} kN).`;
+                }
+
+                this.state.isSafe = srRatio <= 1.0 && !slendernessFail;
+                this.state.srRatio = srRatio;
+                this.state.failureMode = failureMode;
+                this.state.failureMessage = failureMessage;
+                document.getElementById('hud-governing-mode').textContent = governingText;
+
+                // الصناديق الرقمية
+                document.getElementById('calc-boxes-container').innerHTML = `
+                    <div class="calc-box"><span class="lbl">أقصى شد مصعد Pu_max</span><span class="num">${maxTension.toFixed(1)} kN</span></div>
+                    <div class="calc-box"><span class="lbl">تركيب الرياح 1.0DL+1.4WL</span><span class="num" style="color:${Pu2<0?'#f59e0b':'#fff'}">${Pu2.toFixed(1)} kN ${Pu2<0?'(ضغط!)':''}</span></div>
+                    <div class="calc-box"><span class="lbl">مقاومة الشد P_t (Ae=${Ae.toFixed(0)})</span><span class="num">${Pt.toFixed(1)} kN</span></div>
+                    <div class="calc-box"><span class="lbl">مقاومة الضغط P_c (λ=${lambda_max.toFixed(0)})</span><span class="num" style="color:${slendernessFail?'#f87171':'#38bdf8'}">${Pc.toFixed(1)} kN</span></div>
+                `;
+
+                // سجل المعادلات
+                document.getElementById('formula-log-container').innerHTML = `
+                    <div>• التراكيب: <code>Pu1=${Pu1.toFixed(0)}kN</code> | <code>Pu2=${Pu2.toFixed(0)}kN</code> | <code>Pu3=${Pu3.toFixed(0)}kN</code></div>
+                    <div>• ${aeFormulaText} ➔ <code>Ae = ${Ae.toFixed(0)} mm²</code> (Agross = ${Agross_total} mm²)</div>
+                    <div>• النحافة: <code>λx = ${lambda_x.toFixed(0)}</code> , <code>λy = ${lambda_y.toFixed(0)}</code> ${hasTieRod ? '(مع قضيب ربط Ly=L/2)' : ''} ➔ <code>pc = ${pc.toFixed(1)} MPa</code></div>
+                `;
+
+                // رادار الأخطاء الشائعة
+                const alerts = [];
+                if (hasReversal) {
+                    alerts.push({ ok: false, txt: `تنبيه انقلاب القوة (Action Reversal): الرياح الساحبة قلبت القوة إلى ضغط (${Pu2.toFixed(0)} kN)؛ لا يجوز التصميم على الشد فقط!` });
+                }
+                if (slendernessFail && !hasTieRod) {
+                    alerts.push({ ok: false, txt: `تجاوز النحافة الكودية (λy = ${lambda_y.toFixed(0)} > 180): فعّل خيار "إضافة قضيب ربط عرضي (Tie Rod)" لتنصيف طول التحنيب Ly!` });
+                }
+                if (config === 'single-bolted') {
+                    alerts.push({ ok: true, txt: `تذكير كودي: تم تطبيق معامل التخفيض اللامركزي 3a1/(3a1+a2) لأن الزاوية المفردة موصولة من ساق واحدة.` });
+                }
+                if (alerts.length === 0) {
+                    alerts.push({ ok: true, txt: 'تصميم الجائز الشبكي محقق لجميع تراكيب الأحمال وحدود النحافة الكودية.' });
+                }
+                this.renderRadarAlerts(alerts);
+            },
+
+            /**
+             * عرض تنبيهات رادار الأخطاء الشائعة
+             */
+            renderRadarAlerts(alerts) {
+                const list = document.getElementById('radar-list');
+                list.innerHTML = alerts.map(a => `<li class="radar-item ${a.ok ? 'ok' : ''}">${a.txt}</li>`).join('');
+            },
+
+            /**
+             * تحديث البطاقات العائمة HUD ومؤشر الكفاءة الاقتصادية
+             */
+            updateHUDAndEconomy() {
+                const pill = document.getElementById('hud-status-pill');
+                const srVal = document.getElementById('hud-sr-value');
+                const srBar = document.getElementById('hud-sr-bar');
+                const banner = document.getElementById('hud-failure-banner');
+                const desc = document.getElementById('hud-failure-desc');
+
+                const sr = this.state.srRatio;
+                const pct = Math.min(100, Math.round(sr * 100));
+                srVal.textContent = `${sr.toFixed(2)} (${pct}%)`;
+                srBar.style.width = `${pct}%`;
+
+                if (this.state.isSafe) {
+                    pill.className = 'status-pill status-safe';
+                    pill.textContent = 'الحالة: التصميم آمن كودياً ✅';
+                    srBar.style.background = sr > 0.85 ? '#22c55e' : '#38bdf8';
+                    banner.classList.add('hidden');
+                } else {
+                    pill.className = 'status-pill status-danger';
+                    pill.textContent = 'الحالة: خطر انهيار أو انبعاج ❌';
+                    srBar.style.background = '#ef4444';
+                    banner.classList.remove('hidden');
+                    desc.textContent = this.state.failureMessage;
+                }
+
+                // حساب النجوم الاقتصادية (Economy Score)
+                let stars = '★☆☆☆☆';
+                let pts = 500;
+                if (!this.state.isSafe) {
+                    stars = '★☆☆☆☆ (غير آمن)';
+                    pts = 350;
+                } else if (sr >= 0.80 && sr <= 0.98) {
+                    stars = '★★★★★ (مثالي!)';
+                    pts = 1000;
+                } else if (sr >= 0.60 && sr < 0.80) {
+                    stars = '★★★★☆ (جيد جداً)';
+                    pts = 850;
+                } else if (sr >= 0.40 && sr < 0.60) {
+                    stars = '★★★☆☆ (مبالغ فيه)';
+                    pts = 700;
+                } else {
+                    stars = '★★☆☆☆ (مكلف جداً)';
+                    pts = 600;
+                }
+
+                document.getElementById('economy-stars').textContent = stars;
+                document.getElementById('lab-score').textContent = pts;
+            },
+
+            /**
+             * إعادة بناء المجسمات ثلاثية الأبعاد للتمرين النشط
+             */
+            rebuildActive3DModel() {
+                if (this.activeModule === 'connections') {
+                    this.buildConnection3D();
+                } else {
+                    this.buildTruss3D();
+                }
+            },
+
+            /**
+             * بناء المشهد ثلاثي الأبعاد للتمرين الأول (الوصلات المسمارية والملحومة)
+             */
+            buildConnection3D() {
+                this.clearGroupMemory(this.connectionGroup);
+
+                const tmin = parseFloat(document.getElementById('inp-conn-tmin').value);
+                const plateThickness = (tmin / 10) * 0.35; // مقياس بصري متناسق
+
+                // مواد العرض
+                const gussetMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.6, roughness: 0.4 });
+                const mainPlateColor = this.state.isSafe ? 0x0ea5e9 : 0xef4444;
+                const mainPlateMat = new THREE.MeshStandardMaterial({ color: mainPlateColor, metalness: 0.5, roughness: 0.35 });
+
+                // لوح الوصل الخلفي (Gusset Plate)
+                const gussetGeo = new THREE.BoxGeometry(5.5, 3.6, plateThickness);
+                const gussetMesh = new THREE.Mesh(gussetGeo, gussetMat);
+                gussetMesh.position.set(-1.0, 0, -plateThickness / 2);
+                gussetMesh.receiveShadow = true;
+                this.connectionGroup.add(gussetMesh);
+
+                // الصفيحة المسحوبة الأمامية (Moving Plate)
+                const movingGroup = new THREE.Group();
+                movingGroup.name = 'movingPlateGroup';
+                const plateGeo = new THREE.BoxGeometry(5.2, 2.6, plateThickness);
+                const plateMesh = new THREE.Mesh(plateGeo, mainPlateMat);
+                plateMesh.position.set(1.2, 0, plateThickness / 2);
+                plateMesh.castShadow = true;
+                movingGroup.add(plateMesh);
+
+                if (this.connectionType === 'bolted') {
+                    const gridStr = document.getElementById('inp-bolt-grid').value;
+                    const d0 = parseFloat(document.getElementById('inp-bolt-d0').value);
+                    const e2 = parseFloat(document.getElementById('inp-bolt-e2').value);
+                    const [rows, cols] = gridStr.split('x').map(Number);
+
+                    const boltRadius = (d0 / 20) * 0.18;
+                    const spacing = (e2 / 70) * 0.85;
+
+                    const normalBoltMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8, roughness: 0.2 });
+                    const criticalBoltMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0x78350f, metalness: 0.7, roughness: 0.2 });
+
+                    for (let r = 0; r < rows; r++) {
+                        for (let c = 0; c < cols; c++) {
+                            const bx = (c - (cols - 1) / 2) * spacing;
+                            const by = (r - (rows - 1) / 2) * spacing;
+                            const isCritical = (r === rows - 1 && c === cols - 1);
+
+                            const boltUnit = new THREE.Group();
+                            boltUnit.position.set(bx, by, 0);
+                            if (isCritical) boltUnit.name = 'criticalBolt';
+
+                            // رأس البرغي السداسي
+                            const headGeo = new THREE.CylinderGeometry(boltRadius * 1.5, boltRadius * 1.5, plateThickness * 2.6, 6);
+                            headGeo.rotateX(Math.PI / 2);
+                            const boltMesh = new THREE.Mesh(headGeo, isCritical ? criticalBoltMat : normalBoltMat);
+                            boltUnit.add(boltMesh);
+
+                            movingGroup.add(boltUnit);
+                        }
+                    }
+                } else {
+                    // رسم أشرطة اللحام الزاوي العلوية والسفلية مع تمييز أطراف 2a
+                    const a = parseFloat(document.getElementById('inp-weld-a').value);
+                    const L = parseFloat(document.getElementById('inp-weld-L').value);
+                    const closedBox = document.getElementById('inp-weld-closedBox').checked;
+
+                    const weldLen = (L / 160) * 3.0;
+                    const weldSize = (a / 7) * 0.16;
+                    const craterLen = weldSize * 2.0; // تمثيل 2a عند الأطراف
+
+                    const effWeldMat = new THREE.MeshStandardMaterial({
+                        color: this.state.isSafe ? 0x22c55e : 0xef4444,
+                        emissive: this.state.isSafe ? 0x052e16 : 0x7f1d1d
+                    });
+                    const craterMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b });
+
+                    [-1.3, 1.3].forEach(yPos => {
+                        // الجزء الفعال Ls
+                        const effGeo = new THREE.BoxGeometry(Math.max(0.4, weldLen - craterLen), weldSize, weldSize);
+                        const effMesh = new THREE.Mesh(effGeo, effWeldMat);
+                        effMesh.position.set(0, yPos, plateThickness);
+                        movingGroup.add(effMesh);
+
+                        // طرفا النهاية 2a باللون البرتقالي التحذيري إذا لم يكن اللحام صندوقياً مغلقاً
+                        if (!closedBox) {
+                            [-1, 1].forEach(dir => {
+                                const cGeo = new THREE.BoxGeometry(craterLen / 2, weldSize * 1.1, weldSize * 1.1);
+                                const cMesh = new THREE.Mesh(cGeo, craterMat);
+                                cMesh.position.set(dir * (weldLen / 2 - craterLen / 4), yPos, plateThickness);
+                                movingGroup.add(cMesh);
+                            });
+                        }
+                    });
+                }
+
+                // سهم يمثل القوة المؤثرة على الصفيحة
+                const arrowDir = new THREE.Vector3(1, -0.3, 0).normalize();
+                const arrowHelper = new THREE.ArrowHelper(arrowDir, new THREE.Vector3(3.8, 0, plateThickness / 2), 1.6, 0x38bdf8, 0.4, 0.25);
+                movingGroup.add(arrowHelper);
+
+                this.connectionGroup.add(movingGroup);
+            },
+
+            /**
+             * بناء المشهد ثلاثي الأبعاد للتمرين الثاني (الجائز الشبكي والمقطع المكبر)
+             */
+            buildTruss3D() {
+                this.clearGroupMemory(this.trussGroup);
+
+                const WL = parseFloat(document.getElementById('inp-truss-WL').value);
+                const hasTieRod = document.getElementById('inp-truss-tierod').checked;
+                const config = document.getElementById('inp-truss-config').value;
+
+                const steelMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.6, roughness: 0.35 });
+                const gussetMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.4, roughness: 0.5 });
+
+                // لون العنصر المدروس (أخضر آمن / أحمر عند الفشل)
+                const activeColor = this.state.isSafe ? 0x22c55e : 0xef4444;
+                const activeMat = new THREE.MeshStandardMaterial({ color: activeColor, metalness: 0.5, roughness: 0.3 });
+
+                // 1. بناء هيكل الجائز الشبكي السقفي (Roof Truss)
+                const nodes = [
+                    new THREE.Vector3(-6, 0, 0), // 0: مسند أيسر
+                    new THREE.Vector3(0, 0, 0),  // 1: عقدة وسطية سفلية
+                    new THREE.Vector3(6, 0, 0),  // 2: مسند أيمن
+                    new THREE.Vector3(-3, 2.5, 0), // 3: عقدة علوية يسرى
+                    new THREE.Vector3(0, 3.8, 0),  // 4: قمة الجائز
+                    new THREE.Vector3(3, 2.5, 0)   // 5: عقدة علوية يمينية
+                ];
+
+                // دالة مساعدة لرسم قضيب بين نقطتين
+                const addStrut = (p1, p2, mat, radius = 0.11) => {
+                    const vec = new THREE.Vector3().subVectors(p2, p1);
+                    const len = vec.length();
+                    const geo = new THREE.CylinderGeometry(radius, radius, len, 8);
+                    const mesh = new THREE.Mesh(geo, mat);
+                    mesh.position.copy(p1).add(p2).multiplyScalar(0.5);
+                    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), vec.clone().normalize());
+                    this.trussGroup.add(mesh);
+                };
+
+                // العناصر غير المدروسة
+                addStrut(nodes[1], nodes[2], steelMat);
+                addStrut(nodes[0], nodes[3], steelMat, 0.14);
+                addStrut(nodes[3], nodes[4], steelMat, 0.14);
+                addStrut(nodes[4], nodes[5], steelMat, 0.14);
+                addStrut(nodes[5], nodes[2], steelMat, 0.14);
+                addStrut(nodes[3], nodes[1], steelMat, 0.09);
+                addStrut(nodes[4], nodes[1], steelMat, 0.09);
+                addStrut(nodes[5], nodes[1], steelMat, 0.09);
+
+                // العنصر المدروس (الوتر السفلي الأيسر من العقدة 0 إلى العقدة 1) مقسم لقطع لمحاكاة التحنيب أو التمزق
+                const studiedMemberGroup = new THREE.Group();
+                studiedMemberGroup.name = 'studiedTrussMember';
+                const numSegs = 12;
+                for (let i = 0; i < numSegs; i++) {
+                    const segGeo = new THREE.BoxGeometry(6.0 / numSegs - 0.02, 0.24, config.includes('double') ? 0.36 : 0.18);
+                    const segMesh = new THREE.Mesh(segGeo, activeMat);
+                    segMesh.position.set(-6 + (i + 0.5) * (6.0 / numSegs), 0, 0);
+                    segMesh.name = `seg_${i}`;
+                    studiedMemberGroup.add(segMesh);
+                }
+                this.trussGroup.add(studiedMemberGroup);
+
+                // قضيب الربط العرضي في منتصف العنصر المدروس (Tie Rod)
+                if (hasTieRod) {
+                    const tieGeo = new THREE.CylinderGeometry(0.08, 0.08, 3.2, 12);
+                    tieGeo.rotateX(Math.PI / 2);
+                    const tieMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7 });
+                    const tieMesh = new THREE.Mesh(tieGeo, tieMat);
+                    tieMesh.position.set(-3, 0, 0);
+                    this.trussGroup.add(tieMesh);
+                }
+
+                // ألواح الوصل عند العقد (Gusset Plates)
+                nodes.forEach(pt => {
+                    const gGeo = new THREE.BoxGeometry(0.65, 0.65, 0.08);
+                    const gMesh = new THREE.Mesh(gGeo, gussetMat);
+                    gMesh.position.copy(pt);
+                    this.trussGroup.add(gMesh);
+                });
+
+                // أسهم الرياح والأحمال فوق الجائز
+                const isSuction = WL < 0;
+                const arrowColor = isSuction ? 0xf59e0b : 0x38bdf8;
+                [-3, 0, 3].forEach(xPos => {
+                    const dir = new THREE.Vector3(0, isSuction ? 1 : -1, 0);
+                    const origin = new THREE.Vector3(xPos, isSuction ? 3.2 : 5.0, 0);
+                    const arrow = new THREE.ArrowHelper(dir, origin, 1.3, arrowColor, 0.35, 0.25);
+                    this.trussGroup.add(arrow);
+                });
+
+                // 2. مجسم تفصيلي مكبر للمقطع العرضي (L أو 2L مع لوح الوصل) أسفل الجائز
+                const detailGroup = new THREE.Group();
+                detailGroup.position.set(0, -2.0, 2.2);
+
+                const gPlate = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.4, 1.4), gussetMat);
+                detailGroup.add(gPlate);
+
+                const buildAngleMesh = (offsetX, flipX) => {
+                    const grp = new THREE.Group();
+                    const leg1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.9, 1.2), activeMat);
+                    leg1.position.set(offsetX, 0.1, 0);
+                    const leg2 = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.1, 1.2), activeMat);
+                    leg2.position.set(offsetX + (flipX ? -0.3 : 0.3), -0.3, 0);
+                    grp.add(leg1, leg2);
+                    return grp;
+                };
+
+                if (config === 'single-bolted' || config === 'welded') {
+                    detailGroup.add(buildAngleMesh(0.12, false));
+                } else if (config === 'double-concentric') {
+                    detailGroup.add(buildAngleMesh(0.12, false));
+                    detailGroup.add(buildAngleMesh(-0.12, true));
+                } else if (config === 'double-oneside') {
+                    detailGroup.add(buildAngleMesh(0.12, false));
+                    detailGroup.add(buildAngleMesh(0.28, false));
+                }
+
+                this.trussGroup.add(detailGroup);
+            },
+
+            /**
+             * تشغيل وإيقاف وإعادة تعيين محاكاة التحميل والانهيار
+             */
+            startSimulation() {
+                this.simRunning = true;
+                if (this.simProgress >= 1) this.simProgress = 0;
+            },
+
+            pauseSimulation() {
+                this.simRunning = false;
+            },
+
+            reset() {
+                this.simRunning = false;
+                this.simProgress = 0;
+                this.calculate();
+                this.rebuildActive3DModel();
+            },
+
+            /**
+             * 4. تحديث الفيزياء وحركات الانهيار داخل حلقة التحريك
+             */
+            update() {
+                if (this.controls) this.controls.update();
+
+                if (!this.simRunning) return;
+
+                this.simProgress = Math.min(1.0, this.simProgress + 0.018);
+                const p = this.simProgress;
+
+                if (this.activeModule === 'connections') {
+                    const movingGrp = this.connectionGroup.getObjectByName('movingPlateGroup');
+                    if (!movingGrp) return;
+
+                    if (this.state.isSafe) {
+                        // اهتزاز مرن طفيف يدل على الصمود والأمان
+                        movingGrp.position.x = Math.sin(p * Math.PI * 4) * 0.06;
+                    } else {
+                        // تشوه الانهيار الفيزيائي حسب النمط الحاكم
+                        const mode = this.state.failureMode;
+                        if (mode === 'BOLT_SHEAR') {
+                            movingGrp.position.x = p * 1.4;
+                            movingGrp.position.y = -p * 0.45;
+                            movingGrp.rotation.z = -p * 0.22;
+                            const critBolt = movingGrp.getObjectByName('criticalBolt');
+                            if (critBolt) {
+                                critBolt.position.y -= p * 0.08;
+                                critBolt.rotation.z += 0.15;
+                            }
+                        } else if (mode === 'BEARING' || mode === 'EDGE_TEAR') {
+                            movingGrp.position.x = p * 0.95;
+                            movingGrp.scale.x = 1 + p * 0.12;
+                        } else if (mode === 'WELD_RUPTURE') {
+                            movingGrp.position.x = p * 1.6;
+                            movingGrp.rotation.y = p * 0.35;
+                        }
+                    }
+                } else {
+                    // تحريك التمرين الثاني (الجائز الشبكي)
+                    const memberGrp = this.trussGroup.getObjectByName('studiedTrussMember');
+                    if (!memberGrp) return;
+
+                    if (this.state.isSafe) {
+                        memberGrp.position.y = Math.sin(p * Math.PI * 4) * 0.03;
+                    } else {
+                        const mode = this.state.failureMode;
+                        memberGrp.children.forEach((seg, idx) => {
+                            const normX = (idx + 0.5) / memberGrp.children.length; // 0 to 1
+                            if (mode === 'BUCKLING') {
+                                // انحناء جيبي واضح حول المحور الضعيف (Global Buckling)
+                                const buckleAmp = Math.sin(normX * Math.PI) * p * 0.95;
+                                seg.position.y = buckleAmp * 0.6;
+                                seg.position.z = buckleAmp;
+                                seg.rotation.z = Math.cos(normX * Math.PI) * p * 0.35;
+                            } else if (mode === 'TENSION_RUPTURE') {
+                                // انفصال المقطع الصافي عند المنتصف
+                                if (idx >= 6) {
+                                    seg.position.x += p * 0.015;
+                                }
+                            }
+                        });
+                    }
+                }
+            },
+
+            /**
+             * حلقة الرسم المستمرة
+             */
+            animateLoop() {
+                this.animFrameId = requestAnimationFrame(() => this.animateLoop());
+                this.update();
+                if (this.renderer && this.scene && this.camera) {
+                    this.renderer.render(this.scene, this.camera);
+                }
+            },
+
+            /**
+             * معالجة تغيير حجم نافذة المتصفح
+             */
+            onWindowResize() {
+                if (!this.container || !this.renderer || !this.camera) return;
+                const w = this.container.clientWidth;
+                const h = this.container.clientHeight;
+                this.camera.aspect = w / h;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(w, h);
+            },
+
+            /**
+             * تفريغ ذاكرة مجموعة ثلاثية الأبعاد بالكامل
+             */
+            clearGroupMemory(group) {
+                if (!group) return;
+                while (group.children.length > 0) {
+                    const child = group.children[0];
+                    group.remove(child);
+                    child.traverse(obj => {
+                        if (obj.geometry) obj.geometry.dispose();
+                        if (obj.material) {
+                            if (Array.isArray(obj.material)) {
+                                obj.material.forEach(m => m.dispose());
+                            } else {
+                                obj.material.dispose();
+                            }
+                        }
+                    });
+                }
+            },
+
+            /**
+             * 5. دالة التدمير وتنظيف الذاكرة الشاملة (منع تسريب WebGL)
+             */
+            destroy() {
+                if (this.animFrameId) {
+                    cancelAnimationFrame(this.animFrameId);
+                    this.animFrameId = null;
+                }
+
+                if (this.boundResizeHandler) {
+                    window.removeEventListener('resize', this.boundResizeHandler);
+                    this.boundResizeHandler = null;
+                }
+
+                if (this.controls) {
+                    this.controls.dispose();
+                    this.controls = null;
+                }
+
+                if (this.scene) {
+                    this.scene.traverse(obj => {
+                        if (obj.geometry) obj.geometry.dispose();
+                        if (obj.material) {
+                            if (Array.isArray(obj.material)) {
+                                obj.material.forEach(mat => {
+                                    if (mat.map) mat.map.dispose();
+                                    mat.dispose();
+                                });
+                            } else {
+                                if (obj.material.map) obj.material.map.dispose();
+                                obj.material.dispose();
+                            }
+                        }
+                    });
+                    this.scene.clear();
+                    this.scene = null;
+                }
+
+                if (this.renderer) {
+                    this.renderer.dispose();
+                    if (this.renderer.forceContextLoss) {
+                        this.renderer.forceContextLoss();
+                    }
+                    if (this.renderer.domElement && this.renderer.domElement.parentNode) {
+                        this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+                    }
+                    this.renderer = null;
+                }
+            }
+        };
+
+        // تشغيل المختبر فور تحميل الصفحة
+        window.addEventListener('DOMContentLoaded', () => {
+            SteelStructureLab.init('canvas-container');
+        });
+    </script>
+</body>
+</html>

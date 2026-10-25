@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مختبر الهندسة الوصفية: تشريح الأسقف والجمالونات الفضائية</title>
+    <!-- Google Fonts: Tajawal -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    <!-- Three.js (r128) & OrbitControls CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        :root {
+            --bg-main: #0f172a;
+            --bg-card: rgba(30, 41, 59, 0.85);
+            --bg-card-hover: rgba(51, 65, 85, 0.9);
+            --primary: #38bdf8;
+            --primary-glow: rgba(56, 189, 248, 0.35);
+            --accent: #f59e0b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: rgba(148, 163, 184, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Tajawal', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+        }
+
+        #app-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        #canvas-viewport {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            outline: none;
+            cursor: grab;
+        }
+        #canvas-viewport:active {
+            cursor: grabbing;
+        }
+
+        /* Top Header Navigation Overlay */
+        .header-bar {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            left: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .header-title-box {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 10px 18px;
+            pointer-events: auto;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.4);
+        }
+
+        .header-title-box h1 {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-title-box p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .badge-tag {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--primary);
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+        }
+
+        .stat-chip {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 8px 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 90px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .stat-chip .val {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-chip .lbl {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        /* Side Dashboard */
+        .sidebar-dashboard {
+            width: 380px;
+            height: calc(100vh - 32px);
+            margin: 16px 16px 16px 0;
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            z-index: 30;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+
+        .sidebar-dashboard.collapsed {
+            transform: translateX(-400px);
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar-header h2 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .tabs-nav {
+            display: flex;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 4px;
+            border-radius: 12px;
+            margin: 12px 16px 8px;
+            border: 1px solid var(--border);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 8px 6px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: #0f172a;
+            box-shadow: 0 2px 8px var(--primary-glow);
+        }
+
+        .tab-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 14px 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .tab-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        .tab-content::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.3);
+            border-radius: 4px;
+        }
+
+        .control-group {
+            background: rgba(15, 23, 42, 0.45);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px;
+        }
+
+        .control-group-title {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .slider-row {
+            margin-bottom: 12px;
+        }
+        .slider-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            color: var(--text-main);
+            margin-bottom: 6px;
+        }
+
+        .slider-label span.num {
+            font-weight: 700;
+            color: var(--accent);
+            direction: ltr;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 5px;
+            border-radius: 3px;
+            background: #334155;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--primary-glow);
+            transition: transform 0.1s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Buttons & Toggles */
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .action-btn {
+            background: rgba(51, 65, 85, 0.7);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            border-radius: 10px;
+            padding: 9px 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .action-btn:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--primary);
+        }
+
+        .action-btn.active {
+            background: rgba(56, 189, 248, 0.2);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .action-btn.primary {
+            background: var(--primary);
+            color: #0f172a;
+            border-color: var(--primary);
+            font-weight: 700;
+        }
+        .action-btn.primary:hover {
+            background: #7dd3fc;
+        }
+
+        .action-btn.danger {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+        .action-btn.danger:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        /* Math & Formulas Box */
+        .formula-card {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px dashed rgba(56, 189, 248, 0.35);
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 0.75rem;
+            color: #e2e8f0;
+            line-height: 1.5;
+        }
+
+        .formula-card .code-line {
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.35);
+            padding: 4px 8px;
+            border-radius: 6px;
+            margin: 4px 0;
+            color: #38bdf8;
+            direction: ltr;
+            text-align: left;
+        }
+
+        /* Legend overlay at bottom-left */
+        .viewport-legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 10px 16px;
+            font-size: 0.72rem;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+        }
+
+        /* Quick View Cube Controls */
+        .view-presets {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            gap: 6px;
+            z-index: 20;
+        }
+
+        .view-btn {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .view-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* Interactive Notification Toast */
+        .toast-msg {
+            position: absolute;
+            top: 80px;
+            right: 50%;
+            transform: translateX(50%);
+            background: rgba(16, 185, 129, 0.95);
+            color: #0f172a;
+            font-weight: 700;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 50;
+        }
+        .toast-msg.show {
+            opacity: 1;
+        }
+
+        @media (max-width: 960px) {
+            #app-container {
+                flex-direction: column-reverse;
+            }
+            .sidebar-dashboard {
+                width: calc(100vw - 32px);
+                height: 40vh;
+                margin: 0 16px 16px 16px;
+            }
+            .header-bar {
+                top: 8px;
+                right: 8px;
+                left: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <!-- 3D Viewport Area -->
+        <div id="canvas-viewport"></div>
+
+        <!-- Top Header Overlay -->
+        <div class="header-bar">
+            <div class="header-title-box">
+                <h1>
+                    <span>مختبر الأسقف والجمالونات الفضائية</span>
+                    <span class="badge-tag">هندسة وصفية تفاعلية</span>
+                </h1>
+                <p>تشريح تقاطع المستويات والآثار والأطوال الحقيقية للأعضاء الإنشائية</p>
+            </div>
+
+            <div class="header-stats">
+                <div class="stat-chip">
+                    <span class="val" id="disp-ridge-length">0.00 m</span>
+                    <span class="lbl">طول الفصل المشترك</span>
+                </div>
+                <div class="stat-chip">
+                    <span class="val" id="disp-truss-truelen">0.00 m</span>
+                    <span class="lbl">الطول الحقيقي للوتر</span>
+                </div>
+                <div class="stat-chip">
+                    <span class="val" id="disp-slope-angle">0.0°</span>
+                    <span class="lbl">زاوية الميل الفراغي</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Camera Preset Buttons -->
+        <div class="view-presets">
+            <button class="view-btn" id="btn-view-iso">أيزومتري 3D</button>
+            <button class="view-btn" id="btn-view-front">المسقط الجبهي (V)</button>
+            <button class="view-btn" id="btn-view-top">المسقط الأفقي (H)</button>
+            <button class="view-btn" id="btn-view-side">المسقط الجانبي (W)</button>
+        </div>
+
+        <!-- Legend Overlay -->
+        <div class="viewport-legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #f59e0b;"></div>
+                <span>خط الفصل المشترك (قمة السقف / Ridge)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #38bdf8;"></div>
+                <span>أعضاء الجمالون الفضائي (Space Truss)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ef4444;"></div>
+                <span>وتر الدوران / الطول الحقيقي المقارن</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(14, 165, 233, 0.35); border: 1px solid #38bdf8;"></div>
+                <span>مستويات الإسقاط (مونج H و V)</span>
+            </div>
+        </div>
+
+        <!-- Interactive Toast Message -->
+        <div id="toast" class="toast-msg">تم تفعيل حركة الدوران الفضائي!</div>
+
+        <!-- Side Dashboard Panel -->
+        <aside class="sidebar-dashboard">
+            <div class="sidebar-header">
+                <h2>لوحة التحكم والمعايرة الهندسية</h2>
+                <span class="badge-tag" id="status-tag">جاهز للمحاكاة</span>
+            </div>
+
+            <div class="tabs-nav">
+                <button class="tab-btn active" id="tab-btn-geom">الأبعاد والمستويات</button>
+                <button class="tab-btn" id="tab-btn-truss">الجمالون والطول الحقيقي</button>
+                <button class="tab-btn" id="tab-btn-sim">المحاكاة الهيدروليكية</button>
+            </div>
+
+            <!-- Tab 1: Geometry & Intersecting Roof Planes -->
+            <div class="tab-content" id="tab-pane-geom">
+                <div class="control-group">
+                    <div class="control-group-title">
+                        <span>أبعاد المبنى والسقف (Geometrical Dimensions)</span>
+                    </div>
+
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>عرض المبنى الفراغي (Span X):</span>
+                            <span class="num" id="lbl-span">12.0 م</span>
+                        </div>
+                        <input type="range" id="sl-span" min="8" max="20" step="0.5" value="12">
+                    </div>
+
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>طول المبنى (Length Y):</span>
+                            <span class="num" id="lbl-length">16.0 م</span>
+                        </div>
+                        <input type="range" id="sl-length" min="10" max="24" step="0.5" value="16">
+                    </div>
+
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>ارتفاع قمة السقف (Ridge Z):</span>
+                            <span class="num" id="lbl-height">5.0 م</span>
+                        </div>
+                        <input type="range" id="sl-height" min="2" max="9" step="0.25" value="5">
+                    </div>
+
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>إزاحة القمة عن المركز (Ridge Offset):</span>
+                            <span class="num" id="lbl-offset">0.0 م</span>
+                        </div>
+                        <input type="range" id="sl-offset" min="-3" max="3" step="0.2" value="0">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <div class="control-group-title">
+                        <span>إظهار عناصر الهندسة الوصفية</span>
+                    </div>
+                    <div class="btn-grid">
+                        <button class="action-btn active" id="btn-toggle-planes">مستويات الإسقاط</button>
+                        <button class="action-btn active" id="btn-toggle-proj">خطوط التداعي</button>
+                        <button class="action-btn active" id="btn-toggle-roof">غطاء السقف</button>
+                        <button class="action-btn active" id="btn-toggle-traces">آثار المستويين</button>
+                    </div>
+                </div>
+
+                <div class="formula-card">
+                    <strong>معادلة خط الفصل المشترك (Intersection Line):</strong>
+                    <div class="code-line" id="disp-eq-ridge">P1 ∩ P2: g(t) = P0 + t·v</div>
+                    <div>تقاطع الأثرين الأفقيين يعطي الأثر الأفقي $H$، وتقاطع الأثرين الجبهيين يعطي الأثر الجبهي $V$.</div>
+                </div>
+            </div>
+
+            <!-- Tab 2: Truss & True Length Analysis -->
+            <div class="tab-content" id="tab-pane-truss" style="display: none;">
+                <div class="control-group">
+                    <div class="control-group-title">
+                        <span>تحليل العضو المائل (Selected Diagonal Member)</span>
+                    </div>
+
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>كثافة تقسيمات الجمالون (Panels):</span>
+                            <span class="num" id="lbl-panels">4 خانات</span>
+                        </div>
+                        <input type="range" id="sl-panels" min="2" max="8" step="1" value="4">
+                    </div>
+
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>زاوية دوران العضو (Rotation Angle θ):</span>
+                            <span class="num" id="lbl-rot-angle">0.0°</span>
+                        </div>
+                        <input type="range" id="sl-rot" min="0" max="90" step="1" value="0">
+                    </div>
+
+                    <div class="btn-grid" style="margin-top: 10px;">
+                        <button class="action-btn primary" id="btn-animate-rot">تدوير للطول الحقيقي</button>
+                        <button class="action-btn" id="btn-toggle-diff-tri">مثلث الفروق ΔZ</button>
+                    </div>
+                </div>
+
+                <div class="formula-card">
+                    <strong>تشريح مثلث الطول الحقيقي (True Length Triangle):</strong>
+                    <div class="code-line" id="disp-calc-len">L_true = √(ΔX² + ΔY² + ΔZ²)</div>
+                    <div class="code-line" id="disp-calc-proj">L_proj = √(ΔX² + ΔY²) = المسقط الأفقي</div>
+                    <div style="margin-top: 4px;">
+                        فرق الارتفاع $\Delta Z$ مقاساً على عمود المسقط يعطي الطول الحقيقي وزاوية الميل الحقيقية $\alpha$.
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <div class="control-group-title">
+                        <span>محاكاة توزيع الأحمال الإنشائية</span>
+                    </div>
+                    <button class="action-btn" id="btn-toggle-stress" style="width: 100%;">تلوين الأعضاء حسب الإجهاد (شد / ضغط)</button>
+                </div>
+            </div>
+
+            <!-- Tab 3: Simulation & Water Flow -->
+            <div class="tab-content" id="tab-pane-sim" style="display: none;">
+                <div class="control-group">
+                    <div class="control-group-title">
+                        <span>محاكاة تصريف الأمطار (Hydraulic Runoff)</span>
+                    </div>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px;">
+                        تتحرك قطرات الماء وفق مستقيمات الميل الأعظم (Steepest Slope Lines) المتعامدة على أفقيات المستوي لتجتمع في خط الوادي ومزاريب التصريف.
+                    </p>
+                    <div class="btn-grid">
+                        <button class="action-btn primary" id="btn-toggle-rain">تشغيل محاكاة المطر</button>
+                        <button class="action-btn danger" id="btn-reset-scene">إعادة الضبط الشامل</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <div class="control-group-title">
+                        <span>معدل الهطول وسرعة الرياح</span>
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-label">
+                            <span>كثافة قطرات المطر:</span>
+                            <span class="num" id="lbl-rain-density">500 قطرة</span>
+                        </div>
+                        <input type="range" id="sl-rain" min="100" max="1500" step="100" value="500">
+                    </div>
+                </div>
+
+                <div class="formula-card">
+                    <strong>خطوط الانحدار الأعظم (Lines of Maximum Slope):</strong>
+                    <div class="code-line">Slope Vector = ∇h / |∇h| ⊥ Horizontal Trace</div>
+                    <div>المسقط الأفقي لخط الانحدار الأعظم عمودي دوماً على الأثر الأفقي للمستوي المائل.</div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Application Script Enclosed in Unified Object -->
+    <script>
+        /**
+         * كائن مختبر الهندسة الوصفية والإنشائية الموحد
+         * منصة لمسة - تكامل معايير Three.js وحماية الذاكرة
+         */
+        const CivilDescriptiveLab = {
+            // Configuration & Parameters State
+            state: {
+                span: 12.0,          // Span X
+                length: 16.0,        // Length Y
+                height: 5.0,         // Ridge height Z
+                offset: 0.0,         // Ridge X offset
+                panels: 4,           // Truss panels count
+                rotAngle: 0.0,       // Interactive rotation angle
+                showPlanes: true,    // Monge planes
+                showProjLines: true, // Projection dashed lines
+                showRoof: true,      // Roof cover mesh
+                showTraces: true,    // Roof plane traces
+                showDiffTri: false,  // Difference triangle ΔZ
+                showStress: false,   // Color by tension/compression
+                isRaining: false,    // Water flow simulation
+                rainCount: 500,      // Rain droplets
+                isRotatingAnim: false
+            },
+
+            // Three.js Instances
+            scene: null,
+            camera: null,
+            renderer: null,
+            controls: null,
+            container: null,
+            animId: null,
+
+            // Scene Object Groups
+            groups: {
+                mongePlanes: null,
+                roofStructure: null,
+                spaceTruss: null,
+                projectionLines: null,
+                rotationDemo: null,
+                rainParticles: null,
+                traces: null
+            },
+
+            // Materials Cache
+            materials: {},
+            geometries: [],
+
+            /**
+             * تهيئة المختبر داخل الحاوية المحددة
+             */
+            init: function(containerId) {
+                this.container = document.getElementById(containerId);
+                if (!this.container) return;
+
+                // 1. Scene Setup
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x0f172a);
+                this.scene.fog = new THREE.FogExp2(0x0f172a, 0.015);
+
+                // 2. Camera Setup
+                const aspect = this.container.clientWidth / this.container.clientHeight;
+                this.camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
+                this.camera.position.set(24, 18, 26);
+
+                // 3. Renderer Setup
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+                this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                this.container.appendChild(this.renderer.domElement);
+
+                // 4. Controls Setup
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.05;
+                this.controls.maxPolarAngle = Math.PI / 2 + 0.05; // Prevent flipping under ground
+                this.controls.minDistance = 5;
+                this.controls.maxDistance = 120;
+                this.controls.target.set(0, 3, 0);
+
+                // 5. Lighting Setup
+                this.initLighting();
+
+                // 6. Initialize Groups
+                for (let key in this.groups) {
+                    this.groups[key] = new THREE.Group();
+                    this.scene.add(this.groups[key]);
+                }
+
+                // 7. Initialize Shared Materials
+                this.initMaterials();
+
+                // 8. Build Base Monge Planes & Scene
+                this.buildMongePlanes();
+                this.buildAllStructures();
+
+                // 9. Attach Event Listeners
+                this.attachUIEventListeners();
+                window.addEventListener('resize', this.onWindowResize.bind(this));
+
+                // 10. Start Animation Loop
+                this.animate = this.animate.bind(this);
+                this.animId = requestAnimationFrame(this.animate);
+
+                // 11. Initial Calculation & UI update
+                this.calculate();
+            },
+
+            /**
+             * إعداد الإضاءة الواقعية المتوازنة
+             */
+            initLighting: function() {
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
+                this.scene.add(ambientLight);
+
+                const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.75);
+                dirLight1.position.set(25, 40, 20);
+                dirLight1.castShadow = true;
+                dirLight1.shadow.mapSize.width = 1024;
+                dirLight1.shadow.mapSize.height = 1024;
+                dirLight1.shadow.camera.near = 10;
+                dirLight1.shadow.camera.far = 80;
+                const d = 25;
+                dirLight1.shadow.camera.left = -d;
+                dirLight1.shadow.camera.right = d;
+                dirLight1.shadow.camera.top = d;
+                dirLight1.shadow.camera.bottom = -d;
+                this.scene.add(dirLight1);
+
+                const dirLight2 = new THREE.DirectionalLight(0x38bdf8, 0.35);
+                dirLight2.position.set(-20, 15, -20);
+                this.scene.add(dirLight2);
+            },
+
+            /**
+             * تخزين المواد لتسهيل إعادة الاستخدام والتنظيف
+             */
+            initMaterials: function() {
+                this.materials.glassRoof = new THREE.MeshPhysicalMaterial({
+                    color: 0x38bdf8,
+                    transparent: true,
+                    opacity: 0.38,
+                    roughness: 0.1,
+                    metalness: 0.1,
+                    transmission: 0.6,
+                    ior: 1.4,
+                    side: THREE.DoubleSide,
+                    depthWrite: false
+                });
+
+                this.materials.roofWire = new THREE.LineBasicMaterial({
+                    color: 0x7dd3fc,
+                    linewidth: 1.5
+                });
+
+                this.materials.ridgeLine = new THREE.MeshStandardMaterial({
+                    color: 0xf59e0b,
+                    emissive: 0xd97706,
+                    emissiveIntensity: 0.4,
+                    roughness: 0.2
+                });
+
+                this.materials.trussNormal = new THREE.MeshStandardMaterial({
+                    color: 0x0284c7,
+                    metalness: 0.8,
+                    roughness: 0.25
+                });
+
+                this.materials.trussTension = new THREE.MeshStandardMaterial({
+                    color: 0x10b981,
+                    metalness: 0.6,
+                    roughness: 0.3
+                });
+
+                this.materials.trussCompression = new THREE.MeshStandardMaterial({
+                    color: 0xef4444,
+                    metalness: 0.6,
+                    roughness: 0.3
+                });
+
+                this.materials.activeMember = new THREE.MeshStandardMaterial({
+                    color: 0xf43f5e,
+                    emissive: 0xe11d48,
+                    emissiveIntensity: 0.5,
+                    roughness: 0.2
+                });
+
+                this.materials.projLine = new THREE.LineDashedMaterial({
+                    color: 0x94a3b8,
+                    dashSize: 0.35,
+                    gapSize: 0.25,
+                    transparent: true,
+                    opacity: 0.6
+                });
+
+                this.materials.rotatedMember = new THREE.MeshStandardMaterial({
+                    color: 0xa855f7,
+                    emissive: 0x9333ea,
+                    emissiveIntensity: 0.35
+                });
+            },
+
+            /**
+             * بناء مستويات الإسقاط لمونج (المستوي الأفقي H والجبهي V وخط الأرض)
+             */
+            buildMongePlanes: function() {
+                const group = this.groups.mongePlanes;
+                this.clearGroup(group);
+
+                const size = 32;
+
+                // 1. المستوي الأفقي H (Z = 0 في التدوين المعماري، هنا في Three.js Y = 0)
+                const gridH = new THREE.GridHelper(size, 32, 0x38bdf8, 0x1e293b);
+                gridH.position.y = 0;
+                group.add(gridH);
+
+                const planeHGeo = new THREE.PlaneGeometry(size, size);
+                this.geometries.push(planeHGeo);
+                const planeHMat = new THREE.MeshBasicMaterial({
+                    color: 0x0f172a,
+                    transparent: true,
+                    opacity: 0.75,
+                    depthWrite: false
+                });
+                const planeH = new THREE.Mesh(planeHGeo, planeHMat);
+                planeH.rotation.x = -Math.PI / 2;
+                planeH.position.y = -0.01;
+                planeH.receiveShadow = true;
+                group.add(planeH);
+
+                // 2. المستوي الجبهي V (يقع في الخلف عند Z = -size/2)
+                const gridV = new THREE.GridHelper(size, 32, 0x38bdf8, 0x1e293b);
+                gridV.rotation.x = Math.PI / 2;
+                gridV.position.set(0, size / 4, -size / 2);
+                group.add(gridV);
+
+                // 3. خط الأرض G.L (محور X الفاصل بين H و V)
+                const glGeo = new THREE.CylinderGeometry(0.06, 0.06, size, 16);
+                this.geometries.push(glGeo);
+                const glMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+                const glMesh = new THREE.Mesh(glGeo, glMat);
+                glMesh.rotation.z = Math.PI / 2;
+                glMesh.position.set(0, 0, -size / 2);
+                group.add(glMesh);
+            },
+
+            /**
+             * إعادة بناء كافة المجسمات الإنشائية والأسقف بناءً على البارامترات
+             */
+            buildAllStructures: function() {
+                this.buildRoofStructure();
+                this.buildSpaceTruss();
+                this.buildRotationDemo();
+                this.buildProjections();
+                this.buildRainSystem();
+            },
+
+            /**
+             * بناء الأسقف المتقاطعة وخط الفصل المشترك (Ridge)
+             */
+            buildRoofStructure: function() {
+                const group = this.groups.roofStructure;
+                this.clearGroup(group);
+
+                const s = this.state.span;
+                const l = this.state.length;
+                const h = this.state.height;
+                const off = this.state.offset;
+
+                const halfW = s / 2;
+                const halfL = l / 2;
+
+                // إحداثيات النقاط الأساسية للسقف (X, Y_height, Z_depth)
+                // الأطراف السفلية للسقفين (Eaves)
+                const eavesLeftFront  = new THREE.Vector3(-halfW, 0,  halfL);
+                const eavesLeftBack   = new THREE.Vector3(-halfW, 0, -halfL);
+                const eavesRightFront = new THREE.Vector3( halfW, 0,  halfL);
+                const eavesRightBack  = new THREE.Vector3( halfW, 0, -halfL);
+
+                // قمة السقف المتقاطع (خط الفصل المشترك - Ridge)
+                const ridgeFront = new THREE.Vector3(off, h,  halfL);
+                const ridgeBack  = new THREE.Vector3(off, h, -halfL);
+
+                // 1. المستوي المائل الأيسر (Plane 1)
+                const plane1Geo = new THREE.BufferGeometry();
+                const p1Vertices = new Float32Array([
+                    // مثلث 1
+                    eavesLeftFront.x, eavesLeftFront.y, eavesLeftFront.z,
+                    ridgeFront.x, ridgeFront.y, ridgeFront.z,
+                    eavesLeftBack.x, eavesLeftBack.y, eavesLeftBack.z,
+                    // مثلث 2
+                    ridgeFront.x, ridgeFront.y, ridgeFront.z,
+                    ridgeBack.x, ridgeBack.y, ridgeBack.z,
+                    eavesLeftBack.x, eavesLeftBack.y, eavesLeftBack.z
+                ]);
+                plane1Geo.setAttribute('position', new THREE.BufferAttribute(p1Vertices, 3));
+                plane1Geo.computeVertexNormals();
+                this.geometries.push(plane1Geo);
+
+                const mesh1 = new THREE.Mesh(plane1Geo, this.materials.glassRoof);
+                mesh1.visible = this.state.showRoof;
+                group.add(mesh1);
+
+                // 2. المستوي المائل الأيمن (Plane 2)
+                const plane2Geo = new THREE.BufferGeometry();
+                const p2Vertices = new Float32Array([
+                    // مثلث 1
+                    ridgeFront.x, ridgeFront.y, ridgeFront.z,
+                    eavesRightFront.x, eavesRightFront.y, eavesRightFront.z,
+                    ridgeBack.x, ridgeBack.y, ridgeBack.z,
+                    // مثلث 2
+                    eavesRightFront.x, eavesRightFront.y, eavesRightFront.z,
+                    eavesRightBack.x, eavesRightBack.y, eavesRightBack.z,
+                    ridgeBack.x, ridgeBack.y, ridgeBack.z
+                ]);
+                plane2Geo.setAttribute('position', new THREE.BufferAttribute(p2Vertices, 3));
+                plane2Geo.computeVertexNormals();
+                this.geometries.push(plane2Geo);
+
+                const mesh2 = new THREE.Mesh(plane2Geo, this.materials.glassRoof);
+                mesh2.visible = this.state.showRoof;
+                group.add(mesh2);
+
+                // 3. خط الفصل المشترك الفراغي (القمة Ridge)
+                const ridgeGeo = new THREE.CylinderGeometry(0.08, 0.08, l, 16);
+                this.geometries.push(ridgeGeo);
+                const ridgeMesh = new THREE.Mesh(ridgeGeo, this.materials.ridgeLine);
+                ridgeMesh.position.set(off, h, 0);
+                ridgeMesh.rotation.x = Math.PI / 2;
+                group.add(ridgeMesh);
+
+                // خطوط الحواف (Wireframe Borders)
+                const wireGeo = new THREE.BufferGeometry();
+                const wirePts = [
+                    eavesLeftFront, eavesLeftBack,
+                    eavesRightFront, eavesRightBack,
+                    eavesLeftFront, eavesRightFront,
+                    eavesLeftBack, eavesRightBack,
+                    eavesLeftFront, ridgeFront,
+                    eavesRightFront, ridgeFront,
+                    eavesLeftBack, ridgeBack,
+                    eavesRightBack, ridgeBack
+                ];
+                wireGeo.setFromPoints(wirePts);
+                this.geometries.push(wireGeo);
+                const wireLines = new THREE.LineSegments(wireGeo, this.materials.roofWire);
+                group.add(wireLines);
+
+                // حساب وتحديث المسافات في الواجهة
+                const ridgeLen = ridgeFront.distanceTo(ridgeBack);
+                document.getElementById('disp-ridge-length').innerText = `${ridgeLen.toFixed(2)} م`;
+            },
+
+            /**
+             * بناء الجمالون الفضائي (Space Truss Structure) تحت السقف
+             */
+            buildSpaceTruss: function() {
+                const group = this.groups.spaceTruss;
+                this.clearGroup(group);
+
+                const s = this.state.span;
+                const l = this.state.length;
+                const h = this.state.height;
+                const off = this.state.offset;
+                const panels = this.state.panels;
+
+                const halfW = s / 2;
+                const halfL = l / 2;
+                const stepY = l / panels;
+
+                const nodeSphereGeo = new THREE.SphereGeometry(0.14, 16, 16);
+                this.geometries.push(nodeSphereGeo);
+                const nodeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.9, roughness: 0.1 });
+
+                // توليد العقد والإطارات الجمالونية
+                for (let i = 0; i <= panels; i++) {
+                    const curZ = -halfL + i * stepY;
+
+                    const ptLeft  = new THREE.Vector3(-halfW, 0, curZ);
+                    const ptRight = new THREE.Vector3( halfW, 0, curZ);
+                    const ptRidge = new THREE.Vector3(off, h, curZ);
+                    const ptBottomCenter = new THREE.Vector3(off, 0.4, curZ);
+
+                    // إضافة كرات العقد
+                    [ptLeft, ptRight, ptRidge, ptBottomCenter].forEach(pt => {
+                        const sph = new THREE.Mesh(nodeSphereGeo, nodeMat);
+                        sph.position.copy(pt);
+                        group.add(sph);
+                    });
+
+                    // قضبان الإطار الرئيسي (Rafters & Tie)
+                    this.createTrussBar(group, ptLeft, ptRidge, 'comp');
+                    this.createTrussBar(group, ptRight, ptRidge, 'comp');
+                    this.createTrussBar(group, ptLeft, ptBottomCenter, 'tens');
+                    this.createTrussBar(group, ptRight, ptBottomCenter, 'tens');
+                    this.createTrussBar(group, ptRidge, ptBottomCenter, 'comp');
+
+                    // قطريات فراغية بين الإطارات المتتالية (Space Diagonals)
+                    if (i < panels) {
+                        const nextZ = curZ + stepY;
+                        const nextLeft  = new THREE.Vector3(-halfW, 0, nextZ);
+                        const nextRight = new THREE.Vector3( halfW, 0, nextZ);
+                        const nextRidge = new THREE.Vector3(off, h, nextZ);
+                        const nextBC    = new THREE.Vector3(off, 0.4, nextZ);
+
+                        // أوتار طولية
+                        this.createTrussBar(group, ptLeft, nextLeft, 'tens');
+                        this.createTrussBar(group, ptRight, nextRight, 'tens');
+                        this.createTrussBar(group, ptBottomCenter, nextBC, 'tens');
+
+                        // أوتار مائلة فراغية (Bracing Diagonals)
+                        this.createTrussBar(group, ptLeft, nextRidge, 'tens');
+                        this.createTrussBar(group, ptRight, nextRidge, 'tens');
+                        this.createTrussBar(group, ptBottomCenter, nextRidge, 'comp');
+                    }
+                }
+            },
+
+            /**
+             * إنشاء أسطوانة تمثل عضواً إنشائياً في الجمالون مع تلوين الإجهادات
+             */
+            createTrussBar: function(parentGroup, p1, p2, stressType) {
+                const distance = p1.distanceTo(p2);
+                const barGeo = new THREE.CylinderGeometry(0.045, 0.045, distance, 8);
+                this.geometries.push(barGeo);
+
+                let mat = this.materials.trussNormal;
+                if (this.state.showStress) {
+                    mat = (stressType === 'tens') ? this.materials.trussTension : this.materials.trussCompression;
+                }
+
+                const mesh = new THREE.Mesh(barGeo, mat);
+
+                // توجيه الأسطوانة بين النقطتين
+                const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+                mesh.position.copy(mid);
+
+                const dir = new THREE.Vector3().subVectors(p2, p1).normalize();
+                const axis = new THREE.Vector3(0, 1, 0);
+                mesh.quaternion.setFromUnitVectors(axis, dir);
+
+                parentGroup.add(mesh);
+                return mesh;
+            },
+
+            /**
+             * تجسيد تجربة الدوران ومثلث الطول الحقيقي لعضو مائل محدد
+             */
+            buildRotationDemo: function() {
+                const group = this.groups.rotationDemo;
+                this.clearGroup(group);
+
+                const s = this.state.span;
+                const h = this.state.height;
+                const off = this.state.offset;
+
+                // العضو الإنشائي المائل المرجعي (من الزاوية اليسرى الأمامية إلى القمة)
+                const ptA = new THREE.Vector3(-s / 2, 0, this.state.length / 2);
+                const ptB = new THREE.Vector3(off, h, this.state.length / 2 - this.state.length / this.state.panels);
+
+                // العضو النشط الأصلي الملون بالأحمر
+                this.createCustomBar(group, ptA, ptB, this.materials.activeMember, 0.07);
+
+                // حسابات الطول الحقيقي والإسقاط
+                const deltaX = ptB.x - ptA.x;
+                const deltaY_depth = ptB.z - ptA.z; // Z in 3D is Depth Y in descriptive
+                const deltaZ_height = ptB.y - ptA.y; // Y in 3D is Height Z in descriptive
+
+                const trueLength = Math.sqrt(deltaX * deltaX + deltaY_depth * deltaY_depth + deltaZ_height * deltaZ_height);
+                const projH = Math.sqrt(deltaX * deltaX + deltaY_depth * deltaY_depth);
+                const projV = Math.sqrt(deltaX * deltaX + deltaZ_height * deltaZ_height);
+                const alpha = Math.asin(deltaZ_height / trueLength) * (180 / Math.PI);
+
+                // تحديث البطاقات الرقمية
+                document.getElementById('disp-truss-truelen').innerText = `${trueLength.toFixed(2)} م`;
+                document.getElementById('disp-slope-angle').innerText = `${alpha.toFixed(1)}°`;
+                document.getElementById('disp-calc-len').innerText = `L_true = √(${deltaX.toFixed(1)}² + ${deltaY_depth.toFixed(1)}² + ${deltaZ_height.toFixed(1)}²) = ${trueLength.toFixed(2)}m`;
+                document.getElementById('disp-calc-proj').innerText = `L_proj(H) = √(${deltaX.toFixed(1)}² + ${deltaY_depth.toFixed(1)}²) = ${projH.toFixed(2)}m`;
+
+                // تمثيل العضو المدور بزاوية الدوران التفاعلية θ
+                const thetaRad = THREE.MathUtils.degToRad(this.state.rotAngle);
+                // الدوران حول المحور الشاقولي المار بالنقطة A
+                const rotatedEnd = new THREE.Vector3(
+                    ptA.x + Math.cos(thetaRad) * (ptB.x - ptA.x) - Math.sin(thetaRad) * (ptB.z - ptA.z),
+                    ptB.y,
+                    ptA.z + Math.sin(thetaRad) * (ptB.x - ptA.x) + Math.cos(thetaRad) * (ptB.z - ptA.z)
+                );
+
+                if (this.state.rotAngle > 0) {
+                    this.createCustomBar(group, ptA, rotatedEnd, this.materials.rotatedMember, 0.06);
+
+                    // قوس مسار الدوران (Rotation Arc)
+                    const curve = new THREE.EllipseCurve(
+                        ptA.x, ptA.z,
+                        projH, projH,
+                        Math.atan2(ptB.z - ptA.z, ptB.x - ptA.x),
+                        Math.atan2(rotatedEnd.z - ptA.z, rotatedEnd.x - ptA.x),
+                        false, 0
+                    );
+                    const points = curve.getPoints(32).map(p => new THREE.Vector3(p.x, ptB.y, p.y));
+                    const arcGeo = new THREE.BufferGeometry().setFromPoints(points);
+                    this.geometries.push(arcGeo);
+                    const arcLine = new THREE.Line(arcGeo, new THREE.LineBasicMaterial({ color: 0xa855f7 }));
+                    group.add(arcLine);
+                }
+
+                // مثلث الفروق الإنشائي ΔZ إذا كان مفعلاً
+                if (this.state.showDiffTri) {
+                    const triGeo = new THREE.BufferGeometry();
+                    const triPts = new Float32Array([
+                        ptA.x, 0.05, ptA.z,
+                        ptB.x, 0.05, ptB.z,
+                        ptB.x, ptB.y, ptB.z
+                    ]);
+                    triGeo.setAttribute('position', new THREE.BufferAttribute(triPts, 3));
+                    this.geometries.push(triGeo);
+                    const triMat = new THREE.MeshBasicMaterial({
+                        color: 0xf59e0b,
+                        transparent: true,
+                        opacity: 0.35,
+                        side: THREE.DoubleSide
+                    });
+                    const triMesh = new THREE.Mesh(triGeo, triMat);
+                    group.add(triMesh);
+                }
+            },
+
+            /**
+             * أداة مساعدة لبناء أسطوانة بلون ومادة مخصصة
+             */
+            createCustomBar: function(group, p1, p2, material, radius = 0.05) {
+                const dist = p1.distanceTo(p2);
+                const geo = new THREE.CylinderGeometry(radius, radius, dist, 12);
+                this.geometries.push(geo);
+                const mesh = new THREE.Mesh(geo, material);
+                const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+                mesh.position.copy(mid);
+                const dir = new THREE.Vector3().subVectors(p2, p1).normalize();
+                mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+                group.add(mesh);
+            },
+
+            /**
+             * بناء خطوط التداعي ومساقط مونج الإسقاطية
+             */
+            buildProjections: function() {
+                const group = this.groups.projectionLines;
+                this.clearGroup(group);
+
+                if (!this.state.showProjLines) return;
+
+                const s = this.state.span;
+                const l = this.state.length;
+                const h = this.state.height;
+                const off = this.state.offset;
+
+                const pts = [
+                    new THREE.Vector3(-s / 2, 0, l / 2),
+                    new THREE.Vector3(s / 2, 0, l / 2),
+                    new THREE.Vector3(off, h, l / 2),
+                    new THREE.Vector3(off, h, -l / 2)
+                ];
+
+                const lineGeo = new THREE.BufferGeometry();
+                const linePts = [];
+
+                pts.forEach(pt => {
+                    // إسقاط على المستوي الأفقي (Y = 0)
+                    linePts.push(pt.clone(), new THREE.Vector3(pt.x, 0, pt.z));
+                    // إسقاط على المستوي الجبهي (Z = -16)
+                    linePts.push(pt.clone(), new THREE.Vector3(pt.x, pt.y, -16));
+                });
+
+                lineGeo.setFromPoints(linePts);
+                this.geometries.push(lineGeo);
+                const lines = new THREE.LineSegments(lineGeo, this.materials.projLine);
+                lines.computeLineDistances();
+                group.add(lines);
+            },
+
+            /**
+             * نظام قطرات المطر لمحاكاة تدفق المياه على المستويات المائلة
+             */
+            buildRainSystem: function() {
+                const group = this.groups.rainParticles;
+                this.clearGroup(group);
+
+                if (!this.state.isRaining) return;
+
+                const count = this.state.rainCount;
+                const rainGeo = new THREE.BufferGeometry();
+                const positions = new Float32Array(count * 3);
+                const velocities = [];
+
+                const s = this.state.span;
+                const l = this.state.length;
+
+                for (let i = 0; i < count; i++) {
+                    positions[i * 3 + 0] = (Math.random() - 0.5) * s * 1.2;
+                    positions[i * 3 + 1] = Math.random() * 8 + 4;
+                    positions[i * 3 + 2] = (Math.random() - 0.5) * l * 1.1;
+
+                    velocities.push(new THREE.Vector3(0, -0.15 - Math.random() * 0.1, 0));
+                }
+
+                rainGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                this.geometries.push(rainGeo);
+
+                const rainMat = new THREE.PointsMaterial({
+                    color: 0x38bdf8,
+                    size: 0.15,
+                    transparent: true,
+                    opacity: 0.8
+                });
+
+                const particleSystem = new THREE.Points(rainGeo, rainMat);
+                particleSystem.userData = { velocities: velocities };
+                group.add(particleSystem);
+            },
+
+            /**
+             * تحديث حركة الأمطار وجريانها على المستويين نحو خط المزراب
+             */
+            updateRainPhysics: function() {
+                if (!this.state.isRaining || !this.groups.rainParticles.children.length) return;
+
+                const particles = this.groups.rainParticles.children[0];
+                const positions = particles.geometry.attributes.position.array;
+                const s = this.state.span;
+                const l = this.state.length;
+                const h = this.state.height;
+                const off = this.state.offset;
+
+                for (let i = 0; i < positions.length / 3; i++) {
+                    let px = positions[i * 3 + 0];
+                    let py = positions[i * 3 + 1];
+                    let pz = positions[i * 3 + 2];
+
+                    // حساب ارتفاع سطح السقف عند الموضع الحالي (px, pz)
+                    let roofH = 0;
+                    if (px < off) {
+                        // المستوي الأيسر
+                        roofH = (px - (-s / 2)) / (off - (-s / 2)) * h;
+                    } else {
+                        // المستوي الأيمن
+                        roofH = (s / 2 - px) / (s / 2 - off) * h;
+                    }
+
+                    // ملامسة السطح والجريان على خط الانحدار الأعظم (Slope Runoff)
+                    if (py <= roofH && Math.abs(pz) <= l / 2) {
+                        py = roofH;
+                        // الانحدار نحو المزراب الخارجي (الاتجاه المعاكس لخط القمة)
+                        if (px < off) {
+                            px -= 0.08;
+                        } else {
+                            px += 0.08;
+                        }
+                    } else {
+                        // سقوط حر بالهواء
+                        py -= 0.18;
+                    }
+
+                    // إعادة التدوير من الأعلى
+                    if (py <= 0 || Math.abs(px) > s / 2 + 1 || Math.abs(pz) > l / 2 + 1) {
+                        px = (Math.random() - 0.5) * s * 1.1;
+                        py = Math.random() * 6 + h + 2;
+                        pz = (Math.random() - 0.5) * l;
+                    }
+
+                    positions[i * 3 + 0] = px;
+                    positions[i * 3 + 1] = py;
+                    positions[i * 3 + 2] = pz;
+                }
+                particles.geometry.attributes.position.needsUpdate = true;
+            },
+
+            /**
+             * دالة الحسابات الهندسية والتحديث الفوري
+             */
+            calculate: function() {
+                this.buildAllStructures();
+            },
+
+            /**
+             * حلقة التحديث المستمرة (Render Loop)
+             */
+            animate: function() {
+                this.animId = requestAnimationFrame(this.animate);
+
+                // تحريك دوران زاوية الطول الحقيقي تلقائياً إن كانت مفعلة
+                if (this.state.isRotatingAnim) {
+                    this.state.rotAngle += 0.8;
+                    if (this.state.rotAngle >= 90) {
+                        this.state.rotAngle = 90;
+                        this.state.isRotatingAnim = false;
+                        document.getElementById('status-tag').innerText = 'تم الدوران لمستوي الإسقاط';
+                    }
+                    document.getElementById('sl-rot').value = this.state.rotAngle;
+                    document.getElementById('lbl-rot-angle').innerText = `${this.state.rotAngle.toFixed(0)}°`;
+                    this.buildRotationDemo();
+                }
+
+                // تحديث قطرات المطر
+                if (this.state.isRaining) {
+                    this.updateRainPhysics();
+                }
+
+                this.controls.update();
+                this.renderer.render(this.scene, this.camera);
+            },
+
+            /**
+             * إعادة ضبط التجربة للحالة الابتدائية
+             */
+            reset: function() {
+                this.state.span = 12.0;
+                this.state.length = 16.0;
+                this.state.height = 5.0;
+                this.state.offset = 0.0;
+                this.state.panels = 4;
+                this.state.rotAngle = 0.0;
+                this.state.showPlanes = true;
+                this.state.showProjLines = true;
+                this.state.showRoof = true;
+                this.state.showDiffTri = false;
+                this.state.showStress = false;
+                this.state.isRaining = false;
+                this.state.isRotatingAnim = false;
+
+                // تحديث المدخلات في DOM
+                document.getElementById('sl-span').value = 12;
+                document.getElementById('sl-length').value = 16;
+                document.getElementById('sl-height').value = 5;
+                document.getElementById('sl-offset').value = 0;
+                document.getElementById('sl-panels').value = 4;
+                document.getElementById('sl-rot').value = 0;
+
+                document.getElementById('lbl-span').innerText = '12.0 م';
+                document.getElementById('lbl-length').innerText = '16.0 م';
+                document.getElementById('lbl-height').innerText = '5.0 م';
+                document.getElementById('lbl-offset').innerText = '0.0 م';
+                document.getElementById('lbl-panels').innerText = '4 خانات';
+                document.getElementById('lbl-rot-angle').innerText = '0.0°';
+
+                this.groups.mongePlanes.visible = true;
+                this.camera.position.set(24, 18, 26);
+                this.controls.target.set(0, 3, 0);
+
+                this.showToast('تمت إعادة ضبط المختبر بنجاح');
+                this.calculate();
+            },
+
+            /**
+             * تفريغ وتنظيف الذاكرة وموارد كرت الشاشة (Memory Safety)
+             */
+            destroy: function() {
+                if (this.animId) {
+                    cancelAnimationFrame(this.animId);
+                }
+
+                window.removeEventListener('resize', this.onWindowResize);
+
+                // التخلص من كافة الـ Geometries المخزنة
+                this.geometries.forEach(geo => geo.dispose());
+                this.geometries = [];
+
+                // التخلص من المواد
+                for (let k in this.materials) {
+                    this.materials[k].dispose();
+                }
+
+                // تنظيف المشهد والكائنات
+                for (let key in this.groups) {
+                    this.clearGroup(this.groups[key]);
+                }
+
+                if (this.renderer) {
+                    this.renderer.dispose();
+                    if (this.renderer.domElement && this.renderer.domElement.parentNode) {
+                        this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+                    }
+                }
+
+                if (this.controls) {
+                    this.controls.dispose();
+                }
+            },
+
+            /**
+             * مساعدة تنظيف مجموعة ثلاثية أبعاد
+             */
+            clearGroup: function(group) {
+                while (group.children.length > 0) {
+                    const obj = group.children[0];
+                    group.remove(obj);
+                    if (obj.geometry) obj.geometry.dispose();
+                }
+            },
+
+            /**
+             * تكيف أبعاد المشهد مع تغيير حجم النافذة
+             */
+            onWindowResize: function() {
+                if (!this.container || !this.renderer || !this.camera) return;
+                const w = this.container.clientWidth;
+                const h = this.container.clientHeight;
+                this.camera.aspect = w / h;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(w, h);
+            },
+
+            /**
+             * عرض إشعار تفاعلي للمستخدم
+             */
+            showToast: function(msg) {
+                const toast = document.getElementById('toast');
+                if (toast) {
+                    toast.innerText = msg;
+                    toast.classList.add('show');
+                    setTimeout(() => toast.classList.remove('show'), 2400);
+                }
+            },
+
+            /**
+             * ربط كافة أزرار التحكم بالواجهة وتحديث الـ DOM
+             */
+            attachUIEventListeners: function() {
+                const self = this;
+
+                // Sliders Listeners
+                const bindSlider = (id, labelId, unit, stateKey, callback) => {
+                    const el = document.getElementById(id);
+                    el.addEventListener('input', (e) => {
+                        const val = parseFloat(e.target.value);
+                        self.state[stateKey] = val;
+                        document.getElementById(labelId).innerText = `${val.toFixed(unit === '°' ? 0 : 1)} ${unit}`;
+                        if (callback) callback(val);
+                        self.calculate();
+                    });
+                };
+
+                bindSlider('sl-span', 'lbl-span', 'م', 'span');
+                bindSlider('sl-length', 'lbl-length', 'م', 'length');
+                bindSlider('sl-height', 'lbl-height', 'م', 'height');
+                bindSlider('sl-offset', 'lbl-offset', 'م', 'offset');
+                bindSlider('sl-panels', 'lbl-panels', 'خانات', 'panels');
+                bindSlider('sl-rot', 'lbl-rot-angle', '°', 'rotAngle', () => {
+                    self.state.isRotatingAnim = false;
+                });
+                bindSlider('sl-rain', 'lbl-rain-density', 'قطرة', 'rainCount', () => {
+                    self.buildRainSystem();
+                });
+
+                // Toggles
+                document.getElementById('btn-toggle-planes').addEventListener('click', function() {
+                    self.state.showPlanes = !self.state.showPlanes;
+                    self.groups.mongePlanes.visible = self.state.showPlanes;
+                    this.classList.toggle('active', self.state.showPlanes);
+                });
+
+                document.getElementById('btn-toggle-proj').addEventListener('click', function() {
+                    self.state.showProjLines = !self.state.showProjLines;
+                    self.groups.projectionLines.visible = self.state.showProjLines;
+                    this.classList.toggle('active', self.state.showProjLines);
+                });
+
+                document.getElementById('btn-toggle-roof').addEventListener('click', function() {
+                    self.state.showRoof = !self.state.showRoof;
+                    self.groups.roofStructure.children.forEach(c => {
+                        if (c.material === self.materials.glassRoof) c.visible = self.state.showRoof;
+                    });
+                    this.classList.toggle('active', self.state.showRoof);
+                });
+
+                document.getElementById('btn-toggle-diff-tri').addEventListener('click', function() {
+                    self.state.showDiffTri = !self.state.showDiffTri;
+                    this.classList.toggle('active', self.state.showDiffTri);
+                    self.buildRotationDemo();
+                });
+
+                document.getElementById('btn-toggle-stress').addEventListener('click', function() {
+                    self.state.showStress = !self.state.showStress;
+                    this.classList.toggle('active', self.state.showStress);
+                    self.buildSpaceTruss();
+                    self.showToast(self.state.showStress ? 'تلوين الإجهادات: أخضر (شد)، أحمر (ضغط)' : 'العرض العادي للجمالون');
+                });
+
+                document.getElementById('btn-toggle-rain').addEventListener('click', function() {
+                    self.state.isRaining = !self.state.isRaining;
+                    this.classList.toggle('active', self.state.isRaining);
+                    this.innerText = self.state.isRaining ? 'إيقاف محاكاة المطر' : 'تشغيل محاكاة المطر';
+                    self.buildRainSystem();
+                    self.showToast(self.state.isRaining ? 'جريان مياه الأمطار وفق خطوط الانحدار الأعظم' : 'تم إيقاف المطر');
+                });
+
+                document.getElementById('btn-animate-rot').addEventListener('click', function() {
+                    self.state.rotAngle = 0;
+                    self.state.isRotatingAnim = true;
+                    self.showToast('جاري تدوير العضو ليوازي المستوي الجبهي...');
+                });
+
+                document.getElementById('btn-reset-scene').addEventListener('click', function() {
+                    self.reset();
+                });
+
+                // Camera Views
+                document.getElementById('btn-view-iso').addEventListener('click', () => {
+                    self.camera.position.set(24, 18, 26);
+                    self.controls.target.set(0, 3, 0);
+                });
+                document.getElementById('btn-view-front').addEventListener('click', () => {
+                    self.camera.position.set(0, 4, 38);
+                    self.controls.target.set(0, 4, 0);
+                });
+                document.getElementById('btn-view-top').addEventListener('click', () => {
+                    self.camera.position.set(0, 40, 0.01);
+                    self.controls.target.set(0, 0, 0);
+                });
+                document.getElementById('btn-view-side').addEventListener('click', () => {
+                    self.camera.position.set(38, 4, 0);
+                    self.controls.target.set(0, 4, 0);
+                });
+
+                // Tabs Navigation
+                const tabs = [
+                    { btn: 'tab-btn-geom', pane: 'tab-pane-geom' },
+                    { btn: 'tab-btn-truss', pane: 'tab-pane-truss' },
+                    { btn: 'tab-btn-sim', pane: 'tab-pane-sim' }
+                ];
+
+                tabs.forEach(t => {
+                    document.getElementById(t.btn).addEventListener('click', function() {
+                        tabs.forEach(o => {
+                            document.getElementById(o.btn).classList.remove('active');
+                            document.getElementById(o.pane).style.display = 'none';
+                        });
+                        this.classList.add('active');
+                        document.getElementById(t.pane).style.display = 'flex';
+                    });
+                });
+            }
+        };
+
+        // Window OnLoad Initialization
+        window.onload = function() {
+            CivilDescriptiveLab.init('canvas-viewport');
+        };
+    </script>
+</body>
+</html>

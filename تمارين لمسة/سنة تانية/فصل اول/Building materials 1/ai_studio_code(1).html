@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مختبر تكنولوجيا الخرسانة والجنايات الإنشائية | 3D Concrete Lab</title>
+    <!-- خط تجوال العربي -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <!-- مكتبات Three.js r128 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --panel-bg: rgba(15, 23, 42, 0.88);
+            --border-color: rgba(56, 189, 248, 0.25);
+            --accent: #38bdf8;
+            --accent-hover: #0284c7;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Tajawal', sans-serif;
+            user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* الواجهة العلوية */
+        .top-header {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            left: 20px;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            padding: 12px 24px;
+            border-radius: 14px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .brand-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-title h1 {
+            font-size: 1.35rem;
+            font-weight: 800;
+            background: linear-gradient(90deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-badge {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        .mode-switcher {
+            display: flex;
+            gap: 10px;
+        }
+
+        .mode-btn {
+            background: rgba(30, 41, 59, 0.8);
+            color: var(--text-muted);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.9rem;
+            transition: all 0.25s ease;
+        }
+
+        .mode-btn.active {
+            background: var(--accent);
+            color: #0f172a;
+            border-color: var(--accent);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+        }
+
+        /* لوحة التحكم اليمنى */
+        .control-panel {
+            position: absolute;
+            top: 85px;
+            right: 20px;
+            bottom: 20px;
+            width: 370px;
+            z-index: 10;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border-radius: 14px;
+            border: 1px solid var(--border-color);
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .control-panel::-webkit-scrollbar {
+            width: 5px;
+        }
+        .control-panel::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 5px;
+        }
+
+        .section-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--accent);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 6px;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .input-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+        }
+
+        .input-val {
+            font-weight: 700;
+            color: var(--accent);
+            font-family: monospace;
+            font-size: 0.95rem;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: #1e293b;
+            border-radius: 4px;
+            outline: none;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.8);
+        }
+
+        select {
+            background: #1e293b;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+        }
+
+        /* المعادلة الحية */
+        .formula-box {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px dashed rgba(56, 189, 248, 0.4);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            font-size: 0.85rem;
+            direction: ltr;
+            font-family: monospace;
+            color: #e2e8f0;
+        }
+
+        .formula-box span {
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        /* الأزرار التفاعلية */
+        .actions-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: auto;
+        }
+
+        .btn {
+            padding: 11px 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-cast {
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            color: white;
+            grid-column: span 2;
+        }
+        .btn-cast:hover { background: linear-gradient(135deg, #38bdf8, #0284c7); }
+
+        .btn-crush {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #0f172a;
+        }
+        .btn-crush:hover { filter: brightness(1.1); }
+
+        .btn-reset {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        .btn-reset:hover { background: rgba(239, 68, 68, 0.3); }
+
+        /* لوحة القراءات والتشخيص اليسرى */
+        .telemetry-panel {
+            position: absolute;
+            top: 85px;
+            left: 20px;
+            width: 360px;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .card {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border-radius: 14px;
+            border: 1px solid var(--border-color);
+            padding: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .metric-box {
+            background: rgba(30, 41, 59, 0.7);
+            padding: 10px;
+            border-radius: 8px;
+            border-right: 3px solid var(--accent);
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .metric-value {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-top: 2px;
+        }
+
+        /* شاشة المكبس الرقمية */
+        .gauge-display {
+            background: #020617;
+            border: 2px solid #334155;
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+            margin-top: 10px;
+            position: relative;
+        }
+
+        .gauge-number {
+            font-family: 'Courier New', monospace;
+            font-size: 2rem;
+            font-weight: 900;
+            color: #ef4444;
+            text-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+        }
+
+        .gauge-sub {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* صندوق الحكم الجنائي */
+        .verdict-box {
+            margin-top: 10px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            font-weight: 600;
+            border: 1px solid transparent;
+        }
+
+        .verdict-pass {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: var(--success);
+            color: #34d399;
+        }
+
+        .verdict-warn {
+            background: rgba(245, 158, 11, 0.15);
+            border-color: var(--warning);
+            color: #fbbf24;
+        }
+
+        .verdict-fail {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: var(--danger);
+            color: #f87171;
+        }
+
+        .camera-hint {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            background: rgba(15, 23, 42, 0.75);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            border: 1px solid rgba(255,255,255,0.1);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- حاوية المشهد ثلاثي الأبعاد -->
+    <div id="canvas-container"></div>
+
+    <!-- الشريط العلوي -->
+    <header class="top-header">
+        <div class="brand-title">
+            <span class="brand-badge">الكود العربي السوري</span>
+            <h1>محاكي تكنولوجيا الخرسانة والتحقيق الجنائي الإنشائي</h1>
+        </div>
+        <div class="mode-switcher">
+            <button id="btn-mode-cast" class="mode-btn active" onclick="CivilConcreteLab.switchMode('CASTING')">1. ساعة الصب الحرجة (Slump & Casting)</button>
+            <button id="btn-mode-test" class="mode-btn" onclick="CivilConcreteLab.switchMode('TESTING')">2. المحقق الجنائي (مكبس الكسر)</button>
+        </div>
+    </header>
+
+    <!-- لوحة المدخلات والتحكم (يمين) -->
+    <aside class="control-panel">
+        <div class="section-title">
+            <span>تصميم الخلطة والظروف الجوية</span>
+            <span>Mix Design</span>
+        </div>
+
+        <div class="input-group">
+            <div class="input-header">
+                <label>عيار الإسمنت (C)</label>
+                <span class="input-val"><span id="val-c">350</span> kg/m³</span>
+            </div>
+            <input type="range" id="inp-c" min="250" max="500" step="10" value="350">
+        </div>
+
+        <div class="input-group">
+            <div class="input-header">
+                <label>ماء الخلط الفعلي (W)</label>
+                <span class="input-val"><span id="val-w">175</span> L/m³</span>
+            </div>
+            <input type="range" id="inp-w" min="110" max="280" step="5" value="175">
+        </div>
+
+        <div class="input-group">
+            <div class="input-header">
+                <label>درجة حرارة الجو أثناء الصب (T)</label>
+                <span class="input-val"><span id="val-t">25</span> °C</span>
+            </div>
+            <input type="range" id="inp-t" min="10" max="50" step="1" value="25">
+        </div>
+
+        <div class="input-group">
+            <div class="input-header">
+                <label>زمن التأخير والخلط (Time)</label>
+                <span class="input-val"><span id="val-time">30</span> دقيقة</span>
+            </div>
+            <input type="range" id="inp-time" min="15" max="150" step="5" value="30">
+        </div>
+
+        <div class="section-title" style="margin-top: 6px;">
+            <span>معايير الكود والاختبار الجنائي</span>
+            <span>Quality Control</span>
+        </div>
+
+        <div class="input-group">
+            <div class="input-header">
+                <label>المقاومة التصميمية المطلوبة (σn)</label>
+                <span class="input-val"><span id="val-req">250</span> kg/cm²</span>
+            </div>
+            <input type="range" id="inp-req" min="180" max="400" step="10" value="250">
+        </div>
+
+        <div class="input-group">
+            <div class="input-header">
+                <label>شكل العينة المختبرة</label>
+            </div>
+            <select id="inp-shape">
+                <option value="CYLINDER">أسطوانة قياسية (15×30 cm) - الكود السوري</option>
+                <option value="CUBE">مكعب قياسي (15×15×15 cm)</option>
+            </select>
+        </div>
+
+        <div class="formula-box">
+            Bolomey: σ28 = G · σc · ((C / W) - 0.5)<br>
+            <span>σ28 = 0.5 × 400 × (<span id="f-cw">2.00</span> - 0.5) = <span id="f-res">300</span> kg/cm²</span>
+        </div>
+
+        <div class="actions-grid">
+            <button class="btn btn-cast" onclick="CivilConcreteLab.runCastingTest()">
+                ▶ تشغيل اختبار الهبوط والصب
+            </button>
+            <button class="btn btn-crush" onclick="CivilConcreteLab.runCrushingTest()">
+                🔨 فحص الكسر الجنائي
+            </button>
+            <button class="btn btn-reset" onclick="CivilConcreteLab.reset()">
+                ↺ إعادة تعيين
+            </button>
+        </div>
+    </aside>
+
+    <!-- لوحة القراءات والتشخيص الهندسي (يسار) -->
+    <aside class="telemetry-panel">
+        <div class="card">
+            <div class="section-title">
+                <span>القراءات الهندسية الفورية</span>
+                <span>Live Telemetry</span>
+            </div>
+            <div class="metrics-grid">
+                <div class="metric-box">
+                    <div class="metric-label">نسبة الماء للإسمنت (W/C)</div>
+                    <div class="metric-value" id="out-wc">0.50</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">هبوط مخروط أبرامز (Slump)</div>
+                    <div class="metric-value" id="out-slump">10.0 cm</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">مقاومة المكعب (σ_cube)</div>
+                    <div class="metric-value" id="out-cube">300 kg/cm²</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">مقاومة الأسطوانة (0.8 Cube)</div>
+                    <div class="metric-value" id="out-cyl">240 kg/cm²</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="section-title">
+                <span>شاشة مكبس الضغط الهيدروليكي</span>
+                <span>Hydraulic Press</span>
+            </div>
+            <div class="gauge-display">
+                <div class="gauge-number" id="gauge-stress">0.0</div>
+                <div class="gauge-sub">إجهاد الضغط المطبق (kg/cm²) | الحمل: <span id="gauge-load">0</span> kN</div>
+            </div>
+
+            <div id="forensic-verdict" class="verdict-box verdict-pass">
+                قم بتعديل نسب الخلطة ثم اضغط على (تشغيل الاختبار) أو (فحص الكسر الجنائي) لإصدار التقرير الفني.
+            </div>
+        </div>
+    </aside>
+
+    <div class="camera-hint">🖱️ تدوير الكاميرا: زر الفأرة الأيسر | تقريب/إبعاد: عجلة الفأرة | تحريك: زر الفأرة الأيمن</div>
+
+    <!-- المنطق البرمجي والفيزيائي المغلف بالكامل -->
+    <script>
+        const CivilConcreteLab = {
+            // مراجع Three.js الأساسية
+            scene: null,
+            camera: null,
+            renderer: null,
+            controls: null,
+            animationId: null,
+            container: null,
+
+            // مجموعات المشهد
+            castingGroup: null,
+            testingGroup: null,
+            particlesGroup: null,
+            cracksGroup: null,
+
+            // عناصر ثلاثية الأبعاد متحركة
+            abramsCone: null,
+            slumpConcrete: null,
+            columnConcrete: null,
+            bleedingWaterLayer: null,
+            honeycombVoids: [],
+            testSpecimenMesh: null,
+            upperPlaten: null,
+
+            // حالة المحاكاة والمدخلات
+            state: {
+                mode: 'CASTING', // 'CASTING' or 'TESTING'
+                C: 350,          // kg/m3
+                W: 175,          // L/m3
+                T: 25,           // Celsius
+                time: 30,        // minutes
+                reqSigma: 250,   // المطلوبة بالأسطوانة kg/cm2
+                shape: 'CYLINDER',
+                
+                // مخرجات الحسابات
+                wcRatio: 0.5,
+                slumpCm: 10,
+                bolomeyCube: 300,
+                effectiveCube: 300,
+                effectiveCyl: 240,
+                targetCrushStress: 240,
+                statusType: 'NORMAL', // NORMAL, BLEEDING, HONEYCOMB, BURNT
+
+                // متغيرات الأنيميشن
+                isCastingAnim: false,
+                castProgress: 0,
+                isCrushingAnim: false,
+                currentStress: 0,
+                isFailed: false
+            },
+
+            // 1. دالة التهيئة الإلزامية
+            init(containerId) {
+                this.container = document.getElementById(containerId);
+                
+                // إنشاء المشهد
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x0f172a);
+                this.scene.fog = new THREE.FogExp2(0x0f172a, 0.025);
+
+                // إعداد الكاميرا
+                this.camera = new THREE.PerspectiveCamera(
+                    45,
+                    window.innerWidth / window.innerHeight,
+                    0.1,
+                    100
+                );
+                this.camera.position.set(0, 4.5, 9.5);
+
+                // إعداد المصير (Renderer)
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                this.container.appendChild(this.renderer.domElement);
+
+                // التحكم بالكاميرا
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.05;
+                this.controls.maxPolarAngle = Math.PI / 2 - 0.02;
+                this.controls.target.set(0, 1.8, 0);
+
+                // الإضاءة والأرضية
+                this.setupLightsAndFloor();
+
+                // بناء عناصر المشهدين
+                this.buildCastingScene();
+                this.buildTestingScene();
+
+                // ربط أحداث واجهة المستخدم
+                this.bindUIEvents();
+
+                // حساب القيم الأولية
+                this.calculate();
+
+                // بدء حلقة الرسم
+                this.animate();
+            },
+
+            setupLightsAndFloor() {
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+                this.scene.add(ambientLight);
+
+                const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+                dirLight.position.set(6, 12, 8);
+                dirLight.castShadow = true;
+                dirLight.shadow.mapSize.width = 2048;
+                dirLight.shadow.mapSize.height = 2048;
+                this.scene.add(dirLight);
+
+                const blueRimLight = new THREE.PointLight(0x38bdf8, 0.6, 20);
+                blueRimLight.position.set(-6, 5, -5);
+                this.scene.add(blueRimLight);
+
+                // شبكة أرضية هندسية
+                const grid = new THREE.GridHelper(30, 30, 0x38bdf8, 0x1e293b);
+                grid.position.y = 0;
+                this.scene.add(grid);
+
+                // أرضية تستقبل الظلال
+                const floorGeo = new THREE.PlaneGeometry(30, 30);
+                const floorMat = new THREE.MeshStandardMaterial({
+                    color: 0x0f172a,
+                    roughness: 0.8,
+                    metalness: 0.2
+                });
+                const floor = new THREE.Mesh(floorGeo, floorMat);
+                floor.rotation.x = -Math.PI / 2;
+                floor.position.y = -0.01;
+                floor.receiveShadow = true;
+                this.scene.add(floor);
+            },
+
+            // بناء مشهد الصب ومخروط أبرامز والعمود الشفاف
+            buildCastingScene() {
+                this.castingGroup = new THREE.Group();
+                this.scene.add(this.castingGroup);
+
+                // --- 1. منصة فحص الهبوط (يسار المشهد) ---
+                const basePlateGeo = new THREE.BoxGeometry(2.2, 0.08, 2.2);
+                const steelMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.7, roughness: 0.3 });
+                const basePlate = new THREE.Mesh(basePlateGeo, steelMat);
+                basePlate.position.set(-2.0, 0.04, 0);
+                basePlate.receiveShadow = true;
+                this.castingGroup.add(basePlate);
+
+                // العينة الخرسانية داخل المخروط
+                const slumpGeo = new THREE.CylinderGeometry(0.35, 0.7, 2.1, 32, 16);
+                // رفع نقطة الارتكاز لأسفل المخروط لتسهيل الهبوط التدريجي
+                slumpGeo.translate(0, 1.05, 0);
+                const concreteMat = new THREE.MeshStandardMaterial({
+                    color: 0x94a3b8,
+                    roughness: 0.9,
+                    metalness: 0.05
+                });
+                this.slumpConcrete = new THREE.Mesh(slumpGeo, concreteMat);
+                this.slumpConcrete.position.set(-2.0, 0.08, 0);
+                this.slumpConcrete.castShadow = true;
+                this.castingGroup.add(this.slumpConcrete);
+
+                // مخروط أبرامز المعدني
+                const coneGeo = new THREE.CylinderGeometry(0.36, 0.71, 2.12, 32, 1, true);
+                coneGeo.translate(0, 1.06, 0);
+                const coneMat = new THREE.MeshStandardMaterial({
+                    color: 0x0284c7,
+                    metalness: 0.6,
+                    roughness: 0.3,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.85
+                });
+                this.abramsCone = new THREE.Mesh(coneGeo, coneMat);
+                this.abramsCone.position.set(-2.0, 0.08, 0);
+                this.castingGroup.add(this.abramsCone);
+
+                // --- 2. قالب العمود الخرساني الشفاف (يمين المشهد) ---
+                const formGeo = new THREE.BoxGeometry(1.4, 3.6, 1.4);
+                const formMat = new THREE.MeshPhysicalMaterial({
+                    color: 0xe2e8f0,
+                    transparent: true,
+                    opacity: 0.2,
+                    roughness: 0.1,
+                    side: THREE.DoubleSide
+                });
+                const formwork = new THREE.Mesh(formGeo, formMat);
+                formwork.position.set(1.8, 1.84, 0);
+                this.castingGroup.add(formwork);
+
+                // حواف القالب
+                const edges = new THREE.EdgesGeometry(formGeo);
+                const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8 });
+                const formWire = new THREE.LineSegments(edges, lineMat);
+                formwork.add(formWire);
+
+                // جسم الخرسانة المصبوبة داخل العمود
+                const colGeo = new THREE.BoxGeometry(1.34, 3.4, 1.34);
+                colGeo.translate(0, 1.7, 0);
+                const colMat = new THREE.MeshStandardMaterial({
+                    color: 0x64748b,
+                    roughness: 0.85,
+                    transparent: true,
+                    opacity: 0.88
+                });
+                this.columnConcrete = new THREE.Mesh(colGeo, colMat);
+                this.columnConcrete.position.set(1.8, 0.08, 0);
+                this.castingGroup.add(this.columnConcrete);
+
+                // طبقة ماء النضح العلوية (Bleeding Water)
+                const bleedGeo = new THREE.BoxGeometry(1.33, 0.12, 1.33);
+                const bleedMat = new THREE.MeshPhysicalMaterial({
+                    color: 0x38bdf8,
+                    transparent: true,
+                    opacity: 0.0,
+                    roughness: 0.05
+                });
+                this.bleedingWaterLayer = new THREE.Mesh(bleedGeo, bleedMat);
+                this.bleedingWaterLayer.position.set(1.8, 3.52, 0);
+                this.castingGroup.add(this.bleedingWaterLayer);
+
+                // إنشاء حبيبات الركام والتعشيش داخل العمود
+                this.particlesGroup = new THREE.Group();
+                this.particlesGroup.position.set(1.8, 0.08, 0);
+                this.castingGroup.add(this.particlesGroup);
+                this.generateColumnInternals();
+            },
+
+            generateColumnInternals() {
+                // تنظيف أي حبيبات سابقة
+                while (this.particlesGroup.children.length > 0) {
+                    const obj = this.particlesGroup.children[0];
+                    obj.geometry.dispose();
+                    obj.material.dispose();
+                    this.particlesGroup.remove(obj);
+                }
+                this.honeycombVoids = [];
+
+                // حبيبات الركام الخشن (Coarse Aggregate)
+                const aggGeo = new THREE.DodecahedronGeometry(0.08, 0);
+                const aggMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 });
+
+                for (let i = 0; i < 95; i++) {
+                    const mesh = new THREE.Mesh(aggGeo, aggMat.clone());
+                    const rx = (Math.random() - 0.5) * 1.1;
+                    const ry = 0.15 + Math.random() * 3.1;
+                    const rz = (Math.random() - 0.5) * 1.1;
+                    mesh.position.set(rx, ry, rz);
+                    mesh.userData = { origY: ry };
+                    this.particlesGroup.add(mesh);
+                }
+
+                // فجوات التعشيش الهوائية (Honeycombing Voids)
+                const voidGeo = new THREE.SphereGeometry(0.11, 8, 8);
+                const voidMat = new THREE.MeshBasicMaterial({
+                    color: 0x090d16,
+                    wireframe: false,
+                    transparent: true,
+                    opacity: 0.0
+                });
+
+                for (let i = 0; i < 35; i++) {
+                    const voidMesh = new THREE.Mesh(voidGeo, voidMat.clone());
+                    const vx = (Math.random() > 0.5 ? 0.58 : -0.58) * (0.7 + Math.random() * 0.3);
+                    const vy = 0.2 + Math.random() * 1.8;
+                    const vz = (Math.random() - 0.5) * 1.15;
+                    voidMesh.position.set(vx, vy, vz);
+                    this.honeycombVoids.push(voidMesh);
+                    this.particlesGroup.add(voidMesh);
+                }
+            },
+
+            // بناء مشهد مكبس الضغط الهيدروليكي (المحقق الجنائي)
+            buildTestingScene() {
+                this.testingGroup = new THREE.Group();
+                this.testingGroup.visible = false;
+                this.scene.add(this.testingGroup);
+
+                const frameMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.25 });
+                const chromeMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.9, roughness: 0.1 });
+
+                // قاعدة المكبس السفلى
+                const baseGeo = new THREE.BoxGeometry(3.2, 0.8, 2.4);
+                const baseMesh = new THREE.Mesh(baseGeo, frameMat);
+                baseMesh.position.set(0, 0.4, 0);
+                baseMesh.castShadow = true;
+                this.testingGroup.add(baseMesh);
+
+                // الجسر العلوي للمكبس
+                const topBeamGeo = new THREE.BoxGeometry(3.2, 0.7, 2.4);
+                const topBeamMesh = new THREE.Mesh(topBeamGeo, frameMat);
+                topBeamMesh.position.set(0, 4.4, 0);
+                this.testingGroup.add(topBeamMesh);
+
+                // الأعمدة الفولاذية الأربعة
+                const pillarGeo = new THREE.CylinderGeometry(0.14, 0.14, 3.6, 20);
+                const positions = [
+                    [-1.2, 2.5, -0.8], [1.2, 2.5, -0.8],
+                    [-1.2, 2.5, 0.8],  [1.2, 2.5, 0.8]
+                ];
+                positions.forEach(pos => {
+                    const pillar = new THREE.Mesh(pillarGeo, chromeMat);
+                    pillar.position.set(...pos);
+                    this.testingGroup.add(pillar);
+                });
+
+                // صفيحة التحميل السفلية
+                const lowerPlatenGeo = new THREE.CylinderGeometry(0.95, 1.0, 0.3, 32);
+                const lowerPlaten = new THREE.Mesh(lowerPlatenGeo, chromeMat);
+                lowerPlaten.position.set(0, 0.95, 0);
+                this.testingGroup.add(lowerPlaten);
+
+                // المكبس الهيدروليكي العلوي المتحرك
+                const upperPlatenGeo = new THREE.CylinderGeometry(0.85, 0.95, 0.6, 32);
+                this.upperPlaten = new THREE.Mesh(upperPlatenGeo, chromeMat);
+                this.upperPlaten.position.set(0, 3.4, 0);
+                this.testingGroup.add(this.upperPlaten);
+
+                // مجموعة الشروخ ثلاثية الأبعاد
+                this.cracksGroup = new THREE.Group();
+                this.testingGroup.add(this.cracksGroup);
+
+                // بناء العينة الابتدائية
+                this.rebuildTestSpecimen();
+            },
+
+            rebuildTestSpecimen() {
+                if (this.testSpecimenMesh) {
+                    this.testSpecimenMesh.geometry.dispose();
+                    this.testSpecimenMesh.material.dispose();
+                    this.testingGroup.remove(this.testSpecimenMesh);
+                }
+
+                // تنظيف الشروخ
+                this.clearCracks();
+
+                let geo;
+                if (this.state.shape === 'CYLINDER') {
+                    // أسطوانة 15×30 ممثلة بارتفاع 2.0 وحدة
+                    geo = new THREE.CylinderGeometry(0.55, 0.55, 2.0, 32);
+                } else {
+                    // مكعب 15×15×15 ممثل بأبعاد 1.4
+                    geo = new THREE.BoxGeometry(1.4, 1.4, 1.4);
+                }
+
+                const mat = new THREE.MeshStandardMaterial({
+                    color: 0x94a3b8,
+                    roughness: 0.85,
+                    metalness: 0.05
+                });
+
+                this.testSpecimenMesh = new THREE.Mesh(geo, mat);
+                const heightOffset = this.state.shape === 'CYLINDER' ? 2.1 : 1.8;
+                this.testSpecimenMesh.position.set(0, heightOffset, 0);
+                this.testSpecimenMesh.castShadow = true;
+                this.testingGroup.add(this.testSpecimenMesh);
+
+                // ضبط ارتفاع فك المكبس العلوي ليلامس سطح العينة
+                if (this.upperPlaten) {
+                    this.upperPlaten.position.y = this.state.shape === 'CYLINDER' ? 3.4 : 2.8;
+                }
+            },
+
+            clearCracks() {
+                if (!this.cracksGroup) return;
+                while (this.cracksGroup.children.length > 0) {
+                    const line = this.cracksGroup.children[0];
+                    line.geometry.dispose();
+                    line.material.dispose();
+                    this.cracksGroup.remove(line);
+                }
+            },
+
+            generate3DCracks() {
+                this.clearCracks();
+                const isCyl = this.state.shape === 'CYLINDER';
+                const topY = isCyl ? 3.1 : 2.5;
+                const botY = 1.1;
+                const radius = isCyl ? 0.57 : 0.72;
+
+                const crackMat = new THREE.LineBasicMaterial({ color: 0x090d16, linewidth: 3 });
+
+                for (let c = 0; c < 14; c++) {
+                    const points = [];
+                    const angle = (c / 14) * Math.PI * 2;
+                    let currAngle = angle;
+
+                    const steps = 8;
+                    for (let s = 0; s <= steps; s++) {
+                        const t = s / steps;
+                        const y = botY + t * (topY - botY);
+                        currAngle += (Math.random() - 0.5) * 0.35;
+                        const r = radius * (1.01 + Math.random() * 0.02);
+                        const x = Math.cos(currAngle) * r;
+                        const z = Math.sin(currAngle) * r;
+                        points.push(new THREE.Vector3(x, y, z));
+                    }
+
+                    const crackGeo = new THREE.BufferGeometry().setFromPoints(points);
+                    const crackLine = new THREE.Line(crackGeo, crackMat);
+                    this.cracksGroup.add(crackLine);
+                }
+            },
+
+            // 2. دالة الحسابات الهندسية وتحديث الواجهة (Bolomey + الكود السوري)
+            calculate() {
+                const { C, W, T, time, reqSigma, shape } = this.state;
+
+                // نسبة الماء للإسمنت
+                const wc = W / C;
+                this.state.wcRatio = wc;
+
+                // معادلة بولومي: σ28 = G * σc * ((C / W) - 0.5)
+                // G = 0.5, σc = 400 kg/cm2
+                const cw = C / W;
+                let bolomeyCube = 0.5 * 400 * (cw - 0.5);
+                bolomeyCube = Math.max(80, Math.round(bolomeyCube));
+                this.state.bolomeyCube = bolomeyCube;
+
+                // حساب الهبوط الأساسي (Slump cm)
+                let slump = (wc - 0.36) * 45;
+                // تأثير الحرارة والتأخير على ضياع الهبوط وتبخر الماء
+                if (T > 30) slump -= (T - 30) * 0.32;
+                if (time > 45) slump -= (time - 45) * 0.08;
+                slump = Math.max(0.5, Math.min(24.0, slump));
+                this.state.slumpCm = Number(slump.toFixed(1));
+
+                // حساب معاملات التخفيض الجنائية (العيوب الحقلية)
+                let penaltyFactor = 1.0;
+                let statusType = 'NORMAL';
+
+                // 1) حالة الماء الزائد والانفصال الحبيبي والنضح
+                if (wc > 0.65) {
+                    penaltyFactor *= 0.76;
+                    statusType = 'BLEEDING';
+                }
+                // 2) حالة الخرسانة المحترقة بالطقس الحار أو التأخير الطويل
+                if (T > 35 || time > 90) {
+                    const tempLoss = T > 35 ? (T - 35) * 0.015 : 0;
+                    const timeLoss = time > 90 ? (time - 90) * 0.004 : 0;
+                    penaltyFactor *= Math.max(0.55, 1.0 - (tempLoss + timeLoss));
+                    statusType = 'BURNT';
+                }
+                // 3) حالة الجفاف الشديد والتعشيش وضعف الدمك
+                if (wc < 0.40 || this.state.slumpCm < 4.0) {
+                    penaltyFactor *= 0.72;
+                    statusType = 'HONEYCOMB';
+                }
+
+                const effCube = Math.round(bolomeyCube * penaltyFactor);
+                // الكود العربي السوري: المقاومة الأسطوانية = 0.8 × المكعبية
+                const effCyl = Math.round(effCube * 0.8);
+
+                this.state.effectiveCube = effCube;
+                this.state.effectiveCyl = effCyl;
+                this.state.statusType = statusType;
+                this.state.targetCrushStress = (shape === 'CYLINDER') ? effCyl : effCube;
+
+                this.updateUI();
+                this.update3DVisualState();
+            },
+
+            updateUI() {
+                const s = this.state;
+                document.getElementById('val-c').textContent = s.C;
+                document.getElementById('val-w').textContent = s.W;
+                document.getElementById('val-t').textContent = s.T;
+                document.getElementById('val-time').textContent = s.time;
+                document.getElementById('val-req').textContent = s.reqSigma;
+
+                document.getElementById('f-cw').textContent = (s.C / s.W).toFixed(2);
+                document.getElementById('f-res').textContent = s.bolomeyCube;
+
+                document.getElementById('out-wc').textContent = s.wcRatio.toFixed(2);
+                document.getElementById('out-slump').textContent = s.slumpCm + ' cm';
+                document.getElementById('out-cube').textContent = s.effectiveCube + ' kg/cm²';
+                document.getElementById('out-cyl').textContent = s.effectiveCyl + ' kg/cm²';
+
+                // التقييم الجنائي وفق الكود العربي السوري
+                // الشرط: σi >= 0.85 σn والمقاومة الوسطية fcm >= σn + 10
+                const verdictEl = document.getElementById('forensic-verdict');
+                const minSingle = Math.round(0.85 * s.reqSigma);
+                const reqMean = s.reqSigma + 10;
+                const actualCyl = s.effectiveCyl;
+
+                verdictEl.className = 'verdict-box';
+
+                if (s.statusType === 'BLEEDING') {
+                    verdictEl.classList.add('verdict-fail');
+                    verdictEl.innerHTML = `❌ <b>مرفوض جنائياً (ماء زائد W/C = ${s.wcRatio.toFixed(2)}):</b><br>حصل انفصال حبيبي وترسب للركام في قاع العمود مع نضح مائي علوي (Bleeding). المقاومة الفعلية (${actualCyl}) أقل من اشتراط الكود (${reqMean} kg/cm²).`;
+                } else if (s.statusType === 'BURNT') {
+                    verdictEl.classList.add('verdict-fail');
+                    verdictEl.innerHTML = `🔥 <b>مرفوض جنائياً (خرسانة محترقة بالحرارة/التأخير):</b><br>الحرارة (${s.T}°C) أو التأخير (${s.time} د) سبّب تبخراً مبكراً وكسراً للروابط البلورية. المقاومة الأسطوانية (${actualCyl} kg/cm²).`;
+                } else if (s.statusType === 'HONEYCOMB') {
+                    verdictEl.classList.add('verdict-fail');
+                    verdictEl.innerHTML = `⚠️ <b>مرفوض جنائياً (تعشيش وضعف تشغيلية):</b><br>الهبوط منخفض جداً (${s.slumpCm} cm) مما منع تغلغل الخرسانة وسبّب فجوات تعشيش خطيرة أضعفت المقطع الإنشائي.`;
+                } else if (actualCyl >= reqMean) {
+                    verdictEl.classList.add('verdict-pass');
+                    verdictEl.innerHTML = `✅ <b>ناجح ومطابق للكود العربي السوري:</b><br>قوام مثالي للصب (${s.slumpCm} cm). المقاومة الأسطوانية المحققة (${actualCyl} kg/cm²) تتجاوز المقاومة الوسطية المطلوبة (fcm ≥ ${reqMean} kg/cm²).`;
+                } else if (actualCyl >= minSingle) {
+                    verdictEl.classList.add('verdict-warn');
+                    verdictEl.innerHTML = `⚠️ <b>حالة حرجة (تحت المراقبة):</b><br>المقاومة المفردة (${actualCyl} kg/cm²) تحقق الحد الأدنى المفرد (0.85σn = ${minSingle}) لكنها أقل من المتوسط المطلوب (${reqMean} kg/cm²). ارفع عيار الإسمنت.`;
+                } else {
+                    verdictEl.classList.add('verdict-fail');
+                    verdictEl.innerHTML = `❌ <b>مرفوض إنشائياً (ضعف عيار الإسمنت):</b><br>المقاومة الأسطوانية (${actualCyl} kg/cm²) أقل من الحد الأدنى المسموح به في الكود العربي السوري (${minSingle} kg/cm²).`;
+                }
+            },
+
+            update3DVisualState() {
+                const s = this.state;
+
+                // تلوين الخرسانة حسب كمية الماء والحرارة
+                let hexColor = 0x94a3b8;
+                if (s.statusType === 'BLEEDING') hexColor = 0x64748b;
+                else if (s.statusType === 'BURNT') hexColor = 0xa8a29e;
+                else if (s.statusType === 'HONEYCOMB') hexColor = 0xcbd5e1;
+
+                if (this.slumpConcrete) this.slumpConcrete.material.color.setHex(hexColor);
+                if (this.columnConcrete) this.columnConcrete.material.color.setHex(hexColor);
+                if (this.testSpecimenMesh) this.testSpecimenMesh.material.color.setHex(hexColor);
+            },
+
+            // تشغيل أنيميشن فحص الهبوط والصب داخل العمود
+            runCastingTest() {
+                this.switchMode('CASTING');
+                this.state.isCastingAnim = true;
+                this.state.castProgress = 0;
+
+                // إعادة المخروط لوضعه الابتدائي قبل الرفع
+                this.abramsCone.position.y = 0.08;
+                this.slumpConcrete.scale.set(1, 1, 1);
+            },
+
+            // تشغيل أنيميشن كسر العينة بالمكبس الجنائي
+            runCrushingTest() {
+                this.switchMode('TESTING');
+                this.rebuildTestSpecimen();
+                this.state.isCrushingAnim = true;
+                this.state.currentStress = 0;
+                this.state.isFailed = false;
+                document.getElementById('gauge-stress').textContent = '0.0';
+                document.getElementById('gauge-load').textContent = '0';
+            },
+
+            switchMode(newMode) {
+                this.state.mode = newMode;
+                const isCast = (newMode === 'CASTING');
+
+                this.castingGroup.visible = isCast;
+                this.testingGroup.visible = !isCast;
+
+                document.getElementById('btn-mode-cast').classList.toggle('active', isCast);
+                document.getElementById('btn-mode-test').classList.toggle('active', !isCast);
+
+                // تحريك زاوية الكاميرا بنعومة لتناسب المشهد المختار
+                if (isCast) {
+                    this.camera.position.set(0, 4.5, 9.5);
+                    this.controls.target.set(0, 1.8, 0);
+                } else {
+                    this.camera.position.set(0, 3.2, 6.2);
+                    this.controls.target.set(0, 2.1, 0);
+                }
+                this.controls.update();
+            },
+
+            // تحديث الفيزياء والحركة في كل إطار
+            update() {
+                const s = this.state;
+
+                // 1) أنيميشن رفع مخروط أبرامز وهبوط الخرسانة وسلوك العمود
+                if (s.isCastingAnim) {
+                    s.castProgress += 0.02;
+                    const p = Math.min(1, s.castProgress);
+
+                    // رفع المخروط للأعلى
+                    this.abramsCone.position.y = 0.08 + p * 2.4;
+
+                    // حساب نسبة الهبوط والانتشار العرضي (Conservation of Volume)
+                    const slumpRatio = (s.slumpCm / 30) * p; // المخروط الحقيقي ارتفاعه 30 سم
+                    const scaleY = Math.max(0.22, 1 - slumpRatio);
+                    const scaleXZ = 1 + slumpRatio * 0.85;
+                    this.slumpConcrete.scale.set(scaleXZ, scaleY, scaleXZ);
+
+                    // سلوك حبيبات الركام والنضح والتعشيش داخل العمود
+                    const isSegregation = (s.statusType === 'BLEEDING');
+                    const isHoneycomb = (s.statusType === 'HONEYCOMB');
+
+                    this.bleedingWaterLayer.material.opacity = isSegregation ? (p * 0.65) : 0;
+
+                    this.particlesGroup.children.forEach(item => {
+                        if (item.userData && item.userData.origY !== undefined) {
+                            // إذا كان هناك انفصال حبيبي، تترسب الحبيبات الخشنة لقاع العمود
+                            if (isSegregation) {
+                                item.position.y = THREE.MathUtils.lerp(
+                                    item.userData.origY,
+                                    0.15 + (item.userData.origY * 0.35),
+                                    p
+                                );
+                            } else {
+                                item.position.y = item.userData.origY;
+                            }
+                        }
+                    });
+
+                    // إظهار فجوات التعشيش عند ضعف التشغيلية
+                    this.honeycombVoids.forEach(v => {
+                        v.material.opacity = isHoneycomb ? (p * 0.9) : 0;
+                    });
+
+                    if (p >= 1) {
+                        s.isCastingAnim = false;
+                    }
+                }
+
+                // 2) أنيميشن مكبس الكسر الهيدروليكي
+                if (s.isCrushingAnim && !s.isFailed) {
+                    const step = s.targetCrushStress / 110;
+                    s.currentStress += step;
+
+                    // حساب الحمل بالكيلونيوتن (مساحة الأسطوانة 176.7 سم2، المكعب 225 سم2)
+                    const areaCm2 = (s.shape === 'CYLINDER') ? 176.7 : 225.0;
+                    const loadKN = ((s.currentStress * areaCm2) / 101.97).toFixed(0);
+
+                    document.getElementById('gauge-stress').textContent = s.currentStress.toFixed(1);
+                    document.getElementById('gauge-load').textContent = loadKN;
+
+                    // انضغاط طفيف للعينة أثناء التحميل
+                    const strain = (s.currentStress / s.targetCrushStress) * 0.04;
+                    this.testSpecimenMesh.scale.set(1 + strain * 0.5, 1 - strain, 1 + strain * 0.5);
+                    this.upperPlaten.position.y -= 0.0007;
+
+                    // لحظة الانهيار والكسر الجنائي
+                    if (s.currentStress >= s.targetCrushStress) {
+                        s.currentStress = s.targetCrushStress;
+                        s.isFailed = true;
+                        s.isCrushingAnim = false;
+
+                        document.getElementById('gauge-stress').textContent = s.targetCrushStress.toFixed(1);
+                        this.testSpecimenMesh.scale.set(1.08, 0.91, 1.08);
+                        this.generate3DCracks();
+                    }
+                }
+            },
+
+            animate() {
+                this.animationId = requestAnimationFrame(() => this.animate());
+                this.update();
+                if (this.controls) this.controls.update();
+                if (this.renderer && this.scene && this.camera) {
+                    this.renderer.render(this.scene, this.camera);
+                }
+            },
+
+            bindUIEvents() {
+                const bindSlider = (id, key) => {
+                    const el = document.getElementById(id);
+                    el.addEventListener('input', (e) => {
+                        this.state[key] = parseFloat(e.target.value);
+                        this.calculate();
+                    });
+                };
+
+                bindSlider('inp-c', 'C');
+                bindSlider('inp-w', 'W');
+                bindSlider('inp-t', 'T');
+                bindSlider('inp-time', 'time');
+                bindSlider('inp-req', 'reqSigma');
+
+                document.getElementById('inp-shape').addEventListener('change', (e) => {
+                    this.state.shape = e.target.value;
+                    this.calculate();
+                    this.rebuildTestSpecimen();
+                });
+
+                window.addEventListener('resize', () => {
+                    if (!this.camera || !this.renderer) return;
+                    this.camera.aspect = window.innerWidth / window.innerHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+            },
+
+            // 3. دالة إعادة التعيين الإلزامية
+            reset() {
+                this.state.C = 350;
+                this.state.W = 175;
+                this.state.T = 25;
+                this.state.time = 30;
+                this.state.reqSigma = 250;
+                this.state.shape = 'CYLINDER';
+                this.state.isCastingAnim = false;
+                this.state.isCrushingAnim = false;
+                this.state.currentStress = 0;
+                this.state.isFailed = false;
+
+                document.getElementById('inp-c').value = 350;
+                document.getElementById('inp-w').value = 175;
+                document.getElementById('inp-t').value = 25;
+                document.getElementById('inp-time').value = 30;
+                document.getElementById('inp-req').value = 250;
+                document.getElementById('inp-shape').value = 'CYLINDER';
+                document.getElementById('gauge-stress').textContent = '0.0';
+                document.getElementById('gauge-load').textContent = '0';
+
+                // إعادة الأجسام ثلاثية الأبعاد لحالتها الأصلية
+                if (this.abramsCone) this.abramsCone.position.y = 0.08;
+                if (this.slumpConcrete) this.slumpConcrete.scale.set(1, 1, 1);
+                if (this.bleedingWaterLayer) this.bleedingWaterLayer.material.opacity = 0;
+
+                this.honeycombVoids.forEach(v => v.material.opacity = 0);
+                this.particlesGroup.children.forEach(item => {
+                    if (item.userData && item.userData.origY !== undefined) {
+                        item.position.y = item.userData.origY;
+                    }
+                });
+
+                this.rebuildTestSpecimen();
+                this.calculate();
+            },
+
+            // 4. دالة التدمير وتنظيف الذاكرة الإلزامية (Memory Safety)
+            destroy() {
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                    this.animationId = null;
+                }
+
+                if (this.scene) {
+                    this.scene.traverse((object) => {
+                        if (object.geometry) {
+                            object.geometry.dispose();
+                        }
+                        if (object.material) {
+                            if (Array.isArray(object.material)) {
+                                object.material.forEach(mat => mat.dispose());
+                            } else {
+                                object.material.dispose();
+                            }
+                        }
+                    });
+                }
+
+                if (this.renderer) {
+                    this.renderer.dispose();
+                    if (this.renderer.domElement && this.renderer.domElement.parentNode) {
+                        this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+                    }
+                }
+            }
+        };
+
+        // تشغيل المختبر فور تحميل الصفحة
+        window.addEventListener('DOMContentLoaded', () => {
+            CivilConcreteLab.init('canvas-container');
+        });
+    </script>
+</body>
+</html>

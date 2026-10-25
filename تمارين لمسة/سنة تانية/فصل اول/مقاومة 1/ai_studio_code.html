@@ -1,0 +1,1500 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المختبر الهندسي التفاعلي ثلاثي الأبعاد | مقاومة المواد</title>
+    
+    <!-- خط تجوال من Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- مكتبة Three.js (r128) و OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.90);
+            --border-color: rgba(148, 163, 184, 0.2);
+            --primary: #38bdf8;
+            --primary-hover: #0284c7;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Tajawal', sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* الشريط العلوي والتبويبات */
+        header {
+            background: rgba(15, 23, 42, 0.95);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 20;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary), #2563eb);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 20px;
+            color: #fff;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+        }
+
+        .brand h1 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .brand span {
+            font-size: 0.85rem;
+            color: var(--primary);
+            font-weight: 500;
+            display: block;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            background: rgba(15, 23, 42, 0.7);
+            padding: 5px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px 20px;
+            border-radius: 7px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: #0f172a;
+            box-shadow: 0 2px 10px rgba(56, 189, 248, 0.3);
+        }
+
+        /* الحاوية الرئيسية */
+        .workspace {
+            position: relative;
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* لوحة التحكم الجانبية */
+        .sidebar {
+            position: relative;
+            z-index: 10;
+            width: 410px;
+            max-width: 92vw;
+            height: calc(100vh - 85px);
+            margin: 12px 16px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 18px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.3);
+            border-radius: 3px;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--primary);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-bottom: 8px;
+        }
+
+        .control-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.88rem;
+            font-weight: 500;
+        }
+
+        .val-badge {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--primary);
+            padding: 1px 8px;
+            border-radius: 5px;
+            font-weight: 700;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: #334155;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            transition: transform 0.15s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        select {
+            background: #1e293b;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+        }
+
+        /* صناديق النتائج والمعادلات */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .metric-card {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .metric-card.governing {
+            border-color: var(--warning);
+            background: rgba(245, 158, 11, 0.12);
+        }
+
+        .metric-title {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .metric-val {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .metric-unit {
+            font-size: 0.7rem;
+            color: var(--primary);
+        }
+
+        /* صندوق التشخيص */
+        .status-box {
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            line-height: 1.5;
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .status-safe {
+            background: rgba(34, 197, 94, 0.15);
+            border-color: var(--success);
+            color: #4ade80;
+        }
+
+        .status-warn {
+            background: rgba(245, 158, 11, 0.15);
+            border-color: var(--warning);
+            color: #fbbf24;
+        }
+
+        .status-danger {
+            background: rgba(239, 68, 68, 0.18);
+            border-color: var(--danger);
+            color: #f87171;
+            animation: pulse-danger 1.5s infinite;
+        }
+
+        @keyframes pulse-danger {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 15px 4px rgba(239, 68, 68, 0.25); }
+        }
+
+        /* أزرار التحكم بالمحاكاة */
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #0f172a;
+        }
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            color: #fff;
+        }
+
+        .btn-warning {
+            background: #475569;
+            color: #fff;
+        }
+        .btn-warning:hover {
+            background: #64748b;
+        }
+
+        .btn-reset {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+        .btn-reset:hover {
+            background: var(--danger);
+            color: #fff;
+        }
+
+        .equation-box {
+            background: rgba(15, 23, 42, 0.85);
+            border-right: 3px solid var(--primary);
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: #cbd5e1;
+            direction: ltr;
+            text-align: left;
+            font-family: monospace;
+            line-height: 1.4;
+        }
+
+        /* تلميحات الكاميرا العائمة */
+        .hud-overlay {
+            position: absolute;
+            bottom: 18px;
+            left: 18px;
+            z-index: 10;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border-color);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- الشريط العلوي -->
+    <header>
+        <div class="brand">
+            <div class="brand-icon">3D</div>
+            <div>
+                <h1>المختبر الهندسي التفاعلي</h1>
+                <span>ميكانيكا المواد والمنشآت المعدنية</span>
+            </div>
+        </div>
+        <div class="tabs">
+            <button id="tab-joint" class="tab-btn active" onclick="CivilLab.switchModule('joint')">
+                1. مفتش الوصلات المبرشمة (Joint Inspector)
+            </button>
+            <button id="tab-thermal" class="tab-btn" onclick="CivilLab.switchModule('thermal')">
+                2. أزمة السكة الحديدية والتمدد الحراري (Thermal Crisis)
+            </button>
+        </div>
+    </header>
+
+    <!-- مساحة العمل -->
+    <div class="workspace">
+        <!-- حاوية الـ WebGL 3D -->
+        <div id="canvas-container"></div>
+
+        <!-- لوحة تحكم التمرين الأول: مفتش الوصلات -->
+        <aside id="panel-joint" class="sidebar">
+            <div>
+                <div class="section-title">
+                    <span>معاملات الوصلة الهندسية</span>
+                    <small style="color:var(--text-muted)">وحدات: سم، طن</small>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-header">نوع الوصلة (Joint Type):</label>
+                    <select id="j-type" onchange="CivilLab.jointModule.onParamChange()">
+                        <option value="1">وصلة تراكب (Lap Joint - k=1)</option>
+                        <option value="2">وصلة تقابل بغطاءين (Double Cover Butt - k=2)</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>الحمل المطبق (P)</span>
+                        <span class="val-badge"><span id="val-j-P">15.0</span> طن</span>
+                    </div>
+                    <input type="range" id="j-P" min="2" max="60" step="0.5" value="15" oninput="CivilLab.jointModule.onParamChange()">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>العدد الكلي للبراغي (n)</span>
+                        <span class="val-badge"><span id="val-j-n">4</span> براغي</span>
+                    </div>
+                    <input type="range" id="j-n" min="1" max="8" step="1" value="4" oninput="CivilLab.jointModule.onParamChange()">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>عدد البراغي بالصف الحرج (m)</span>
+                        <span class="val-badge"><span id="val-j-m">2</span> برغي</span>
+                    </div>
+                    <input type="range" id="j-m" min="1" max="4" step="1" value="2" oninput="CivilLab.jointModule.onParamChange()">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>قطر البرغي (d)</span>
+                        <span class="val-badge"><span id="val-j-d">2.0</span> سم</span>
+                    </div>
+                    <input type="range" id="j-d" min="1.2" max="3.0" step="0.2" value="2.0" oninput="CivilLab.jointModule.onParamChange()">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>سمك الصفيحة (t)</span>
+                        <span class="val-badge"><span id="val-j-t">1.2</span> سم</span>
+                    </div>
+                    <input type="range" id="j-t" min="0.6" max="2.5" step="0.1" value="1.2" oninput="CivilLab.jointModule.onParamChange()">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>عرض الصفيحة (b)</span>
+                        <span class="val-badge"><span id="val-j-b">16.0</span> سم</span>
+                    </div>
+                    <input type="range" id="j-b" min="10" max="28" step="1" value="16" oninput="CivilLab.jointModule.onParamChange()">
+                </div>
+            </div>
+
+            <div>
+                <div class="section-title">
+                    <span>قدرات التحمل القصوى للأنماط الثلاثة</span>
+                </div>
+                <div class="results-grid">
+                    <div id="card-shear" class="metric-card">
+                        <div class="metric-title">قدرة القص P_sh</div>
+                        <div id="res-shear" class="metric-val">0.0</div>
+                        <div class="metric-unit">طن (Ton)</div>
+                    </div>
+                    <div id="card-bearing" class="metric-card">
+                        <div class="metric-title">قدرة الدهس P_br</div>
+                        <div id="res-bearing" class="metric-val">0.0</div>
+                        <div class="metric-unit">طن (Ton)</div>
+                    </div>
+                    <div id="card-tension" class="metric-card">
+                        <div class="metric-title">قدرة الشد P_t</div>
+                        <div id="res-tension" class="metric-val">0.0</div>
+                        <div class="metric-unit">طن (Ton)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="equation-box">
+                P_shear = n · k · (π·d²/4) · τ_sh<br>
+                P_bearing = n · d · t · σ_b<br>
+                P_tension = (b - m·d) · t · σ_t
+            </div>
+
+            <div id="joint-status" class="status-box status-safe">
+                النظام جاهز للاختبار. اضغط "تطبيق الحمل" لمحاكاة الاستجابة الميكانيكية.
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="CivilLab.jointModule.startTest()">▶ تطبيق الحمل</button>
+                <button class="btn btn-warning" onclick="CivilLab.jointModule.togglePause()">⏸ إيقاف مؤقت</button>
+                <button class="btn btn-reset" onclick="CivilLab.jointModule.reset()">↺ إعادة ضبط</button>
+            </div>
+        </aside>
+
+        <!-- لوحة تحكم التمرين الثاني: أزمة السكة الحديدية -->
+        <aside id="panel-thermal" class="sidebar hidden">
+            <div>
+                <div class="section-title">
+                    <span>معاملات السكة والتمدد الحراري</span>
+                    <small style="color:var(--text-muted)">E = 2.1×10⁶</small>
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>الارتفاع الحراري (ΔT)</span>
+                        <span class="val-badge"><span id="val-th-dT">15</span> °C</span>
+                    </div>
+                    <input type="range" id="th-dT" min="0" max="70" step="1" value="15" oninput="CivilLab.thermalModule.onParamChange()">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>فجوة التمدد الابتدائية (δ)</span>
+                        <span class="val-badge"><span id="val-th-gap">10.0</span> مم</span>
+                    </div>
+                    <input type="range" id="th-gap" min="0" max="25" step="0.5" value="10" oninput="CivilLab.thermalModule.onParamChange()">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>طول قطاع السكة (L)</span>
+                        <span class="val-badge"><span id="val-th-L">25</span> متر</span>
+                    </div>
+                    <input type="range" id="th-L" min="10" max="50" step="1" value="25" oninput="CivilLab.thermalModule.onParamChange()">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>مساحة مقطع السكة (A)</span>
+                        <span class="val-badge"><span id="val-th-A">65</span> سم²</span>
+                    </div>
+                    <input type="range" id="th-A" min="40" max="100" step="5" value="65" oninput="CivilLab.thermalModule.onParamChange()">
+                </div>
+            </div>
+
+            <div>
+                <div class="section-title">
+                    <span>مخرجات التوافق والاستجابة الإنشائية</span>
+                </div>
+                <div class="results-grid" style="grid-template-columns: repeat(2, 1fr);">
+                    <div class="metric-card">
+                        <div class="metric-title">التمدد الحر ΔL_th</div>
+                        <div id="res-th-dL" class="metric-val">0.00</div>
+                        <div class="metric-unit">ملليمتر (mm)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-title">الفجوة المتبقية</div>
+                        <div id="res-th-remGap" class="metric-val">0.00</div>
+                        <div class="metric-unit">ملليمتر (mm)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-title">الإجهاد الحراري σ_th</div>
+                        <div id="res-th-stress" class="metric-val">0</div>
+                        <div class="metric-unit">كجم/سم²</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-title">رد الفعل المقيد R</div>
+                        <div id="res-th-R" class="metric-val">0.0</div>
+                        <div class="metric-unit">طن (Ton)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="equation-box">
+                ΔL_th = α · ΔT · L<br>
+                If ΔL_th > δ (Indeterminate):<br>
+                σ_th = E · (α·ΔT - δ/L) , R = σ_th · A
+            </div>
+
+            <div id="thermal-status" class="status-box status-safe">
+                النظام محدد استاتيكياً (الفجوة مفتوحة). السكة تتمدد بحرية دون تولد إجهادات.
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="CivilLab.thermalModule.startHeatSweep()">▶ محاكاة موجة حر</button>
+                <button class="btn btn-warning" onclick="CivilLab.thermalModule.togglePause()">⏸ إيقاف مؤقت</button>
+                <button class="btn btn-reset" onclick="CivilLab.thermalModule.reset()">↺ إعادة ضبط</button>
+            </div>
+        </aside>
+
+        <div class="hud-overlay">
+            🖱️ تدوير: زر الفأرة الأيسر | تقريب: عجلة الفأرة | تحريك: زر الفأرة الأيمن
+        </div>
+    </div>
+
+    <script>
+        /**
+         * ============================================================================
+         * الكائن الهندسي الموحد (CivilLab)
+         * يضم إدارة المشهد ثلاثي الأبعاد، الحسابات الميكانيكية، وحماية الذاكرة الصارمة
+         * ============================================================================
+         */
+        const CivilLab = {
+            activeModuleName: null,
+            activeModule: null,
+            container: null,
+            resizeBound: null,
+
+            // تهيئة التطبيق عند التحميل
+            initApp() {
+                this.container = document.getElementById('canvas-container');
+                this.resizeBound = () => this.onWindowResize();
+                window.addEventListener('resize', this.resizeBound);
+                this.switchModule('joint');
+            },
+
+            // التبديل الآمن بين التبويبات مع تنظيف كامل للذاكرة (Memory Leak Prevention)
+            switchModule(moduleName) {
+                if (this.activeModuleName === moduleName) return;
+
+                // تدمير الموديول السابق وتفريغ ذاكرة كرت الشاشة WebGL
+                if (this.activeModule) {
+                    this.activeModule.destroy();
+                    this.activeModule = null;
+                }
+
+                // تحديث أزرار التبويب واللوحات الجانبية
+                document.getElementById('tab-joint').classList.toggle('active', moduleName === 'joint');
+                document.getElementById('tab-thermal').classList.toggle('active', moduleName === 'thermal');
+                document.getElementById('panel-joint').classList.toggle('hidden', moduleName !== 'joint');
+                document.getElementById('panel-thermal').classList.toggle('hidden', moduleName !== 'thermal');
+
+                this.activeModuleName = moduleName;
+                this.activeModule = (moduleName === 'joint') ? this.jointModule : this.thermalModule;
+                this.activeModule.init('canvas-container');
+            },
+
+            // معالجة تغيير حجم نافذة المتصفح
+            onWindowResize() {
+                if (!this.activeModule || !this.activeModule.renderer || !this.activeModule.camera) return;
+                const width = this.container.clientWidth;
+                const height = this.container.clientHeight;
+                this.activeModule.camera.aspect = width / height;
+                this.activeModule.camera.updateProjectionMatrix();
+                this.activeModule.renderer.setSize(width, height);
+            },
+
+            // دالة مساعدة لتفريغ أي شجرة مجسمات من الذاكرة
+            disposeHierarchy(node) {
+                if (!node) return;
+                node.traverse((child) => {
+                    if (child.geometry) {
+                        child.geometry.dispose();
+                    }
+                    if (child.material) {
+                        if (Array.isArray(child.material)) {
+                            child.material.forEach(mat => {
+                                if (mat.map) mat.map.dispose();
+                                mat.dispose();
+                            });
+                        } else {
+                            if (child.material.map) child.material.map.dispose();
+                            child.material.dispose();
+                        }
+                    }
+                });
+            },
+
+            /**
+             * ============================================================================
+             * الموديول الأول: مفتش الوصلات (The Joint Failure Inspector)
+             * ============================================================================
+             */
+            jointModule: {
+                scene: null,
+                camera: null,
+                renderer: null,
+                controls: null,
+                animId: null,
+                meshGroup: null,
+
+                // حالة المحاكاة
+                isTesting: false,
+                isPaused: false,
+                animProgress: 0,
+
+                // الثوابت الهندسية (كجم/سم²)
+                TAU_SH: 1000,   // إجهاد القص المسموح
+                SIGMA_B: 2400,  // إجهاد الدهس المسموح
+                SIGMA_T: 1400,  // إجهاد الشد المسموح
+
+                // المدخلات والمخرجات الحسابية
+                params: {},
+                results: {},
+
+                // مراجع المجسمات للتحريك أثناء الانهيار
+                topPlateGroup: null,
+                bottomPlateGroup: null,
+                coverPlatesGroup: null,
+                boltsData: [],
+                bearingRings: [],
+                arrowsGroup: null,
+
+                init(containerId) {
+                    const container = document.getElementById(containerId);
+                    const w = container.clientWidth;
+                    const h = container.clientHeight;
+
+                    // 1. إنشاء المشهد والكاميرا
+                    this.scene = new THREE.Scene();
+                    this.scene.background = new THREE.Color(0x0f172a);
+
+                    this.camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 1000);
+                    this.camera.position.set(0, 26, 32);
+
+                    // 2. المُصيّر (Renderer)
+                    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                    this.renderer.setSize(w, h);
+                    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                    this.renderer.shadowMap.enabled = true;
+                    container.innerHTML = '';
+                    container.appendChild(this.renderer.domElement);
+
+                    // 3. متحكمات الكاميرا
+                    this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                    this.controls.enableDamping = true;
+                    this.controls.dampingFactor = 0.06;
+                    this.controls.target.set(0, 0, 0);
+
+                    // 4. الإضاءة والشبكة الأرضية
+                    const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+                    this.scene.add(ambientLight);
+
+                    const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+                    dirLight.position.set(20, 35, 25);
+                    dirLight.castShadow = true;
+                    this.scene.add(dirLight);
+
+                    const pointLight = new THREE.PointLight(0x38bdf8, 0.5, 100);
+                    pointLight.position.set(-20, 15, -15);
+                    this.scene.add(pointLight);
+
+                    const grid = new THREE.GridHelper(60, 30, 0x38bdf8, 0x1e293b);
+                    grid.position.y = -5;
+                    this.scene.add(grid);
+
+                    this.meshGroup = new THREE.Group();
+                    this.scene.add(this.meshGroup);
+
+                    this.isTesting = false;
+                    this.isPaused = false;
+                    this.animProgress = 0;
+
+                    this.calculate();
+                    this.build3DModel();
+                    this.update();
+                },
+
+                // قراءة المدخلات وإجراء الحسابات الهندسية
+                calculate() {
+                    const k = parseInt(document.getElementById('j-type').value);
+                    const P = parseFloat(document.getElementById('j-P').value);
+                    let n = parseInt(document.getElementById('j-n').value);
+                    let m = parseInt(document.getElementById('j-m').value);
+                    const d = parseFloat(document.getElementById('j-d').value);
+                    const t = parseFloat(document.getElementById('j-t').value);
+                    let b = parseFloat(document.getElementById('j-b').value);
+
+                    // ضبط القيود المنطقية: لا يمكن أن يتجاوز عدد براغي الصف الواحد العدد الكلي
+                    if (m > n) {
+                        m = n;
+                        document.getElementById('j-m').value = m;
+                    }
+                    // منع تداخل الثقوب هندسياً مع عرض الصفيحة
+                    const minWidth = m * d + 2.5;
+                    if (b < minWidth) {
+                        b = Math.ceil(minWidth);
+                        document.getElementById('j-b').value = b;
+                    }
+
+                    // تحديث الشارات الرقمية في الواجهة
+                    document.getElementById('val-j-P').textContent = P.toFixed(1);
+                    document.getElementById('val-j-n').textContent = n;
+                    document.getElementById('val-j-m').textContent = m;
+                    document.getElementById('val-j-d').textContent = d.toFixed(1);
+                    document.getElementById('val-j-t').textContent = t.toFixed(1);
+                    document.getElementById('val-j-b').textContent = b.toFixed(1);
+
+                    // المعادلات الهندسية الإلزامية (تحويل من كجم إلى طن بالقسمة على 1000)
+                    const boltArea = (Math.PI * d * d) / 4.0;
+                    const P_shear = (n * k * boltArea * this.TAU_SH) / 1000.0;
+                    const P_bearing = (n * d * t * this.SIGMA_B) / 1000.0;
+                    const netWidth = Math.max(0.5, b - m * d);
+                    const P_tension = (netWidth * t * this.SIGMA_T) / 1000.0;
+
+                    const P_min = Math.min(P_shear, P_bearing, P_tension);
+                    let governingMode = 'SHEAR';
+                    if (P_min === P_bearing) governingMode = 'BEARING';
+                    if (P_min === P_tension) governingMode = 'TENSION';
+
+                    this.params = { k, P, n, m, d, t, b };
+                    this.results = {
+                        P_shear,
+                        P_bearing,
+                        P_tension,
+                        P_min,
+                        governingMode,
+                        isSafe: P <= P_min
+                    };
+
+                    // تحديث بطاقات النتائج
+                    document.getElementById('res-shear').textContent = P_shear.toFixed(2);
+                    document.getElementById('res-bearing').textContent = P_bearing.toFixed(2);
+                    document.getElementById('res-tension').textContent = P_tension.toFixed(2);
+
+                    document.getElementById('card-shear').classList.toggle('governing', governingMode === 'SHEAR');
+                    document.getElementById('card-bearing').classList.toggle('governing', governingMode === 'BEARING');
+                    document.getElementById('card-tension').classList.toggle('governing', governingMode === 'TENSION');
+
+                    this.updateStatusUI();
+                },
+
+                updateStatusUI() {
+                    const statusEl = document.getElementById('joint-status');
+                    const { P } = this.params;
+                    const { P_min, governingMode, isSafe } = this.results;
+
+                    const modeNamesAr = {
+                        'SHEAR': 'انقصاص البراغي (Bolt Shear Failure)',
+                        'BEARING': 'دهس جدار الثقب (Plate Bearing Failure)',
+                        'TENSION': 'تمزق الصفيحة بالشد الصافي (Net Section Tension Fracture)'
+                    };
+
+                    if (!this.isTesting) {
+                        statusEl.className = 'status-box ' + (isSafe ? 'status-safe' : 'status-warn');
+                        statusEl.innerHTML = `القدرة الحاكمة الدنيا <b>P_min = ${P_min.toFixed(2)} طن</b> (${modeNamesAr[governingMode]}).<br>اضغط <b>"تطبيق الحمل"</b> لاختبار الوصلة عملياً.`;
+                        return;
+                    }
+
+                    if (isSafe) {
+                        statusEl.className = 'status-box status-safe';
+                        statusEl.innerHTML = `✅ <b>الوصلة آمنة ومستقرة:</b> القوة المطبقة (${P.toFixed(1)} طن) أقل من القدرة الحاكمة الدنيا (${P_min.toFixed(2)} طن).`;
+                    } else {
+                        statusEl.className = 'status-box status-danger';
+                        statusEl.innerHTML = `⚠️ <b>تحذير: حدث انهيار بـ ${modeNamesAr[governingMode]}!</b><br>القوة المطبقة (${P.toFixed(1)} طن) تجاوزت السعة الحاكمة الدنيا (${P_min.toFixed(2)} طن).`;
+                    }
+                },
+
+                // بناء المجسمات ثلاثية الأبعاد للوصلة والبراغي
+                build3DModel() {
+                    CivilLab.disposeHierarchy(this.meshGroup);
+                    this.meshGroup.clear();
+                    this.boltsData = [];
+                    this.bearingRings = [];
+
+                    const { k, n, m, d, t, b } = this.params;
+                    const scale = 0.7; // معامل تحجيم بصري متناسق
+                    const plateW = b * scale;
+                    const plateT = t * scale;
+                    const plateL = 18;
+                    const overlap = 10;
+
+                    // خامات المعادن
+                    const matPlateLeft = new THREE.MeshStandardMaterial({
+                        color: 0x64748b, metalness: 0.65, roughness: 0.35
+                    });
+                    const matPlateRight = new THREE.MeshStandardMaterial({
+                        color: 0x94a3b8, metalness: 0.6, roughness: 0.35
+                    });
+                    const matBolt = new THREE.MeshStandardMaterial({
+                        color: 0xe2e8f0, metalness: 0.85, roughness: 0.2
+                    });
+                    const matHole = new THREE.MeshBasicMaterial({ color: 0x0f172a });
+
+                    this.topPlateGroup = new THREE.Group();
+                    this.bottomPlateGroup = new THREE.Group();
+                    this.coverPlatesGroup = new THREE.Group();
+
+                    if (k === 1) {
+                        // وصلة تراكب (Lap Joint): صفيحة علوية يمين + صفيحة سفلية يسار
+                        // نقسم الصفيحة اليمنى عند خط الصف الحرج لدعم محاكاة التمزق بالشد
+                        const rightPart1 = new THREE.Mesh(new THREE.BoxGeometry(overlap, plateT, plateW), matPlateRight.clone());
+                        rightPart1.position.set(0, plateT / 2, 0);
+
+                        const rightPart2 = new THREE.Mesh(new THREE.BoxGeometry(plateL - overlap, plateT, plateW), matPlateRight.clone());
+                        rightPart2.position.set(plateL / 2, plateT / 2, 0);
+
+                        this.topPlateGroup.add(rightPart1, rightPart2);
+                        this.topPlateGroup.userData = { fracturePart: rightPart2, mainPart: rightPart1 };
+
+                        const leftPlate = new THREE.Mesh(new THREE.BoxGeometry(plateL, plateT, plateW), matPlateLeft.clone());
+                        leftPlate.position.set(-(plateL - overlap) / 2, -plateT / 2, 0);
+                        this.bottomPlateGroup.add(leftPlate);
+                    } else {
+                        // وصلة تقابل بغطاءين (Double Cover Butt Joint - k=2)
+                        const leftMain = new THREE.Mesh(new THREE.BoxGeometry(plateL, plateT, plateW), matPlateLeft.clone());
+                        leftMain.position.set(-plateL / 2 - 0.15, 0, 0);
+                        this.bottomPlateGroup.add(leftMain);
+
+                        const rightMain1 = new THREE.Mesh(new THREE.BoxGeometry(overlap / 2, plateT, plateW), matPlateRight.clone());
+                        rightMain1.position.set(overlap / 4 + 0.15, 0, 0);
+
+                        const rightMain2 = new THREE.Mesh(new THREE.BoxGeometry(plateL - overlap / 2, plateT, plateW), matPlateRight.clone());
+                        rightMain2.position.set(plateL / 2 + overlap / 4 + 0.15, 0, 0);
+
+                        this.topPlateGroup.add(rightMain1, rightMain2);
+                        this.topPlateGroup.userData = { fracturePart: rightMain2, mainPart: rightMain1 };
+
+                        const coverT = plateT * 0.65;
+                        const topCover = new THREE.Mesh(new THREE.BoxGeometry(overlap * 1.3, coverT, plateW), matPlateLeft.clone());
+                        topCover.position.set(0, (plateT + coverT) / 2, 0);
+
+                        const botCover = new THREE.Mesh(new THREE.BoxGeometry(overlap * 1.3, coverT, plateW), matPlateLeft.clone());
+                        botCover.position.set(0, -(plateT + coverT) / 2, 0);
+
+                        this.coverPlatesGroup.add(topCover, botCover);
+                    }
+
+                    this.meshGroup.add(this.topPlateGroup, this.bottomPlateGroup, this.coverPlatesGroup);
+
+                    // توزيع البراغي هندسياً في صفوف وأعمدة
+                    const boltRadius = (d * scale) / 2;
+                    const rows = Math.ceil(n / m);
+                    let boltCount = 0;
+
+                    for (let r = 0; r < rows; r++) {
+                        const colsInRow = Math.min(m, n - boltCount);
+                        const xPos = (rows === 1) ? 0 : (r - (rows - 1) / 2) * 3.2;
+
+                        for (let c = 0; c < colsInRow; c++) {
+                            const zPos = (colsInRow === 1) ? 0 : (c - (colsInRow - 1) / 2) * (plateW / (m + 0.6));
+                            this.createBolt(xPos, zPos, boltRadius, plateT, k, matBolt, matHole);
+                            boltCount++;
+                        }
+                    }
+
+                    // إنشاء أسهم القوة (Load Arrows)
+                    this.arrowsGroup = new THREE.Group();
+                    const arrowMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+                    const shaftGeo = new THREE.CylinderGeometry(0.22, 0.22, 4.5, 12);
+                    const headGeo = new THREE.ConeGeometry(0.65, 1.5, 12);
+
+                    // سهم أيمـن (شد لليمين)
+                    const rightArrow = new THREE.Group();
+                    const rShaft = new THREE.Mesh(shaftGeo, arrowMat);
+                    rShaft.rotation.z = -Math.PI / 2;
+                    const rHead = new THREE.Mesh(headGeo, arrowMat);
+                    rHead.rotation.z = -Math.PI / 2;
+                    rHead.position.x = 2.5;
+                    rightArrow.add(rShaft, rHead);
+                    rightArrow.position.set(16, 0, 0);
+
+                    // سهم أيسر (شد لليسار)
+                    const leftArrow = new THREE.Group();
+                    const lShaft = new THREE.Mesh(shaftGeo, arrowMat);
+                    lShaft.rotation.z = Math.PI / 2;
+                    const lHead = new THREE.Mesh(headGeo, arrowMat);
+                    lHead.rotation.z = Math.PI / 2;
+                    lHead.position.x = -2.5;
+                    leftArrow.add(lShaft, lHead);
+                    leftArrow.position.set(-16, 0, 0);
+
+                    this.arrowsGroup.add(rightArrow, leftArrow);
+                    this.meshGroup.add(this.arrowsGroup);
+                },
+
+                // إنشاء برغي ثلاثي الأبعاد مقسم لنصفين لمحاكاة القص + حلقة دهس للثقب
+                createBolt(x, z, radius, plateT, k, matBolt, matHole) {
+                    const totalH = (k === 1) ? plateT * 2.2 : plateT * 2.6;
+                    const halfH = totalH / 2;
+
+                    // النصف العلوي للبرغي + الرأس السداسي
+                    const topHalf = new THREE.Group();
+                    const topCyl = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, halfH, 20), matBolt.clone());
+                    topCyl.position.y = halfH / 2;
+                    const hexHead = new THREE.Mesh(new THREE.CylinderGeometry(radius * 1.5, radius * 1.5, 0.5, 6), matBolt.clone());
+                    hexHead.position.y = halfH + 0.25;
+                    topHalf.add(topCyl, hexHead);
+                    topHalf.position.set(x, 0, z);
+
+                    // النصف السفلي للبرغي + الصامولة السفلية
+                    const botHalf = new THREE.Group();
+                    const botCyl = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, halfH, 20), matBolt.clone());
+                    botCyl.position.y = -halfH / 2;
+                    const hexNut = new THREE.Mesh(new THREE.CylinderGeometry(radius * 1.5, radius * 1.5, 0.5, 6), matBolt.clone());
+                    hexNut.position.y = -halfH - 0.25;
+                    botHalf.add(botCyl, hexNut);
+                    botHalf.position.set(x, 0, z);
+
+                    // حلقة تمثيل ثقب الصفيحة (تتمدد بيضاوياً عند انهيار الدهس Bearing)
+                    const holeRing = new THREE.Mesh(
+                        new THREE.CylinderGeometry(radius * 1.08, radius * 1.08, totalH * 1.02, 20),
+                        matHole.clone()
+                    );
+                    holeRing.position.set(x, 0, z);
+
+                    this.meshGroup.add(topHalf, botHalf, holeRing);
+                    this.boltsData.push({ topHalf, botHalf, origX: x, origZ: z });
+                    this.bearingRings.push(holeRing);
+                },
+
+                onParamChange() {
+                    this.isTesting = false;
+                    this.animProgress = 0;
+                    this.calculate();
+                    this.build3DModel();
+                },
+
+                startTest() {
+                    this.calculate();
+                    this.build3DModel();
+                    this.isTesting = true;
+                    this.isPaused = false;
+                    this.animProgress = 0;
+                    this.updateStatusUI();
+                },
+
+                togglePause() {
+                    if (!this.isTesting) return;
+                    this.isPaused = !this.isPaused;
+                },
+
+                reset() {
+                    this.isTesting = false;
+                    this.isPaused = false;
+                    this.animProgress = 0;
+                    this.calculate();
+                    this.build3DModel();
+                },
+
+                // حلقة التحديث والرسم المستمرة
+                update() {
+                    this.animId = requestAnimationFrame(() => this.update());
+
+                    if (this.controls) this.controls.update();
+
+                    if (this.isTesting && !this.isPaused) {
+                        this.animProgress = Math.min(1, this.animProgress + 0.018);
+                        const p = this.animProgress;
+
+                        if (this.results.isSafe) {
+                            // وميض أخضر هادئ واستطالة مرنة طفيفة جداً
+                            const elasticShift = Math.sin(p * Math.PI) * 0.15;
+                            this.topPlateGroup.position.x = elasticShift;
+                            this.topPlateGroup.children.forEach(m => {
+                                m.material.emissive.setHex(0x14532d);
+                                m.material.emissiveIntensity = Math.sin(p * Math.PI) * 0.6;
+                            });
+                        } else {
+                            // تحريك الانهيار الميكانيكي وفق النمط الحاكم
+                            const mode = this.results.governingMode;
+
+                            if (mode === 'SHEAR') {
+                                // انقصاص البراغي: انشطار أسطوانة البرغي وانزلاق الصفيحة العلوية
+                                const slide = p * 3.8;
+                                this.topPlateGroup.position.x = slide;
+                                this.boltsData.forEach(b => {
+                                    b.topHalf.position.x = b.origX + slide;
+                                    b.topHalf.rotation.z = -p * 0.25;
+                                    b.topHalf.children[0].material.color.setHex(0xef4444);
+                                });
+                            } else if (mode === 'BEARING') {
+                                // دهس جدار الثقب: استطالة بيضاوية لثقوب الصفيحة وإزاحة الصفيحة
+                                const crush = p * 1.8;
+                                this.topPlateGroup.position.x = crush;
+                                this.bearingRings.forEach(ring => {
+                                    ring.scale.x = 1 + p * 1.6;
+                                    ring.position.x += 0.015;
+                                    ring.material.color.setHex(0xdc2626);
+                                });
+                            } else if (mode === 'TENSION') {
+                                // تمزق الصفيحة بالشد الصافي على خط الثقوب الحرج
+                                const fracturePart = this.topPlateGroup.userData.fracturePart;
+                                if (fracturePart) {
+                                    fracturePart.position.x = (18 / 2) + p * 4.2;
+                                    fracturePart.rotation.y = p * 0.08;
+                                    fracturePart.material.color.setHex(0xef4444);
+                                }
+                            }
+                        }
+                    }
+
+                    if (this.renderer && this.scene && this.camera) {
+                        this.renderer.render(this.scene, this.camera);
+                    }
+                },
+
+                // التنظيف الصارم للذاكرة عند الخروج من التمرين
+                destroy() {
+                    if (this.animId) cancelAnimationFrame(this.animId);
+                    if (this.controls) this.controls.dispose();
+                    CivilLab.disposeHierarchy(this.scene);
+                    if (this.renderer) {
+                        this.renderer.dispose();
+                        if (this.renderer.domElement && this.renderer.domElement.parentNode) {
+                            this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+                        }
+                    }
+                    this.scene = null;
+                    this.camera = null;
+                    this.renderer = null;
+                    this.controls = null;
+                }
+            },
+
+            /**
+             * ============================================================================
+             * الموديول الثاني: أزمة السكة الحديدية والتمدد الحراري (Thermal Rail & Gap Crisis)
+             * ============================================================================
+             */
+            thermalModule: {
+                scene: null,
+                camera: null,
+                renderer: null,
+                controls: null,
+                animId: null,
+                meshGroup: null,
+
+                // الثوابت الفيزيائية للفولاذ
+                E: 2.1e6,            // معامل المرونة (كجم/سم²)
+                ALPHA: 1.2e-5,       // معامل التمدد الحراري الطولي (1/°C)
+                SIGMA_BUCKLE: 750,   // حد الانبعاج الحراري الحرج (كجم/سم²)
+
+                // حالة المحاكاة
+                isSweeping: false,
+                isPaused: false,
+
+                params: {},
+                results: {},
+
+                // مراجع مجسمات السكة للتحريك والتقوس
+                leftRailSegments: [],
+                rightRailMesh: null,
+                gapMarkerMesh: null,
+                contactFlashMesh: null,
+
+                init(containerId) {
+                    const container = document.getElementById(containerId);
+                    const w = container.clientWidth;
+                    const h = container.clientHeight;
+
+                    // 1. المشهد والكاميرا
+                    this.scene = new THREE.Scene();
+                    this.scene.background = new THREE.Color(0x0f172a);
+
+                    this.camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 1000);
+                    this.camera.position.set(0, 16, 28);
+
+                    // 2. المُصيّر
+                    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                    this.renderer.setSize(w, h);
+                    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                    container.innerHTML = '';
+                    container.appendChild(this.renderer.domElement);
+
+                    // 3. متحكمات الكاميرا
+                    this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                    this.controls.enableDamping = true;
+                    this.controls.dampingFactor = 0.06;
+
+                    // 4. الإضاءة والشبكة الأرضية
+                    const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+                    this.scene.add(ambientLight);
+
+                    const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+                    dirLight.position.set(15, 30, 20);
+                    this.scene.add(dirLight);
+
+                    const grid = new THREE.GridHelper(70, 35, 0x38bdf8, 0x1e293b);
+                    grid.position.y = -2.2;
+                    this.scene.add(grid);
+
+                    this.meshGroup = new THREE.Group();
+                    this.scene.add(this.meshGroup);
+
+                    this.isSweeping = false;
+                    this.isPaused = false;
+
+                    this.build3DModel();
+                    this.calculate();
+                    this.update3DState();
+                    this.update();
+                },
+
+                // إجراء الحسابات الحرارية والانتقال من محدد إلى غير محدد استاتيكياً
+                calculate() {
+                    const dT = parseFloat(document.getElementById('th-dT').value);
+                    const gap_mm = parseFloat(document.getElementById('th-gap').value);
+                    const L_m = parseFloat(document.getElementById('th-L').value);
+                    const A_cm2 = parseFloat(document.getElementById('th-A').value);
+
+                    // تحديث الشارات الرقمية
+                    document.getElementById('val-th-dT').textContent = dT.toFixed(0);
+                    document.getElementById('val-th-gap').textContent = gap_mm.toFixed(1);
+                    document.getElementById('val-th-L').textContent = L_m.toFixed(0);
+                    document.getElementById('val-th-A').textContent = A_cm2.toFixed(0);
+
+                    // تحويل الوحدات: الطول بالملليمتر لحسابات الفجوة
+                    const L_mm = L_m * 1000.0;
+                    const dL_th_mm = this.ALPHA * dT * L_mm; // التمدد الحر بالملليمتر
+
+                    let remGap_mm = 0;
+                    let sigma_th = 0; // كجم/سم²
+                    let R_ton = 0;    // طن
+                    let state = 'DETERMINATE'; // محدد استاتيكياً
+
+                    if (dL_th_mm <= gap_mm) {
+                        // الفجوة لم تنغلق بعد: نظام محدد استاتيكياً
+                        remGap_mm = gap_mm - dL_th_mm;
+                        sigma_th = 0;
+                        R_ton = 0;
+                        state = 'DETERMINATE';
+                    } else {
+                        // الفجوة انغلقت: تحول النظام إلى غير محدد استاتيكياً
+                        remGap_mm = 0;
+                        // معادلة التوافق: σ_th = E * (α*ΔT - δ/L)
+                        const constrainedStrain = (dL_th_mm - gap_mm) / L_mm;
+                        sigma_th = this.E * constrainedStrain;
+                        R_ton = (sigma_th * A_cm2) / 1000.0;
+
+                        if (sigma_th >= this.SIGMA_BUCKLE) {
+                            state = 'BUCKLED';
+                        } else {
+                            state = 'INDETERMINATE';
+                        }
+                    }
+
+                    this.params = { dT, gap_mm, L_m, A_cm2 };
+                    this.results = { dL_th_mm, remGap_mm, sigma_th, R_ton, state };
+
+                    // تحديث بطاقات النتائج
+                    document.getElementById('res-th-dL').textContent = dL_th_mm.toFixed(2);
+                    document.getElementById('res-th-remGap').textContent = remGap_mm.toFixed(2);
+                    document.getElementById('res-th-stress').textContent = Math.round(sigma_th);
+                    document.getElementById('res-th-R').textContent = R_ton.toFixed(1);
+
+                    // تحديث صندوق التشخيص
+                    const statusEl = document.getElementById('thermal-status');
+                    if (state === 'DETERMINATE') {
+                        statusEl.className = 'status-box status-safe';
+                        statusEl.innerHTML = `✅ <b>نظام محدد استاتيكياً (الفجوة مفتوحة):</b><br>التمدد الحر (${dL_th_mm.toFixed(1)} مم) أصغر من الفجوة الابتدائية. الإجهاد الحراري = 0.`;
+                    } else if (state === 'INDETERMINATE') {
+                        statusEl.className = 'status-box status-warn';
+                        statusEl.innerHTML = `⚡ <b>انغلقت الفجوة (نظام غير محدد استاتيكياً):</b><br>تولد إجهاد انضغاطي حراري (${Math.round(sigma_th)} كجم/سم²) ورد فعل مقيد (${R_ton.toFixed(1)} طن).`;
+                    } else {
+                        statusEl.className = 'status-box status-danger';
+                        statusEl.innerHTML = `🚨 <b>انهيار بالانبعاج الحراري (Thermal Buckling)!</b><br>تجاوز الإجهاد الحراري الحد الحرج (${this.SIGMA_BUCKLE} كجم/سم²) مما أدى لتقوس السكة جانبياً!`;
+                    }
+                },
+
+                // بناء مشهد السكة الحديدية والعوارض الخشبية ومؤشر الفجوة
+                build3DModel() {
+                    CivilLab.disposeHierarchy(this.meshGroup);
+                    this.meshGroup.clear();
+                    this.leftRailSegments = [];
+
+                    // 1. إنشاء العوارض الخشبية/الخرسانية (Sleepers)
+                    const sleeperMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.8 });
+                    const sleeperGeo = new THREE.BoxGeometry(1.4, 0.5, 8);
+                    for (let x = -22; x <= 22; x += 2.5) {
+                        const sleeper = new THREE.Mesh(sleeperGeo, sleeperMat);
+                        sleeper.position.set(x, -1.6, 0);
+                        this.meshGroup.add(sleeper);
+                    }
+
+                    // 2. إنشاء الجدارين الثابتين في أقصى اليمين واليسار (Fixed Supports)
+                    const wallMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.4, roughness: 0.6 });
+                    const leftWall = new THREE.Mesh(new THREE.BoxGeometry(1.5, 4.5, 9), wallMat);
+                    leftWall.position.set(-23.5, 0.2, 0);
+                    const rightWall = new THREE.Mesh(new THREE.BoxGeometry(1.5, 4.5, 9), wallMat);
+                    rightWall.position.set(23.5, 0.2, 0);
+                    this.meshGroup.add(leftWall, rightWall);
+
+                    // 3. تقسيم القضيب الأيسر إلى 24 قطعة متصلة لمحاكاة التقوس والانبعاج (Buckling) بسلاسة
+                    const numSegs = 24;
+                    const totalLeftLen = 22.0;
+                    const segLen = totalLeftLen / numSegs;
+
+                    for (let i = 0; i < numSegs; i++) {
+                        const segGroup = this.createIProfileSegment(segLen);
+                        this.meshGroup.add(segGroup);
+                        this.leftRailSegments.push({
+                            mesh: segGroup,
+                            index: i,
+                            ratio: i / (numSegs - 1) // من 0 عند الجدار الأيسر إلى 1 عند الفجوة
+                        });
+                    }
+
+                    // 4. القضيب الأيمن المقابل
+                    this.rightRailMesh = this.createIProfileSegment(21.5);
+                    this.rightRailMesh.position.set(12.0, 0, 0);
+                    this.meshGroup.add(this.rightRailMesh);
+
+                    // 5. مؤشر الفجوة التفاعلي (مسطرة ضوئية بين طرفي القضيب)
+                    const gapGeo = new THREE.BoxGeometry(1, 2.2, 2.2);
+                    const gapMat = new THREE.MeshBasicMaterial({
+                        color: 0x38bdf8, transparent: true, opacity: 0.35, wireframe: false
+                    });
+                    this.gapMarkerMesh = new THREE.Mesh(gapGeo, gapMat);
+                    this.meshGroup.add(this.gapMarkerMesh);
+
+                    // 6. حلقة الوميض الإشعاعي عند تلامس القضيبين وإغلاق الفجوة
+                    const flashGeo = new THREE.RingGeometry(1.2, 2.6, 24);
+                    const flashMat = new THREE.MeshBasicMaterial({
+                        color: 0xf59e0b, side: THREE.DoubleSide, transparent: true, opacity: 0
+                    });
+                    this.contactFlashMesh = new THREE.Mesh(flashGeo, flashMat);
+                    this.contactFlashMesh.rotation.y = Math.PI / 2;
+                    this.contactFlashMesh.position.set(1.25, 0, 0);
+                    this.meshGroup.add(this.contactFlashMesh);
+                },
+
+                // إنشاء مقطع سكة حديدية ثلاثي الأبعاد (I-Beam Rail Profile)
+                createIProfileSegment(length) {
+                    const group = new THREE.Group();
+                    const mat = new THREE.MeshStandardMaterial({
+                        color: 0x94a3b8, metalness: 0.75, roughness: 0.25
+                    });
+
+                    // القاعدة السفلية والعصب الأوسط والرأس العلوي للسكة
+                    const base = new THREE.Mesh(new THREE.BoxGeometry(length, 0.35, 1.8), mat);
+                    base.position.y = -1.1;
+
+                    const web = new THREE.Mesh(new THREE.BoxGeometry(length, 1.4, 0.45), mat);
+                    web.position.y = -0.25;
+
+                    const head = new THREE.Mesh(new THREE.BoxGeometry(length, 0.55, 1.2), mat);
+                    head.position.y = 0.65;
+
+                    group.add(base, web, head);
+                    group.userData.mat = mat;
+                    return group;
+                },
+
+                // تحديث ألوان الحرارة، الفجوة، والانبعاج الجانبي في المشهد ثلاثي الأبعاد
+                update3DState() {
+                    const { dT } = this.params;
+                    const { remGap_mm, sigma_th, state } = this.results;
+
+                    // تحويل الفجوة المتبقية إلى مسافة بصرية واضحة في المشهد
+                    const visualGap = (remGap_mm / 25.0) * 2.5;
+                    const rightRailStart = 1.25;
+                    const leftRailEnd = rightRailStart - visualGap;
+                    const leftRailStart = -22.75;
+                    const currentTotalLen = leftRailEnd - leftRailStart;
+
+                    // تدرج لوني حراري (Heat Map Color Shift) من الفضي البارد إلى البرتقالي/الأحمر المتوهج
+                    const heatRatio = Math.min(1, dT / 70.0);
+                    const railColor = new THREE.Color(0x94a3b8).lerp(new THREE.Color(0xef4444), heatRatio * 0.85);
+
+                    // حساب مقدار التقوس الجانبي (Buckling Amplitude) في حال تجاوز الإجهاد الحرج
+                    let buckleAmp = 0;
+                    if (state === 'BUCKLED') {
+                        const excess = (sigma_th - this.SIGMA_BUCKLE) / 600.0;
+                        buckleAmp = Math.min(4.2, 1.2 + excess * 2.5);
+                    }
+
+                    const numSegs = this.leftRailSegments.length;
+                    const segScaleX = currentTotalLen / 22.0;
+
+                    this.leftRailSegments.forEach((seg, idx) => {
+                        const t = (idx + 0.5) / numSegs;
+                        const xPos = leftRailStart + t * currentTotalLen;
+
+                        // دالة جيبية للانبعاج الجانبي على المحور Z
+                        const zBuckle = Math.sin(t * Math.PI) * buckleAmp;
+                        const rotY = -Math.cos(t * Math.PI) * (buckleAmp * 0.12);
+
+                        seg.mesh.position.set(xPos, 0, zBuckle);
+                        seg.mesh.scale.x = segScaleX * 1.02;
+                        seg.mesh.rotation.y = rotY;
+
+                        seg.mesh.userData.mat.color.copy(railColor);
+                        seg.mesh.userData.mat.emissive.setHex(state === 'BUCKLED' ? 0x7f1d1d : 0x451a03);
+                        seg.mesh.userData.mat.emissiveIntensity = heatRatio * 0.5;
+                    });
+
+                    if (this.rightRailMesh) {
+                        this.rightRailMesh.userData.mat.color.copy(railColor);
+                    }
+
+                    // تحديث مؤشر الفجوة
+                    if (visualGap > 0.03) {
+                        this.gapMarkerMesh.visible = true;
+                        this.gapMarkerMesh.scale.x = visualGap;
+                        this.gapMarkerMesh.position.set(rightRailStart - visualGap / 2, 0, 0);
+                        this.contactFlashMesh.material.opacity = 0;
+                    } else {
+                        this.gapMarkerMesh.visible = false;
+                        // إظهار وميض التلامس وتولد رد الفعل R
+                        this.contactFlashMesh.material.opacity = 0.8;
+                    }
+                },
+
+                onParamChange() {
+                    this.isSweeping = false;
+                    this.calculate();
+                    this.update3DState();
+                },
+
+                // تشغيل محاكاة موجة الحر تدريجياً من الصفر حتى 70 درجة مئوية
+                startHeatSweep() {
+                    document.getElementById('th-dT').value = 0;
+                    this.isSweeping = true;
+                    this.isPaused = false;
+                    this.calculate();
+                    this.update3DState();
+                },
+
+                togglePause() {
+                    if (!this.isSweeping) return;
+                    this.isPaused = !this.isPaused;
+                },
+
+                reset() {
+                    this.isSweeping = false;
+                    this.isPaused = false;
+                    document.getElementById('th-dT').value = 15;
+                    document.getElementById('th-gap').value = 10;
+                    document.getElementById('th-L').value = 25;
+                    document.getElementById('th-A').value = 65;
+                    this.calculate();
+                    this.update3DState();
+                },
+
+                update() {
+                    this.animId = requestAnimationFrame(() => this.update());
+
+                    if (this.controls) this.controls.update();
+
+                    if (this.isSweeping && !this.isPaused) {
+                        const slider = document.getElementById('th-dT');
+                        let currentTemp = parseFloat(slider.value);
+                        if (currentTemp < 70) {
+                            currentTemp = Math.min(70, currentTemp + 0.25);
+                            slider.value = currentTemp;
+                            this.calculate();
+                            this.update3DState();
+                        } else {
+                            this.isSweeping = false;
+                        }
+                    }
+
+                    // تحريك حلقة الوميض عند انغلاق الفجوة
+                    if (this.contactFlashMesh && this.contactFlashMesh.material.opacity > 0) {
+                        const pulse = 1 + 0.15 * Math.sin(Date.now() * 0.008);
+                        this.contactFlashMesh.scale.set(pulse, pulse, 1);
+                    }
+
+                    if (this.renderer && this.scene && this.camera) {
+                        this.renderer.render(this.scene, this.camera);
+                    }
+                },
+
+                // التنظيف الصارم للذاكرة عند مغادرة التبويب
+                destroy() {
+                    if (this.animId) cancelAnimationFrame(this.animId);
+                    if (this.controls) this.controls.dispose();
+                    CivilLab.disposeHierarchy(this.scene);
+                    if (this.renderer) {
+                        this.renderer.dispose();
+                        if (this.renderer.domElement && this.renderer.domElement.parentNode) {
+                            this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+                        }
+                    }
+                    this.scene = null;
+                    this.camera = null;
+                    this.renderer = null;
+                    this.controls = null;
+                }
+            }
+        };
+
+        // تشغيل المختبر فور اكتمال تحميل الصفحة
+        window.addEventListener('DOMContentLoaded', () => {
+            CivilLab.initApp();
+        });
+    </script>
+</body>
+</html>

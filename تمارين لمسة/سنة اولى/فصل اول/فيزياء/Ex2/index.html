@@ -1,0 +1,1977 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مختبر مهندس الفواصل الحرارية 3D - فيزياء السنة الأولى للهندسة المدنية</title>
+
+  <!-- خط تجوال Tajawal عبر CDN -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" />
+
+  <!-- ملف التنسيقات -->
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- مكتبة Three.js (r128) و OrbitControls عبر روابط CDN المطلوبة حصراً -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+	<style>
+		/* ==========================================================================
+		مختبر مهندس الفواصل الحرارية 3D - التصميم الهندسي الداكن المتجاوب
+		========================================================================== */
+
+		:root {
+		--bg-dark: #0f172a;
+		--panel-bg: rgba(15, 23, 42, 0.88);
+		--panel-border: rgba(56, 189, 248, 0.24);
+		--card-bg: rgba(30, 41, 59, 0.78);
+		--text-main: #f8fafc;
+		--text-muted: #94a3b8;
+		--accent-cyan: #38bdf8;
+		--accent-amber: #f59e0b;
+		--accent-red: #ef4444;
+		--accent-emerald: #10b981;
+		--font-main: 'Tajawal', sans-serif;
+		}
+
+		* {
+		box-sizing: border-box;
+		margin: 0;
+		padding: 0;
+		}
+
+		html, body {
+		width: 100%;
+		height: 100%;
+		overflow: hidden;
+		background-color: var(--bg-dark);
+		color: var(--text-main);
+		font-family: var(--font-main);
+		user-select: none;
+		-webkit-font-smoothing: antialiased;
+		}
+
+		/* حاوية المشهد ثلاثي الأبعاد */
+		#canvas-container {
+		position: fixed;
+		inset: 0;
+		width: 100vw;
+		height: 100vh;
+		z-index: 1;
+		}
+
+		/* الشريط العلوي */
+		.top-bar {
+		position: fixed;
+		top: 12px;
+		right: 12px;
+		left: 12px;
+		z-index: 20;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 10px 16px;
+		background: var(--panel-bg);
+		backdrop-filter: blur(14px);
+		border: 1px solid var(--panel-border);
+		border-radius: 14px;
+		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+		flex-wrap: wrap;
+		}
+
+		.brand-block {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		}
+
+		.brand-badge {
+		background: linear-gradient(135deg, #0284c7, #38bdf8);
+		color: #fff;
+		font-weight: 800;
+		font-size: 0.85rem;
+		padding: 6px 10px;
+		border-radius: 8px;
+		letter-spacing: 0.5px;
+		box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+		}
+
+		.brand-block h1 {
+		font-size: 1.15rem;
+		font-weight: 800;
+		color: #fff;
+		line-height: 1.2;
+		}
+
+		.subtitle {
+		font-size: 0.78rem;
+		color: var(--text-muted);
+		}
+
+		/* أزرار تبديل الأطوار */
+		.mode-tabs {
+		display: flex;
+		gap: 6px;
+		background: rgba(2, 6, 23, 0.65);
+		padding: 5px;
+		border-radius: 10px;
+		border: 1px solid rgba(148, 163, 184, 0.16);
+		}
+
+		.mode-tab {
+		display: flex;
+		align-items: center;
+		gap: 7px;
+		background: transparent;
+		color: var(--text-muted);
+		border: none;
+		padding: 7px 12px;
+		border-radius: 8px;
+		font-family: var(--font-main);
+		font-size: 0.84rem;
+		font-weight: 700;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		}
+
+		.mode-tab:hover {
+		color: #fff;
+		background: rgba(56, 189, 248, 0.1);
+		}
+
+		.mode-tab.active {
+		background: linear-gradient(135deg, rgba(14, 165, 233, 0.28), rgba(56, 189, 248, 0.15));
+		color: var(--accent-cyan);
+		border: 1px solid rgba(56, 189, 248, 0.45);
+		box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+		}
+
+		.tab-num {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 20px;
+		height: 20px;
+		border-radius: 50%;
+		background: rgba(56, 189, 248, 0.2);
+		font-size: 0.75rem;
+		}
+
+		/* أزرار الإجراءات */
+		.action-buttons {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		}
+
+		.btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 8px 13px;
+		border-radius: 9px;
+		font-family: var(--font-main);
+		font-size: 0.84rem;
+		font-weight: 700;
+		border: 1px solid transparent;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		}
+
+		.btn-primary {
+		background: linear-gradient(135deg, #0284c7, #0ea5e9);
+		color: #fff;
+		box-shadow: 0 4px 12px rgba(14, 165, 233, 0.35);
+		}
+
+		.btn-primary:hover {
+		background: linear-gradient(135deg, #0369a1, #0284c7);
+		transform: translateY(-1px);
+		}
+
+		.btn-amber {
+		background: rgba(245, 158, 11, 0.18);
+		color: #fbbf24;
+		border-color: rgba(245, 158, 11, 0.45);
+		}
+
+		.btn-amber:hover {
+		background: rgba(245, 158, 11, 0.3);
+		}
+
+		.btn-secondary {
+		background: rgba(51, 65, 85, 0.65);
+		color: #e2e8f0;
+		border-color: rgba(148, 163, 184, 0.25);
+		}
+
+		.btn-secondary:hover {
+		background: rgba(71, 85, 105, 0.85);
+		}
+
+		/* لوحة التحكم الجانبية اليمنى */
+		.control-panel {
+		position: fixed;
+		top: 82px;
+		right: 12px;
+		width: 340px;
+		max-height: calc(100vh - 96px);
+		z-index: 15;
+		background: var(--panel-bg);
+		backdrop-filter: blur(14px);
+		border: 1px solid var(--panel-border);
+		border-radius: 14px;
+		box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+		transition: transform 0.3s ease;
+		}
+
+		.panel-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 12px 16px;
+		border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+		background: rgba(2, 6, 23, 0.4);
+		}
+
+		.panel-header h2 {
+		font-size: 0.96rem;
+		font-weight: 800;
+		color: var(--accent-cyan);
+		}
+
+		.btn-icon-only {
+		background: transparent;
+		border: none;
+		color: var(--text-muted);
+		font-size: 1.1rem;
+		cursor: pointer;
+		}
+
+		.panel-body {
+		padding: 14px 16px;
+		overflow-y: auto;
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+		}
+
+		.control-group {
+		background: var(--card-bg);
+		padding: 11px 12px;
+		border-radius: 10px;
+		border: 1px solid rgba(148, 163, 184, 0.12);
+		}
+
+		.control-label {
+		display: block;
+		font-size: 0.82rem;
+		font-weight: 700;
+		margin-bottom: 7px;
+		color: #e2e8f0;
+		}
+
+		.custom-select {
+		width: 100%;
+		padding: 8px 10px;
+		border-radius: 8px;
+		background: #0f172a;
+		color: #fff;
+		border: 1px solid rgba(56, 189, 248, 0.35);
+		font-family: var(--font-main);
+		font-size: 0.82rem;
+		font-weight: 500;
+		outline: none;
+		cursor: pointer;
+		}
+
+		.alpha-badge {
+		margin-top: 8px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		font-size: 0.8rem;
+		padding: 5px 8px;
+		border-radius: 6px;
+		background: rgba(56, 189, 248, 0.1);
+		color: var(--accent-cyan);
+		}
+
+		/* أزرار سريعة للتسليح */
+		.quick-chips {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 6px;
+		}
+
+		.chip {
+		padding: 6px 8px;
+		border-radius: 7px;
+		border: 1px solid rgba(148, 163, 184, 0.25);
+		background: rgba(15, 23, 42, 0.8);
+		color: var(--text-muted);
+		font-family: var(--font-main);
+		font-size: 0.78rem;
+		font-weight: 700;
+		cursor: pointer;
+		transition: all 0.18s;
+		}
+
+		.chip.active, .chip:hover {
+		border-color: var(--accent-cyan);
+		color: #fff;
+		background: rgba(14, 165, 233, 0.25);
+		}
+
+		/* أشرطة التمرير */
+		.slider-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 6px;
+		font-size: 0.83rem;
+		font-weight: 700;
+		}
+
+		.slider-val {
+		font-weight: 800;
+		color: #fff;
+		background: rgba(15, 23, 42, 0.75);
+		padding: 2px 8px;
+		border-radius: 6px;
+		border: 1px solid rgba(148, 163, 184, 0.2);
+		font-size: 0.82rem;
+		}
+
+		.hot-text { color: #fb923c; }
+		.cyan-text { color: var(--accent-cyan); }
+		.amber-text { color: var(--accent-amber); }
+
+		input[type="range"] {
+		width: 100%;
+		accent-color: var(--accent-cyan);
+		cursor: pointer;
+		height: 6px;
+		border-radius: 4px;
+		}
+
+		.slider-Scale {
+		display: flex;
+		justify-content: space-between;
+		font-size: 0.7rem;
+		color: var(--text-muted);
+		margin-top: 4px;
+		}
+
+		/* جدول المعاملات المرجعي */
+		.reference-table-box {
+		background: var(--card-bg);
+		border-radius: 10px;
+		border: 1px solid rgba(148, 163, 184, 0.15);
+		padding: 8px 10px;
+		}
+
+		.reference-table-box summary {
+		font-size: 0.82rem;
+		font-weight: 700;
+		color: var(--accent-amber);
+		cursor: pointer;
+		list-style: none;
+		}
+
+		.alpha-table {
+		width: 100%;
+		border-collapse: collapse;
+		margin-top: 8px;
+		font-size: 0.76rem;
+		}
+
+		.alpha-table th, .alpha-table td {
+		padding: 5px 6px;
+		border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+		text-align: right;
+		}
+
+		.alpha-table th {
+		color: var(--accent-cyan);
+		font-weight: 700;
+		}
+
+		.alpha-table tbody tr {
+		cursor: pointer;
+		transition: background 0.15s;
+		}
+
+		.alpha-table tbody tr:hover {
+		background: rgba(56, 189, 248, 0.12);
+		}
+
+		.highlight-row {
+		background: rgba(245, 158, 11, 0.12);
+		color: #fcd34d;
+		font-weight: 700;
+		}
+
+		/* لوحة الشاشات الرقمية والمعادلات (الجانب الأيسر) */
+		.telemetry-panel {
+		position: fixed;
+		top: 82px;
+		left: 12px;
+		width: 430px;
+		z-index: 15;
+		background: var(--panel-bg);
+		backdrop-filter: blur(14px);
+		border: 1px solid var(--panel-border);
+		border-radius: 14px;
+		padding: 14px;
+		box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		}
+
+		.status-banner {
+		display: flex;
+		align-items: center;
+		gap: 9px;
+		padding: 9px 12px;
+		border-radius: 9px;
+		font-size: 0.83rem;
+		font-weight: 700;
+		}
+
+		.status-banner.safe {
+		background: rgba(16, 185, 129, 0.16);
+		border: 1px solid rgba(16, 185, 129, 0.45);
+		color: #34d399;
+		}
+
+		.status-banner.danger {
+		background: rgba(239, 68, 68, 0.18);
+		border: 1px solid rgba(239, 68, 68, 0.5);
+		color: #fca5a5;
+		}
+
+		.status-dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		background: currentColor;
+		box-shadow: 0 0 8px currentColor;
+		flex-shrink: 0;
+		}
+
+		.readout-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 8px;
+		}
+
+		.metric-card {
+		background: var(--card-bg);
+		border: 1px solid rgba(148, 163, 184, 0.16);
+		border-radius: 10px;
+		padding: 9px 10px;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		}
+
+		.highlight-card {
+		border-color: rgba(245, 158, 11, 0.45);
+		background: linear-gradient(180deg, rgba(245, 158, 11, 0.1), rgba(30, 41, 59, 0.85));
+		}
+
+		.metric-title {
+		font-size: 0.74rem;
+		color: var(--text-muted);
+		margin-bottom: 4px;
+		}
+
+		.metric-value {
+		font-size: 0.95rem;
+		font-weight: 800;
+		color: #fff;
+		line-height: 1.25;
+		}
+
+		.metric-sub {
+		font-size: 0.7rem;
+		color: #cbd5e1;
+		margin-top: 4px;
+		}
+
+		/* صندوق المعادلات */
+		.equation-box {
+		background: rgba(2, 6, 23, 0.75);
+		border: 1px solid rgba(56, 189, 248, 0.25);
+		border-radius: 10px;
+		padding: 10px 12px;
+		}
+
+		.eq-title {
+		font-size: 0.78rem;
+		font-weight: 700;
+		color: var(--accent-cyan);
+		margin-bottom: 6px;
+		}
+
+		.eq-content {
+		font-family: 'Courier New', monospace;
+		font-size: 0.78rem;
+		line-height: 1.55;
+		color: #e2e8f0;
+		}
+
+		.eq-line {
+		display: flex;
+		justify-content: space-between;
+		border-bottom: 1px dashed rgba(148, 163, 184, 0.12);
+		padding: 2px 0;
+		}
+
+		.eq-line:last-child {
+		border-bottom: none;
+		}
+
+		.eq-highlight {
+		color: #fbbf24;
+		font-weight: 700;
+		}
+
+		/* تلميح التحكم بالكاميرا */
+		.camera-hint {
+		position: fixed;
+		bottom: 12px;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 10;
+		background: rgba(15, 23, 42, 0.8);
+		border: 1px solid rgba(148, 163, 184, 0.2);
+		padding: 6px 14px;
+		border-radius: 20px;
+		font-size: 0.76rem;
+		color: var(--text-muted);
+		display: flex;
+		gap: 10px;
+		pointer-events: none;
+		}
+
+		.hidden {
+		display: none !important;
+		}
+
+		/* التجاوب مع الشاشات الصغيرة والهواتف */
+		@media (max-width: 1100px) {
+		.top-bar {
+		padding: 8px 10px;
+		}
+		.control-panel {
+		top: auto;
+		bottom: 10px;
+		right: 10px;
+		width: 310px;
+		max-height: 46vh;
+		}
+		.telemetry-panel {
+		top: auto;
+		bottom: 10px;
+		left: 10px;
+		width: 350px;
+		}
+		.camera-hint {
+		display: none;
+		}
+		}
+
+		@media (max-width: 720px) {
+		.brand-block h1 {
+		font-size: 0.95rem;
+		}
+		.subtitle {
+		display: none;
+		}
+		.mode-tab {
+		font-size: 0.74rem;
+		padding: 5px 8px;
+		}
+		.control-panel {
+		left: 10px;
+		right: 10px;
+		width: auto;
+		bottom: 8px;
+		max-height: 38vh;
+		}
+		.telemetry-panel {
+		top: 128px;
+		left: 10px;
+		right: 10px;
+		width: auto;
+		bottom: auto;
+		padding: 10px;
+		}
+		.readout-grid {
+		grid-template-columns: repeat(3, 1fr);
+		}
+		.equation-box {
+		display: none;
+		}
+		}
+	</style>
+</head>
+<body>
+
+  <!-- الحاوية الرئيسية للمشهد ثلاثي الأبعاد -->
+  <div id="canvas-container" aria-label="مشهد محاكاة الفيزياء ثلاثي الأبعاد"></div>
+
+  <!-- الشريط العلوي (العنوان + تبديل الأطوار الثلاثة + أزرار التحكم السريعة) -->
+  <header class="top-bar">
+    <div class="brand-block">
+      <div class="brand-badge">3D LAB</div>
+      <div>
+        <h1>مختبر مهندس الفواصل الحرارية 3D</h1>
+        <p class="subtitle">فيزياء السنة الأولى للهندسة المدنية — التمدد الحراري والإجهادات الإنشائية</p>
+      </div>
+    </div>
+
+    <!-- أزرار التبديل بين الأطوار الثلاثة -->
+    <nav class="mode-tabs" role="tablist" aria-label="أطوار المحاكاة">
+      <button class="mode-tab active" data-mode="buckling" id="tab-buckling">
+        <span class="tab-num">1</span>
+        <span>تطنب السكك والجسور (مسألة الدورة)</span>
+      </button>
+      <button class="mode-tab" data-mode="concrete" id="tab-concrete">
+        <span class="tab-num">2</span>
+        <span>توافق الخرسانة المسلحة (البيتون والتسليح)</span>
+      </button>
+      <button class="mode-tab" data-mode="disc" id="tab-disc">
+        <span class="tab-num">3</span>
+        <span>برهان القرص والسلك الدائري</span>
+      </button>
+    </nav>
+
+    <!-- أزرار التحكم بالمحاكاة -->
+    <div class="action-buttons">
+      <button id="btn-play-pause" class="btn btn-primary" title="بدء أو إيقاف التسخين التدريجي">
+        <span id="play-icon">▶</span>
+        <span id="play-text">بدء المحاكاة</span>
+      </button>
+      <button id="btn-exam-preset" class="btn btn-amber" title="ضبط أرقام مسألة الدورة الامتحانية">
+        ★ مسألة الدورة الامتحانية
+      </button>
+      <button id="btn-reset" class="btn btn-secondary" title="إعادة ضبط التجربة">
+        ↺ إعادة ضبط
+      </button>
+    </div>
+  </header>
+
+  <!-- لوحة التحكم الجانبية اليمنى (المعاملات الفيزيائية + جدول المواد) -->
+  <aside class="control-panel" id="control-panel">
+    <div class="panel-header">
+      <h2>⚙️ لوحة المعاملات الفيزيائية</h2>
+      <button id="btn-toggle-panel" class="btn-icon-only" title="طي/فتح اللوحة">☰</button>
+    </div>
+
+    <div class="panel-body">
+      <!-- اختيار المادة -->
+      <div class="control-group">
+        <label for="material-select" class="control-label">
+          <span>المادة الهندسية ومعامل التمدد الخطي (α):</span>
+        </label>
+        <select id="material-select" class="custom-select">
+          <option value="exam_iron" selected>حديد مسألة الدورة الامتحانية (α = 12 × 10⁻⁶ °C⁻¹)</option>
+          <option value="aluminum">الألمنيوم - Aluminum (α = 24 × 10⁻⁶ °C⁻¹)</option>
+          <option value="brass">النحاس الأصفر والبرونز - Brass & Bronze (α = 19 × 10⁻⁶ °C⁻¹)</option>
+          <option value="copper">النحاس - Copper (α = 17 × 10⁻⁶ °C⁻¹)</option>
+          <option value="concrete">الإسمنت / البيتون - Concrete (α = 12 × 10⁻⁶ °C⁻¹)</option>
+          <option value="steel">الفولاذ / الحديد - Steel (α = 11 × 10⁻⁶ °C⁻¹)</option>
+          <option value="glass">الزجاج العادي - Ordinary Glass (α = 9 × 10⁻⁶ °C⁻¹)</option>
+          <option value="pyrex">زجاج بيركس - Pyrex Glass (α = 3.2 × 10⁻⁶ °C⁻¹)</option>
+          <option value="invar">سبيكة الإنفار - Invar Ni-Fe (α = 0.9 × 10⁻⁶ °C⁻¹)</option>
+        </select>
+        <div class="alpha-badge">
+          <span>قيمة α المعتمدة:</span>
+          <strong id="alpha-readout" dir="ltr">12.0 × 10⁻⁶ °C⁻¹</strong>
+        </div>
+      </div>
+
+      <!-- أزرار اختيار سريع لتسليح البيتون في الطور 2 -->
+      <div class="control-group hidden" id="rebar-quick-group">
+        <label class="control-label">اختيار سريع لمادة قضبان التسليح داخل البيتون:</label>
+        <div class="quick-chips">
+          <button class="chip active" data-mat="steel">فولاذ (11×10⁻⁶)</button>
+          <button class="chip" data-mat="aluminum">ألمنيوم (24×10⁻⁶)</button>
+          <button class="chip" data-mat="copper">نحاس (17×10⁻⁶)</button>
+          <button class="chip" data-mat="invar">إنفار (0.9×10⁻⁶)</button>
+        </div>
+      </div>
+
+      <!-- شريط فرق درجة الحرارة ΔT -->
+      <div class="control-group">
+        <div class="slider-header">
+          <label for="slider-dt">فرق درجة الحرارة (ΔT):</label>
+          <span class="slider-val hot-text" id="val-dt" dir="ltr">50 °C</span>
+        </div>
+        <input type="range" id="slider-dt" min="0" max="80" step="0.5" value="50" />
+        <div class="slider-Scale">
+          <span>0°C (اعتدال)</span>
+          <span>40°C</span>
+          <span>80°C (ذروة الحر)</span>
+        </div>
+      </div>
+
+      <!-- شريط الطول الابتدائي L0 (الطور 1 والطور 2) -->
+      <div class="control-group" id="group-l0">
+        <div class="slider-header">
+          <label for="slider-l0">الطول الكلي الابتدائي (L₀):</label>
+          <span class="slider-val" id="val-l0" dir="ltr">30.0 m</span>
+        </div>
+        <input type="range" id="slider-l0" min="10" max="100" step="1" value="30" />
+        <div class="slider-Scale">
+          <span>10 m</span>
+          <span>30 m (مسألة الدورة)</span>
+          <span>100 m</span>
+        </div>
+      </div>
+
+      <!-- شريط عرض فاصل التمدد الأوسط d_gap (الطور 1 فقط) -->
+      <div class="control-group" id="group-gap">
+        <div class="slider-header">
+          <label for="slider-gap">عرض فاصل التمدد الأوسط (d_gap):</label>
+          <span class="slider-val cyan-text" id="val-gap" dir="ltr">0.0 mm</span>
+        </div>
+        <input type="range" id="slider-gap" min="0" max="50" step="0.5" value="0" />
+        <div class="slider-Scale">
+          <span>0 mm (بدون فاصل)</span>
+          <span>18 mm (الحد الحرج)</span>
+          <span>50 mm</span>
+        </div>
+      </div>
+
+      <!-- شريط نصف القطر الابتدائي R0 (الطور 3 فقط) -->
+      <div class="control-group hidden" id="group-r0">
+        <div class="slider-header">
+          <label for="slider-r0">نصف القطر الابتدائي (R₀):</label>
+          <span class="slider-val" id="val-r0" dir="ltr">2.50 m</span>
+        </div>
+        <input type="range" id="slider-r0" min="1" max="5" step="0.1" value="2.5" />
+        <div class="slider-Scale">
+          <span>1.0 m</span>
+          <span>2.5 m</span>
+          <span>5.0 m</span>
+        </div>
+      </div>
+
+      <!-- شريط تكبير التشوه البصري في المشهد 3D -->
+      <div class="control-group">
+        <div class="slider-header">
+          <label for="slider-mag">معامل الإيضاح البصري 3D:</label>
+          <span class="slider-val" id="val-mag" dir="ltr">1.0× (حقيقي)</span>
+        </div>
+        <input type="range" id="slider-mag" min="1" max="10" step="0.5" value="1" />
+        <div class="slider-Scale">
+          <span>1× (مقياس هندسي)</span>
+          <span>5×</span>
+          <span>10× (مُكبّر للتوضيح)</span>
+        </div>
+      </div>
+
+      <!-- جدول معاملات التمدد الخطي المرجعي من كتاب الفيزياء -->
+      <details class="reference-table-box">
+        <summary>📋 جدول معاملات التمدد الخطي الوسطي (α)</summary>
+        <table class="alpha-table">
+          <thead>
+            <tr>
+              <th>المادة</th>
+              <th>α (× 10⁻⁶ °C⁻¹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr data-table-mat="aluminum"><td>الألمنيوم (Aluminum)</td><td dir="ltr">24</td></tr>
+            <tr data-table-mat="brass"><td>النحاس الأصفر والبرونز (Brass)</td><td dir="ltr">19</td></tr>
+            <tr data-table-mat="copper"><td>النحاس (Copper)</td><td dir="ltr">17</td></tr>
+            <tr data-table-mat="concrete"><td>الإسمنت / البيتون (Concrete)</td><td dir="ltr">12</td></tr>
+            <tr data-table-mat="exam_iron" class="highlight-row"><td>حديد مسألة الدورة الامتحانية</td><td dir="ltr">12</td></tr>
+            <tr data-table-mat="steel"><td>الفولاذ / الحديد (Steel)</td><td dir="ltr">11</td></tr>
+            <tr data-table-mat="glass"><td>الزجاج العادي (Ordinary Glass)</td><td dir="ltr">9</td></tr>
+            <tr data-table-mat="pyrex"><td>زجاج بيركس (Pyrex Glass)</td><td dir="ltr">3.2</td></tr>
+            <tr data-table-mat="invar"><td>سبيكة الإنفار (Invar Ni-Fe)</td><td dir="ltr">0.9</td></tr>
+          </tbody>
+        </table>
+      </details>
+    </div>
+  </aside>
+
+  <!-- لوحة الشاشات الرقمية والمعادلات الفورية (الجانب الأيسر / الأسفل) -->
+  <section class="telemetry-panel" aria-live="polite">
+    <!-- شارة الحالة الهندسية -->
+    <div class="status-banner danger" id="status-banner">
+      <span class="status-dot"></span>
+      <span id="status-text">تحذير إنشائي: الفاصل غير كافٍ — حدوث تطنب حراري نحو الأعلى!</span>
+    </div>
+
+    <!-- بطاقات القراءات الرقمية للطور 1 (التطنب) -->
+    <div id="readouts-buckling" class="readout-grid">
+      <div class="metric-card">
+        <span class="metric-title">الزيادة الطولية الكلية (ΔL)</span>
+        <strong class="metric-value" id="out-dl" dir="ltr">0.018 m (1.8 cm)</strong>
+        <span class="metric-sub" id="out-dl-mm" dir="ltr">= 18.00 mm</span>
+      </div>
+
+      <div class="metric-card">
+        <span class="metric-title">التمدد الفائض الفعّال (ΔL_eff)</span>
+        <strong class="metric-value cyan-text" id="out-dleff" dir="ltr">0.018 m (1.8 cm)</strong>
+        <span class="metric-sub" id="out-gap-status">الفاصل المتبقي: 0.0 mm</span>
+      </div>
+
+      <div class="metric-card highlight-card">
+        <span class="metric-title">ارتفاع التطنب الأوسط (h)</span>
+        <strong class="metric-value amber-text" id="out-h" dir="ltr">0.735 m (73.5 cm)</strong>
+        <span class="metric-sub" id="out-h-exact" dir="ltr">نصف المجاز الدقيق: 0.520 m (52.0 cm)</span>
+      </div>
+    </div>
+
+    <!-- بطاقات القراءات الرقمية للطور 2 (الخرسانة المسلحة) -->
+    <div id="readouts-concrete" class="readout-grid hidden">
+      <div class="metric-card">
+        <span class="metric-title">تمدد البيتون (ΔL_c)</span>
+        <strong class="metric-value" id="out-dlc" dir="ltr">18.00 mm</strong>
+        <span class="metric-sub" dir="ltr">α_c = 12 × 10⁻⁶ °C⁻¹</span>
+      </div>
+
+      <div class="metric-card">
+        <span class="metric-title">تمدد قضبان التسليح (ΔL_s)</span>
+        <strong class="metric-value cyan-text" id="out-dls" dir="ltr">16.50 mm</strong>
+        <span class="metric-sub" id="out-alphas-sub" dir="ltr">α_s = 11 × 10⁻⁶ °C⁻¹</span>
+      </div>
+
+      <div class="metric-card highlight-card">
+        <span class="metric-title">فرق الانفعال الحراري (Δε)</span>
+        <strong class="metric-value amber-text" id="out-strain" dir="ltr">0.50 × 10⁻⁴</strong>
+        <span class="metric-sub" id="out-crack-risk">انفعال تفاضلي ضئيل — توافق تام</span>
+      </div>
+    </div>
+
+    <!-- بطاقات القراءات الرقمية للطور 3 (القرص والسلك الدائري) -->
+    <div id="readouts-disc" class="readout-grid hidden">
+      <div class="metric-card">
+        <span class="metric-title">الزيادة في نصف القطر (ΔR)</span>
+        <strong class="metric-value" id="out-dr" dir="ltr">1.50 mm</strong>
+        <span class="metric-sub" id="out-r-new" dir="ltr">R = 2.5015 m</span>
+      </div>
+
+      <div class="metric-card">
+        <span class="metric-title">المحيط الابتدائي (C₀ = 2πR₀)</span>
+        <strong class="metric-value cyan-text" id="out-c0" dir="ltr">15.708 m</strong>
+        <span class="metric-sub">متطابق للقرص والحلقة</span>
+      </div>
+
+      <div class="metric-card highlight-card">
+        <span class="metric-title">الزيادة في المحيط (ΔC)</span>
+        <strong class="metric-value amber-text" id="out-dc" dir="ltr">9.42 mm (0.942 cm)</strong>
+        <span class="metric-sub">تباعد متساوٍ لذرات المحيط</span>
+      </div>
+    </div>
+
+    <!-- صندوق المعادلات الفيزيائية الحية -->
+    <div class="equation-box">
+      <div class="eq-title">📐 العلاقات الرياضية الفيزيائية والتعويض العددي الفوري:</div>
+      <div id="equation-content" class="eq-content" dir="ltr">
+        <!-- يتم تحديثه ديناميكياً من الجافاسكريبت -->
+      </div>
+    </div>
+  </section>
+
+  <!-- تلميح التحكم بالكاميرا في أسفل الشاشة -->
+  <div class="camera-hint">
+    <span>🖱️ تدوير المشهد: سحب بالزر الأيسر</span>
+    <span>•</span>
+    <span>🔍 تقريب/إبعاد: عجلة الفأرة</span>
+    <span>•</span>
+    <span>✋ تحريك: سحب بالزر الأيمن</span>
+  </div>
+
+  <script>
+		const ThermalBucklingApp = {
+		// جدول معاملات التمدد الخطي الوسطي (α بواحدة C^-1 أو K^-1)
+		materials: {
+		exam_iron: { name: 'حديد مسألة الدورة الامتحانية', alpha: 12e-6, baseColor: 0x64748b },
+		aluminum:  { name: 'الألمنيوم (Aluminum)', alpha: 24e-6, baseColor: 0xcbd5e1 },
+		brass:     { name: 'النحاس الأصفر والبرونز (Brass)', alpha: 19e-6, baseColor: 0xd97706 },
+		copper:    { name: 'النحاس (Copper)', alpha: 17e-6, baseColor: 0xb45309 },
+		concrete:  { name: 'الإسمنت / البيتون (Concrete)', alpha: 12e-6, baseColor: 0x94a3b8 },
+		steel:     { name: 'الفولاذ / الحديد (Steel)', alpha: 11e-6, baseColor: 0x475569 },
+		glass:     { name: 'الزجاج العادي (Ordinary Glass)', alpha: 9e-6, baseColor: 0x38bdf8 },
+		pyrex:     { name: 'زجاج بيركس (Pyrex Glass)', alpha: 3.2e-6, baseColor: 0x7dd3fc },
+		invar:     { name: 'سبيكة الإنفار (Invar Ni-Fe)', alpha: 0.9e-6, baseColor: 0x334155 }
+		},
+
+		// حالة المحاكاة الحالية
+		state: {
+		mode: 'buckling',         // 'buckling' | 'concrete' | 'disc'
+		materialKey: 'exam_iron', // المادة المختارة
+		L0: 30.0,                 // الطول الابتدائي الكلي بالمتر (الافتراضي 30 m)
+		dT: 50.0,                 // فرق درجة الحرارة المئوية (الافتراضي 50 °C)
+		dGapMm: 0.0,              // عرض فاصل التمدد الأوسط بالميليمتر (الافتراضي 0 mm)
+		R0: 2.5,                  // نصف القطر الابتدائي للقرص والحلقة (الطور 3)
+		visualMag: 1.0,           // معامل الإيضاح البصري
+		isPlaying: false,         // حالة التشغيل التلقائي للتسخين
+		playDirection: 1,
+		clockTime: 0
+		},
+
+		// مراجع كائنات Three.js
+		scene: null,
+		camera: null,
+		renderer: null,
+		controls: null,
+
+		// مجموعات الأطوار الثلاثة في المشهد 3D
+		groups: {
+		buckling: null,
+		concrete: null,
+		disc: null
+		},
+
+		// عناصر الطور 1 (تطنب السكك والجسور)
+		bucklingObjs: {
+		leftRailGroup: null,
+		rightRailGroup: null,
+		leftAbutment: null,
+		rightAbutment: null,
+		triangleLines: null,
+		triangleFill: null,
+		jointMarker: null,
+		railMaterial: null,
+		labelHypotenuse: null,
+		labelBase: null,
+		labelHeight: null
+		},
+
+		// عناصر الطور 2 (توافق الخرسانة المسلحة)
+		concreteObjs: {
+		concreteShell: null,
+		rebarsGroup: null,
+		stirrupsGroup: null,
+		cracksGroup: null,
+		rebarMaterial: null,
+		stressGlowMaterial: null,
+		labelConcrete: null,
+		labelRebar: null
+		},
+
+		// عناصر الطور 3 (برهان القرص والسلك الدائري)
+		discObjs: {
+		solidDiscMesh: null,
+		wireRingMesh: null,
+		discAtoms: [],
+		ringAtoms: [],
+		innerDiscAtoms: [],
+		discMaterial: null,
+		ringMaterial: null,
+		labelDisc: null,
+		labelRing: null
+		},
+
+		/**
+		* نقطة البداية وتهيئة التطبيق
+		*/
+		init() {
+		this.initThreeScene();
+		this.buildBucklingMode();
+		this.buildConcreteMode();
+		this.buildDiscMode();
+		this.bindUIEvents();
+		this.updateSimulation();
+		this.animate();
+		},
+
+		/**
+		* إعداد المشهد ثلاثي الأبعاد والإضاءة والأرضية الشبكية
+		*/
+		initThreeScene() {
+		const container = document.getElementById('canvas-container');
+
+		this.scene = new THREE.Scene();
+		this.scene.background = new THREE.Color(0x0f172a);
+		this.scene.fog = new THREE.FogExp2(0x0f172a, 0.012);
+
+		this.camera = new THREE.PerspectiveCamera(
+		45,
+		window.innerWidth / window.innerHeight,
+		0.1,
+		500
+		);
+		this.camera.position.set(0, 7.5, 22);
+
+		this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+		this.renderer.setSize(window.innerWidth, window.innerHeight);
+		this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+		this.renderer.shadowMap.enabled = true;
+		this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+		container.appendChild(this.renderer.domElement);
+
+		this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+		this.controls.enableDamping = true;
+		this.controls.dampingFactor = 0.06;
+		this.controls.maxPolarAngle = Math.PI / 2 - 0.02;
+		this.controls.minDistance = 4;
+		this.controls.maxDistance = 85;
+		this.controls.target.set(0, 1.5, 0);
+
+		// إضاءة محيطية وهندسية احترافية
+		const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.65);
+		this.scene.add(ambientLight);
+
+		const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.1);
+		dirLight1.position.set(18, 28, 20);
+		dirLight1.castShadow = true;
+		dirLight1.shadow.mapSize.width = 2048;
+		dirLight1.shadow.mapSize.height = 2048;
+		this.scene.add(dirLight1);
+
+		const dirLight2 = new THREE.DirectionalLight(0x38bdf8, 0.45);
+		dirLight2.position.set(-20, 12, -15);
+		this.scene.add(dirLight2);
+
+		// أرضية شبكية هندسية THREE.GridHelper
+		const gridHelper = new THREE.GridHelper(90, 90, 0x38bdf8, 0x1e293b);
+		gridHelper.position.y = 0;
+		this.scene.add(gridHelper);
+
+		// سطح أرضية خافت تحت الشبكة
+		const groundGeo = new THREE.PlaneGeometry(120, 120);
+		const groundMat = new THREE.MeshStandardMaterial({
+		color: 0x090f1d,
+		roughness: 0.9,
+		metalness: 0.1
+		});
+		const groundMesh = new THREE.Mesh(groundGeo, groundMat);
+		groundMesh.rotation.x = -Math.PI / 2;
+		groundMesh.position.y = -0.02;
+		groundMesh.receiveShadow = true;
+		this.scene.add(groundMesh);
+
+		// إنشاء مجموعات الأطوار الثلاثة
+		this.groups.buckling = new THREE.Group();
+		this.groups.concrete = new THREE.Group();
+		this.groups.disc = new THREE.Group();
+
+		this.scene.add(this.groups.buckling);
+		this.scene.add(this.groups.concrete);
+		this.scene.add(this.groups.disc);
+
+		this.groups.concrete.visible = false;
+		this.groups.disc.visible = false;
+
+		window.addEventListener('resize', () => this.onWindowResize());
+		},
+
+		/**
+		* أداة مساعدة لإنشاء لافتات نصية ثلاثية الأبعاد (Canvas Texture Sprites)
+		*/
+		createTextSprite(text, bgColor = 'rgba(15, 23, 42, 0.9)', borderColor = '#38bdf8', textColor = '#ffffff') {
+		const canvas = document.createElement('canvas');
+		canvas.width = 512;
+		canvas.height = 128;
+		const ctx = canvas.getContext('2d');
+
+		const texture = new THREE.CanvasTexture(canvas);
+		texture.minFilter = THREE.LinearFilter;
+
+		const spriteMaterial = new THREE.SpriteMaterial({
+		map: texture,
+		depthTest: false,
+		transparent: true
+		});
+		const sprite = new THREE.Sprite(spriteMaterial);
+		sprite.scale.set(4.2, 1.05, 1);
+		sprite.renderOrder = 999;
+
+		sprite.userData.updateText = (newText, newBorder = borderColor, newTextCol = textColor) => {
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+		// خلفية مستديرة الزوايا
+		ctx.fillStyle = bgColor;
+		ctx.strokeStyle = newBorder;
+		ctx.lineWidth = 5;
+		const r = 22;
+		ctx.beginPath();
+		ctx.moveTo(r, 10);
+		ctx.lineTo(canvas.width - r, 10);
+		ctx.quadraticCurveTo(canvas.width - 10, 10, canvas.width - 10, r);
+		ctx.lineTo(canvas.width - 10, canvas.height - r);
+		ctx.quadraticCurveTo(canvas.width - 10, canvas.height - 10, canvas.width - r, canvas.height - 10);
+		ctx.lineTo(r, canvas.height - 10);
+		ctx.quadraticCurveTo(10, canvas.height - 10, 10, canvas.height - r);
+		ctx.lineTo(10, r);
+		ctx.quadraticCurveTo(10, 10, r, 10);
+		ctx.closePath();
+		ctx.fill();
+		ctx.stroke();
+
+		// كتابة النص
+		ctx.font = 'bold 34px Tajawal, Arial, sans-serif';
+		ctx.fillStyle = newTextCol;
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+		ctx.fillText(newText, canvas.width / 2, canvas.height / 2);
+
+		texture.needsUpdate = true;
+		};
+
+		sprite.userData.updateText(text);
+		return sprite;
+		},
+
+		/**
+		* بناء الطور 1: تطنب السكك الحديدية والجسور 3D (مسألة الدورة الامتحانية)
+		*/
+		buildBucklingMode() {
+		const group = this.groups.buckling;
+
+		// 1. فرشة الحصى تحت السكة (Ballast Bed)
+		const ballastGeo = new THREE.BoxGeometry(24, 0.35, 3.2);
+		const ballastMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.95 });
+		const ballast = new THREE.Mesh(ballastGeo, ballastMat);
+		ballast.position.set(0, 0.175, 0);
+		ballast.receiveShadow = true;
+		group.add(ballast);
+
+		// 2. الركائز الخرسانية الطرفية الثابتة (Left & Right Concrete Abutments)
+		const abutmentGeo = new THREE.BoxGeometry(1.8, 2.2, 3.6);
+		const abutmentMat = new THREE.MeshStandardMaterial({
+		color: 0x475569,
+		roughness: 0.75,
+		metalness: 0.1
+		});
+
+		this.bucklingObjs.leftAbutment = new THREE.Mesh(abutmentGeo, abutmentMat);
+		this.bucklingObjs.leftAbutment.position.set(-10.9, 1.1, 0);
+		this.bucklingObjs.leftAbutment.castShadow = true;
+		group.add(this.bucklingObjs.leftAbutment);
+
+		this.bucklingObjs.rightAbutment = new THREE.Mesh(abutmentGeo, abutmentMat);
+		this.bucklingObjs.rightAbutment.position.set(10.9, 1.1, 0);
+		this.bucklingObjs.rightAbutment.castShadow = true;
+		group.add(this.bucklingObjs.rightAbutment);
+
+		// 3. مادة القضبان الفولاذية (تتلون حرارياً مع ارتفاع ΔT)
+		this.bucklingObjs.railMaterial = new THREE.MeshStandardMaterial({
+		color: 0x64748b,
+		metalness: 0.78,
+		roughness: 0.28,
+		emissive: 0x000000,
+		emissiveIntensity: 0.25
+		});
+
+		// دالة مساعدة لبناء نصف سكة حديدية مع العوارض (طول مرجعي 10 وحدات)
+		const createHalfTrackSegment = (isLeft) => {
+		const segGroup = new THREE.Group();
+		const baseLen = 10.0;
+		const dir = isLeft ? 1 : -1;
+
+		// قضيبان متوازيان بمقطع I-Beam مبسط
+		const railGeo = new THREE.BoxGeometry(baseLen, 0.28, 0.16);
+		const flangeGeo = new THREE.BoxGeometry(baseLen, 0.08, 0.32);
+
+		[-0.75, 0.75].forEach((zPos) => {
+		const railWeb = new THREE.Mesh(railGeo, this.bucklingObjs.railMaterial);
+		railWeb.position.set((dir * baseLen) / 2, 0.14, zPos);
+		railWeb.castShadow = true;
+		segGroup.add(railWeb);
+
+		const topFlange = new THREE.Mesh(flangeGeo, this.bucklingObjs.railMaterial);
+		topFlange.position.set((dir * baseLen) / 2, 0.28, zPos);
+		segGroup.add(topFlange);
+
+		const botFlange = new THREE.Mesh(flangeGeo, this.bucklingObjs.railMaterial);
+		botFlange.position.set((dir * baseLen) / 2, 0.02, zPos);
+		segGroup.add(botFlange);
+		});
+
+		// عوارض السكة (Sleepers)
+		const sleeperGeo = new THREE.BoxGeometry(0.32, 0.14, 2.3);
+		const sleeperMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.8 });
+		for (let i = 1; i <= 9; i++) {
+		const sleeper = new THREE.Mesh(sleeperGeo, sleeperMat);
+		sleeper.position.set(dir * (i * 1.05), -0.04, 0);
+		sleeper.castShadow = true;
+		segGroup.add(sleeper);
+		}
+
+		return segGroup;
+		};
+
+		this.bucklingObjs.leftRailGroup = createHalfTrackSegment(true);
+		this.bucklingObjs.leftRailGroup.position.set(-10, 0.45, 0);
+		group.add(this.bucklingObjs.leftRailGroup);
+
+		this.bucklingObjs.rightRailGroup = createHalfTrackSegment(false);
+		this.bucklingObjs.rightRailGroup.position.set(10, 0.45, 0);
+		group.add(this.bucklingObjs.rightRailGroup);
+
+		// 4. كرة مضيئة عند المفصل الأوسط (توضح نقطة التطنب)
+		const jointGeo = new THREE.SphereGeometry(0.24, 24, 24);
+		const jointMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+		this.bucklingObjs.jointMarker = new THREE.Mesh(jointGeo, jointMat);
+		group.add(this.bucklingObjs.jointMarker);
+
+		// 5. أضلاع المثلث القائم في الفضاء ثلاثي الأبعاد + تعبئة شفافة للمثلث
+		const triPositions = new Float32Array(12); // 4 نقاط لإغلاق المثلث القائم
+		const triGeo = new THREE.BufferGeometry();
+		triGeo.setAttribute('position', new THREE.BufferAttribute(triPositions, 3));
+		const triLineMat = new THREE.LineBasicMaterial({ color: 0xfbbf24, linewidth: 3 });
+		this.bucklingObjs.triangleLines = new THREE.Line(triGeo, triLineMat);
+		group.add(this.bucklingObjs.triangleLines);
+
+		const fillPositions = new Float32Array(9);
+		const fillGeo = new THREE.BufferGeometry();
+		fillGeo.setAttribute('position', new THREE.BufferAttribute(fillPositions, 3));
+		const fillMat = new THREE.MeshBasicMaterial({
+		color: 0xf59e0b,
+		transparent: true,
+		opacity: 0.18,
+		side: THREE.DoubleSide
+		});
+		this.bucklingObjs.triangleFill = new THREE.Mesh(fillGeo, fillMat);
+		group.add(this.bucklingObjs.triangleFill);
+
+		// 6. لافتات أطوال أضلاع المثلث القائم في المشهد 3D
+		this.bucklingObjs.labelBase = this.createTextSprite('L₀ / 2 = 15.00 m', 'rgba(15,23,42,0.92)', '#38bdf8');
+		this.bucklingObjs.labelHypotenuse = this.createTextSprite('(L₀ + ΔL)/2 = 15.009 m', 'rgba(15,23,42,0.92)', '#fbbf24');
+		this.bucklingObjs.labelHeight = this.createTextSprite('h = 0.735 m (73.5 cm)', 'rgba(15,23,42,0.95)', '#ef4444');
+
+		group.add(this.bucklingObjs.labelBase);
+		group.add(this.bucklingObjs.labelHypotenuse);
+		group.add(this.bucklingObjs.labelHeight);
+		},
+
+		/**
+		* بناء الطور 2: توافق الخرسانة المسلحة 3D (البيتون وقضبان التسليح)
+		*/
+		buildConcreteMode() {
+		const group = this.groups.concrete;
+
+		// ركيزتان سفليتان للجائز البيتوني
+		const pedestalGeo = new THREE.BoxGeometry(1.4, 1.4, 2.8);
+		const pedestalMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.8 });
+		const leftPed = new THREE.Mesh(pedestalGeo, pedestalMat);
+		leftPed.position.set(-7.5, 0.7, 0);
+		const rightPed = new THREE.Mesh(pedestalGeo, pedestalMat);
+		rightPed.position.set(7.5, 0.7, 0);
+		group.add(leftPed, rightPed);
+
+		// الجائز البيتوني الشفاف جزئياً (Concrete Beam)
+		const beamGeo = new THREE.BoxGeometry(16, 2.4, 2.2);
+		const beamMat = new THREE.MeshPhysicalMaterial({
+		color: 0x94a3b8,
+		transparent: true,
+		opacity: 0.36,
+		roughness: 0.35,
+		transmission: 0.25,
+		depthWrite: false
+		});
+		this.concreteObjs.concreteShell = new THREE.Mesh(beamGeo, beamMat);
+		this.concreteObjs.concreteShell.position.set(0, 2.6, 0);
+		group.add(this.concreteObjs.concreteShell);
+
+		// حواف خارجية للجائز البيتوني لوضوح الشكل الهندسي
+		const edgesGeo = new THREE.EdgesGeometry(beamGeo);
+		const edgesMat = new THREE.LineBasicMaterial({ color: 0xcbd5e1, transparent: true, opacity: 0.5 });
+		const beamEdges = new THREE.LineSegments(edgesGeo, edgesMat);
+		this.concreteObjs.concreteShell.add(beamEdges);
+
+		// قضبان التسليح الطولية الـ 4 بداخل البيتون
+		this.concreteObjs.rebarsGroup = new THREE.Group();
+		this.concreteObjs.rebarsGroup.position.set(0, 2.6, 0);
+		group.add(this.concreteObjs.rebarsGroup);
+
+		this.concreteObjs.rebarMaterial = new THREE.MeshStandardMaterial({
+		color: 0x475569,
+		metalness: 0.85,
+		roughness: 0.25
+		});
+
+		const rebarGeo = new THREE.CylinderGeometry(0.11, 0.11, 15.6, 20);
+		rebarGeo.rotateZ(Math.PI / 2);
+
+		const rebarOffsets = [
+		[-0.75, -0.65],
+		[-0.75,  0.65],
+		[ 0.75, -0.65],
+		[ 0.75,  0.65]
+		];
+
+		rebarOffsets.forEach(([yOff, zOff]) => {
+		const bar = new THREE.Mesh(rebarGeo, this.concreteObjs.rebarMaterial);
+		bar.position.set(0, yOff, zOff);
+		this.concreteObjs.rebarsGroup.add(bar);
+		});
+
+		// الأساور العرضية (Stirrups)
+		this.concreteObjs.stirrupsGroup = new THREE.Group();
+		this.concreteObjs.stirrupsGroup.position.set(0, 2.6, 0);
+		group.add(this.concreteObjs.stirrupsGroup);
+
+		const stirrupMat = new THREE.LineBasicMaterial({ color: 0x64748b });
+		for (let x = -7; x <= 7; x += 1.4) {
+		const pts = [
+		new THREE.Vector3(x, -0.8, -0.7),
+		new THREE.Vector3(x,  0.8, -0.7),
+		new THREE.Vector3(x,  0.8,  0.7),
+		new THREE.Vector3(x, -0.8,  0.7),
+		new THREE.Vector3(x, -0.8, -0.7)
+		];
+		const stGeo = new THREE.BufferGeometry().setFromPoints(pts);
+		this.concreteObjs.stirrupsGroup.add(new THREE.Line(stGeo, stirrupMat));
+		}
+
+		// مجموعة الشقوق الحرارية الحمراء ثلاثية الأبعاد (تظهر عند عدم التوافق الحراري)
+		this.concreteObjs.cracksGroup = new THREE.Group();
+		this.concreteObjs.cracksGroup.position.set(0, 2.6, 0);
+		group.add(this.concreteObjs.cracksGroup);
+
+		const crackMat = new THREE.LineBasicMaterial({ color: 0xef4444, linewidth: 3 });
+		for (let i = -6; i <= 6; i += 1.5) {
+		const crackPts = [
+		new THREE.Vector3(i, -1.18, 1.11),
+		new THREE.Vector3(i + 0.22, -0.5, 1.11),
+		new THREE.Vector3(i - 0.18, 0.15, 1.11),
+		new THREE.Vector3(i + 0.15, 0.85, 1.11),
+		new THREE.Vector3(i, 1.18, 1.11)
+		];
+		const crackGeo = new THREE.BufferGeometry().setFromPoints(crackPts);
+		this.concreteObjs.cracksGroup.add(new THREE.Line(crackGeo, crackMat));
+
+		// شقوق على الوجه الخلفي والعلوي أيضاً
+		const backCrackPts = crackPts.map(v => new THREE.Vector3(v.x, v.y, -1.11));
+		const backGeo = new THREE.BufferGeometry().setFromPoints(backCrackPts);
+		this.concreteObjs.cracksGroup.add(new THREE.Line(backGeo, crackMat));
+		}
+
+		// لافتات توضيحية في المشهد 3D
+		this.concreteObjs.labelConcrete = this.createTextSprite('بيتون مسلح: α_c = 12 × 10⁻⁶ °C⁻¹', 'rgba(15,23,42,0.9)', '#94a3b8');
+		this.concreteObjs.labelConcrete.position.set(0, 4.7, 0);
+		group.add(this.concreteObjs.labelConcrete);
+
+		this.concreteObjs.labelRebar = this.createTextSprite('التسليح الداخلي', 'rgba(15,23,42,0.9)', '#38bdf8');
+		this.concreteObjs.labelRebar.position.set(0, 0.65, 1.8);
+		group.add(this.concreteObjs.labelRebar);
+		},
+
+		/**
+		* بناء الطور 3: برهان القرص المصمت والسلك الدائري المفرغ 3D
+		*/
+		buildDiscMode() {
+		const group = this.groups.disc;
+
+		this.discObjs.discMaterial = new THREE.MeshStandardMaterial({
+		color: 0x0284c7,
+		metalness: 0.55,
+		roughness: 0.3,
+		transparent: true,
+		opacity: 0.85
+		});
+
+		this.discObjs.ringMaterial = new THREE.MeshStandardMaterial({
+		color: 0x0284c7,
+		metalness: 0.65,
+		roughness: 0.25
+		});
+
+		// 1. القرص الدائري المصمت على اليمين (x = -5.2)
+		const discGeo = new THREE.CylinderGeometry(3.2, 3.2, 0.28, 64);
+		this.discObjs.solidDiscMesh = new THREE.Mesh(discGeo, this.discObjs.discMaterial);
+		this.discObjs.solidDiscMesh.position.set(-5.2, 2.2, 0);
+		this.discObjs.solidDiscMesh.rotation.x = Math.PI / 5;
+		group.add(this.discObjs.solidDiscMesh);
+
+		// دائرة مرجعية متقطعة لنصف القطر الابتدائي للقرص
+		const refRingGeo = new THREE.RingGeometry(3.17, 3.22, 64);
+		refRingGeo.rotateX(-Math.PI / 2);
+		const refMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.5 });
+		const refDiscCircle = new THREE.Mesh(refRingGeo, refMat);
+		refDiscCircle.position.set(-5.2, 2.2, 0);
+		refDiscCircle.rotation.x = Math.PI / 5;
+		group.add(refDiscCircle);
+
+		// 2. حلقة السلك الدائري المفرغ على اليسار (x = +5.2)
+		const torusGeo = new THREE.TorusGeometry(3.2, 0.14, 24, 80);
+		torusGeo.rotateX(Math.PI / 2);
+		this.discObjs.wireRingMesh = new THREE.Mesh(torusGeo, this.discObjs.ringMaterial);
+		this.discObjs.wireRingMesh.position.set(5.2, 2.2, 0);
+		this.discObjs.wireRingMesh.rotation.x = Math.PI / 5;
+		group.add(this.discObjs.wireRingMesh);
+
+		const refWireCircle = new THREE.Mesh(refRingGeo.clone(), refMat);
+		refWireCircle.position.set(5.2, 2.2, 0);
+		refWireCircle.rotation.x = Math.PI / 5;
+		group.add(refWireCircle);
+
+		// 3. ذرات المحيط المضيئة (20 ذرة على محيط القرص و20 ذرة على محيط الحلقة)
+		const atomGeo = new THREE.SphereGeometry(0.16, 16, 16);
+		const atomMat = new THREE.MeshStandardMaterial({
+		color: 0xfbbf24,
+		emissive: 0xf59e0b,
+		emissiveIntensity: 0.85
+		});
+
+		const numAtoms = 20;
+		for (let i = 0; i < numAtoms; i++) {
+      const angle = (i / numAtoms) * Math.PI * 2;
+
+      const atomD = new THREE.Mesh(atomGeo, atomMat);
+      atomD.userData.angle = angle;
+      this.discObjs.solidDiscMesh.add(atomD);
+      this.discObjs.discAtoms.push(atomD);
+
+      const atomR = new THREE.Mesh(atomGeo, atomMat);
+      atomR.userData.angle = angle;
+      this.discObjs.wireRingMesh.add(atomR);
+      this.discObjs.ringAtoms.push(atomR);
+    }
+
+    // ذرات داخلية للقرص المصمت لتوضيح التمدد المتماثل من المركز
+    const innerAtomGeo = new THREE.SphereGeometry(0.11, 12, 12);
+    const innerAtomMat = new THREE.MeshStandardMaterial({
+      color: 0x38bdf8,
+      emissive: 0x0284c7,
+      emissiveIntensity: 0.6
+    });
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      const innerAtom = new THREE.Mesh(innerAtomGeo, innerAtomMat);
+      innerAtom.userData.angle = angle;
+      this.discObjs.solidDiscMesh.add(innerAtom);
+      this.discObjs.innerDiscAtoms.push(innerAtom);
+    }
+
+    // لافتات ثلاثية الأبعاد للقرص والحلقة
+    this.discObjs.labelDisc = this.createTextSprite('قرص دائري مصمت (R₀)', 'rgba(15,23,42,0.92)', '#38bdf8');
+    this.discObjs.labelDisc.position.set(-5.2, 5.4, 0);
+    group.add(this.discObjs.labelDisc);
+
+    this.discObjs.labelRing = this.createTextSprite('حلقة سلك دائري مفرغ (R₀)', 'rgba(15,23,42,0.92)', '#fbbf24');
+    this.discObjs.labelRing.position.set(5.2, 5.4, 0);
+    group.add(this.discObjs.labelRing);
+  },
+
+  /**
+   * ربط عناصر واجهة المستخدم بالأحداث
+   */
+  bindUIEvents() {
+    // تبديل الأطوار الثلاثة
+    document.querySelectorAll('.mode-tab').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.mode-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.switchMode(btn.dataset.mode);
+      });
+    });
+
+    // قائمة اختيار المادة
+    const matSelect = document.getElementById('material-select');
+    matSelect.addEventListener('change', (e) => {
+      this.state.materialKey = e.target.value;
+      this.syncQuickChips();
+      this.updateSimulation();
+    });
+
+    // النقر على صفوف الجدول المرجعي لاختيار المادة مباشرة
+    document.querySelectorAll('[data-table-mat]').forEach((row) => {
+      row.addEventListener('click', () => {
+        const key = row.getAttribute('data-table-mat');
+        this.state.materialKey = key;
+        matSelect.value = key;
+        this.syncQuickChips();
+        this.updateSimulation();
+      });
+    });
+
+    // أزرار الاختيار السريع لمادة التسليح في الطور 2
+    document.querySelectorAll('.chip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const key = chip.getAttribute('data-mat');
+        this.state.materialKey = key;
+        matSelect.value = key;
+        this.syncQuickChips();
+        this.updateSimulation();
+      });
+    });
+
+    // أشرطة التمرير
+    const bindSlider = (id, stateProp) => {
+      const el = document.getElementById(id);
+      el.addEventListener('input', (e) => {
+        this.state[stateProp] = parseFloat(e.target.value);
+        this.updateSimulation();
+      });
+    };
+
+    bindSlider('slider-dt', 'dT');
+    bindSlider('slider-l0', 'L0');
+    bindSlider('slider-gap', 'dGapMm');
+    bindSlider('slider-r0', 'R0');
+    bindSlider('slider-mag', 'visualMag');
+
+    // زر بدء / إيقاف المحاكاة الحرارية
+    document.getElementById('btn-play-pause').addEventListener('click', () => {
+      this.state.isPlaying = !this.state.isPlaying;
+      document.getElementById('play-icon').textContent = this.state.isPlaying ? '⏸' : '▶';
+      document.getElementById('play-text').textContent = this.state.isPlaying ? 'إيقاف مؤقت' : 'بدء المحاكاة';
+    });
+
+    // زر ضبط قيم مسألة الدورة الامتحانية
+    document.getElementById('btn-exam-preset').addEventListener('click', () => {
+      this.applyExamPreset();
+    });
+
+    // زر إعادة الضبط
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      this.state.isPlaying = false;
+      document.getElementById('play-icon').textContent = '▶';
+      document.getElementById('play-text').textContent = 'بدء المحاكاة';
+      this.applyExamPreset();
+    });
+
+    // زر طي لوحة التحكم في الشاشات الصغيرة
+    document.getElementById('btn-toggle-panel').addEventListener('click', () => {
+      const body = document.querySelector('.panel-body');
+      body.classList.toggle('hidden');
+    });
+  },
+
+  /**
+   * مزامنة أزرار الاختيار السريع في الطور 2
+   */
+  syncQuickChips() {
+    document.querySelectorAll('.chip').forEach((chip) => {
+      chip.classList.toggle('active', chip.getAttribute('data-mat') === this.state.materialKey);
+    });
+  },
+
+  /**
+   * تطبيق الإعداد الافتراضي لمسألة الدورة الامتحانية:
+   * (L0 = 30 m, ΔT = 50°C, α = 12 × 10^-6, d_gap = 0)
+   */
+  applyExamPreset() {
+    this.state.materialKey = 'exam_iron';
+    this.state.L0 = 30.0;
+    this.state.dT = 50.0;
+    this.state.dGapMm = 0.0;
+    this.state.R0 = 2.5;
+    this.state.visualMag = 1.0;
+
+    document.getElementById('material-select').value = 'exam_iron';
+    document.getElementById('slider-l0').value = 30;
+    document.getElementById('slider-dt').value = 50;
+    document.getElementById('slider-gap').value = 0;
+    document.getElementById('slider-r0').value = 2.5;
+    document.getElementById('slider-mag').value = 1;
+
+    this.syncQuickChips();
+    this.updateSimulation();
+  },
+
+  /**
+   * التبديل بين الأطوار الثلاثة في المشهد 3D والواجهة
+   */
+  switchMode(newMode) {
+    this.state.mode = newMode;
+
+    this.groups.buckling.visible = (newMode === 'buckling');
+    this.groups.concrete.visible = (newMode === 'concrete');
+    this.groups.disc.visible = (newMode === 'disc');
+
+    // إظهار/إخفاء عناصر التحكم الخاصة بكل طور
+    document.getElementById('group-l0').classList.toggle('hidden', newMode === 'disc');
+    document.getElementById('group-gap').classList.toggle('hidden', newMode !== 'buckling');
+    document.getElementById('group-r0').classList.toggle('hidden', newMode !== 'disc');
+    document.getElementById('rebar-quick-group').classList.toggle('hidden', newMode !== 'concrete');
+
+    // إظهار بطاقات القراءات المناسبة
+    document.getElementById('readouts-buckling').classList.toggle('hidden', newMode !== 'buckling');
+    document.getElementById('readouts-concrete').classList.toggle('hidden', newMode !== 'concrete');
+    document.getElementById('readouts-disc').classList.toggle('hidden', newMode !== 'disc');
+
+    // إذا انتقل الطالب للطور 2 وكان على حديد الدورة، نضبط الفولاذ الافتراضي لتجربة التوافق
+    if (newMode === 'concrete' && this.state.materialKey === 'exam_iron') {
+		this.state.materialKey = 'steel';
+		document.getElementById('material-select').value = 'steel';
+		this.syncQuickChips();
+		}
+
+		this.updateSimulation();
+		},
+
+		/**
+		* حساب اللون الحراري التدريجي مع ارتفاع ΔT
+		*/
+		computeThermalColor(baseHex, dT) {
+		const tRatio = Math.min(Math.max(dT / 80, 0), 1);
+		const baseCol = new THREE.Color(baseHex);
+		const hotCol = new THREE.Color(0xea580c); // برتقالي محمر متوهج
+		return baseCol.clone().lerp(hotCol, tRatio * 0.72);
+		},
+
+		/**
+		* التحديث الشامل للحسابات الفيزيائية والمجسمات ثلاثية الأبعاد
+		*/
+		updateSimulation() {
+		const mat = this.materials[this.state.materialKey];
+		const alpha = mat.alpha;
+		const L0 = this.state.L0;
+		const dT = this.state.dT;
+		const dGapM = this.state.dGapMm / 1000.0; // تحويل الفاصل من mm إلى m
+		const mag = this.state.visualMag;
+
+		// تحديث النصوص بجانب أشرطة التمرير
+		document.getElementById('alpha-readout').textContent = `${(alpha * 1e6).toFixed(1)} × 10⁻⁶ °C⁻¹`;
+		document.getElementById('val-dt').textContent = `${dT.toFixed(1)} °C`;
+		document.getElementById('val-l0').textContent = `${L0.toFixed(1)} m`;
+		document.getElementById('val-gap').textContent = `${this.state.dGapMm.toFixed(1)} mm`;
+		document.getElementById('val-r0').textContent = `${this.state.R0.toFixed(2)} m`;
+		document.getElementById('val-mag').textContent = mag === 1 ? '1.0× (حقيقي)' : `${mag.toFixed(1)}×`;
+
+		// تشغيل التحديث الخاص بالطور الفعال
+		if (this.state.mode === 'buckling') {
+		this.updateBucklingPhysics(alpha, L0, dT, dGapM, mag, mat);
+		} else if (this.state.mode === 'concrete') {
+		this.updateConcretePhysics(alpha, L0, dT, mag, mat);
+		} else if (this.state.mode === 'disc') {
+		this.updateDiscPhysics(alpha, this.state.R0, dT, mag, mat);
+		}
+		},
+
+		/**
+		* حسابات وتحديث الطور 1: تطنب السكك الحديدية والجسور 3D
+		*/
+		updateBucklingPhysics(alpha, L0, dT, dGapM, mag, mat) {
+		// 1. الزيادة الكلية في الطول ΔL = α × L0 × ΔT
+		const dL = alpha * L0 * dT;
+		const dL_cm = dL * 100;
+		const dL_mm = dL * 1000;
+
+		// 2. فحص شرط فاصل التمدد
+		const isSafe = dGapM >= dL - 1e-9;
+		const dL_eff = isSafe ? 0 : (dL - dGapM);
+		const remainingGapMm = Math.max(0, (dGapM - dL) * 1000);
+
+		// 3. حساب ارتفاع التطنب h من المثلث القائم
+		// الصيغة الدقيقة لنصف المجاز: h_half = sqrt( ((L0 + ΔL_eff)/2)^2 - (L0/2)^2 )
+		const halfBase = L0 / 2.0;
+		const halfHypotenuse = (L0 + dL_eff) / 2.0;
+		const h_half = isSafe ? 0 : Math.sqrt(Math.max(0, halfHypotenuse * halfHypotenuse - halfBase * halfBase));
+
+		// صيغة سلم تصحيح مسألة الدورة الامتحانية التي تعطي 0.735 m (73.5 cm) عند (L0=30, ΔT=50, α=12e-6):
+		// h_exam = sqrt( (L0/2 + ΔL_eff)^2 - (L0/2)^2 ) ≈ sqrt(L0 * ΔL_eff)
+		const examHyp = halfBase + dL_eff;
+		const h_exam = isSafe ? 0 : Math.sqrt(Math.max(0, examHyp * examHyp - halfBase * halfBase));
+
+		// تحديث الشاشات الرقمية
+		document.getElementById('out-dl').textContent = `${dL.toFixed(3)} m (${dL_cm.toFixed(1)} cm)`;
+		document.getElementById('out-dl-mm').textContent = `= ${dL_mm.toFixed(2)} mm`;
+
+		document.getElementById('out-dleff').textContent = `${dL_eff.toFixed(3)} m (${(dL_eff * 100).toFixed(1)} cm)`;
+		document.getElementById('out-gap-status').textContent = isSafe
+		? `الفاصل المتبقي الآمن: ${remainingGapMm.toFixed(2)} mm`
+		: `تجاوز الفاصل بمقدار: ${(dL_eff * 1000).toFixed(2)} mm`;
+
+		document.getElementById('out-h').textContent = `${h_exam.toFixed(3)} m (${(h_exam * 100).toFixed(1)} cm)`;
+		document.getElementById('out-h-exact').textContent = `نصف المجاز: ${h_half.toFixed(3)} m (${(h_half * 100).toFixed(1)} cm)`;
+
+		// تحديث شارة الحالة
+		const banner = document.getElementById('status-banner');
+		const statusText = document.getElementById('status-text');
+		if (isSafe) {
+		banner.className = 'status-banner safe';
+		statusText.textContent = `حالة آمنة إنشائياً (d_gap ≥ ΔL): يتمدد القضيبان أفقياً بأمان داخل الفاصل (h = 0).`;
+		} else {
+		banner.className = 'status-banner danger';
+		statusText.textContent = `خطر تطنب حراري (d_gap < ΔL): ارتفاع المفصل الأوسط h = ${(h_exam * 100).toFixed(1)} cm نحو الأعلى!`;
+    }
+
+    // تحديث صندوق المعادلات الحية
+    document.getElementById('equation-content').innerHTML = `
+      <div class="eq-line">
+			<span>ΔL = α × L₀ × ΔT = ${alpha.toExponential(1)} × ${L0} × ${dT}</span>
+			<span class="eq-highlight">= ${dL.toFixed(4)} m (${dL_cm.toFixed(2)} cm)</span>
+		</div>
+		<div class="eq-line">
+			<span>ΔL_eff = max(0, ΔL - d_gap)</span>
+			<span>= ${dL_eff.toFixed(4)} m</span>
+		</div>
+		<div class="eq-line">
+			<span>h = √( ((L₀ + ΔL_eff)/2)² - (L₀/2)² )</span>
+			<span class="eq-highlight">h = ${h_exam.toFixed(3)} m (${(h_exam * 100).toFixed(1)} cm)</span>
+		</div>
+		`;
+
+		// 4. تحديث المشهد ثلاثي الأبعاد للطور 1
+		const baseY = 0.45;
+		const halfSpan3D = 10.0; // نصف طول السكة في المشهد 3D = 10 وحدات
+		const scale3D = halfSpan3D / halfBase;
+
+		// ارتفاع التطنب في الفضاء ثلاثي الأبعاد
+		const h3D = h_exam * scale3D * mag;
+		const angle3D = Math.atan2(h3D, halfSpan3D);
+		const hyp3D = Math.sqrt(halfSpan3D * halfSpan3D + h3D * h3D);
+
+		// فجوة الفاصل الأوسط في حال الأمان
+		const visualGapHalf = isSafe
+		? Math.min(0.45, ((dGapM - dL) * 1000) * 0.008 * mag)
+		: 0;
+
+		const effectiveRun = halfSpan3D - visualGapHalf;
+		const scaleRatio = isSafe ? (effectiveRun / 10.0) : (hyp3D / 10.0);
+
+		// تدوير وتمديد نصفي السكة
+		this.bucklingObjs.leftRailGroup.rotation.z = angle3D;
+		this.bucklingObjs.leftRailGroup.scale.x = scaleRatio;
+
+		this.bucklingObjs.rightRailGroup.rotation.z = -angle3D;
+		this.bucklingObjs.rightRailGroup.scale.x = scaleRatio;
+
+		// موقع المفصل الأوسط
+		this.bucklingObjs.jointMarker.position.set(0, baseY + h3D, 0);
+		this.bucklingObjs.jointMarker.visible = !isSafe;
+
+		// تدرج لون المعدن حرارياً مع ارتفاع ΔT
+		const thermalCol = this.computeThermalColor(mat.baseColor, dT);
+		this.bucklingObjs.railMaterial.color.copy(thermalCol);
+		this.bucklingObjs.railMaterial.emissive.setHex(dT > 25 ? 0x9a3412 : 0x000000);
+		this.bucklingObjs.railMaterial.emissiveIntensity = Math.max(0, (dT - 20) / 120);
+
+		// تحديث رسم أضلاع المثلث القائم في المشهد 3D
+		const showTriangle = !isSafe && h3D > 0.02;
+		this.bucklingObjs.triangleLines.visible = showTriangle;
+		this.bucklingObjs.triangleFill.visible = showTriangle;
+		this.bucklingObjs.labelBase.visible = showTriangle;
+		this.bucklingObjs.labelHypotenuse.visible = showTriangle;
+		this.bucklingObjs.labelHeight.visible = showTriangle;
+
+		if (showTriangle) {
+		const zPlane = 1.25; // إزاحة المثلث قليلاً للأمام ليظهر بوضوح أمام السكة
+		const pLeft = new THREE.Vector3(-halfSpan3D, baseY, zPlane);
+		const pMidBase = new THREE.Vector3(0, baseY, zPlane);
+		const pTop = new THREE.Vector3(0, baseY + h3D, zPlane);
+
+		const linePos = this.bucklingObjs.triangleLines.geometry.attributes.position.array;
+		[pLeft, pMidBase, pTop, pLeft].forEach((pt, idx) => {
+		linePos[idx * 3]     = pt.x;
+		linePos[idx * 3 + 1] = pt.y;
+		linePos[idx * 3 + 2] = pt.z;
+		});
+		this.bucklingObjs.triangleLines.geometry.attributes.position.needsUpdate = true;
+
+		const fillPos = this.bucklingObjs.triangleFill.geometry.attributes.position.array;
+		[pLeft, pMidBase, pTop].forEach((pt, idx) => {
+		fillPos[idx * 3]     = pt.x;
+		fillPos[idx * 3 + 1] = pt.y;
+		fillPos[idx * 3 + 2] = pt.z;
+		});
+		this.bucklingObjs.triangleFill.geometry.attributes.position.needsUpdate = true;
+
+		// تحديث مواقع ونصوص لافتات المثلث القائم
+		this.bucklingObjs.labelBase.position.set(-halfSpan3D / 2, baseY - 0.55, zPlane);
+		this.bucklingObjs.labelBase.userData.updateText(`L₀/2 = ${halfBase.toFixed(2)} m`, '#38bdf8');
+
+		this.bucklingObjs.labelHypotenuse.position.set(-halfSpan3D / 2 - 0.4, baseY + h3D / 2 + 0.65, zPlane);
+		this.bucklingObjs.labelHypotenuse.userData.updateText(`الوتر = ${halfHypotenuse.toFixed(4)} m`, '#fbbf24');
+
+		this.bucklingObjs.labelHeight.position.set(2.4, baseY + h3D / 2, zPlane);
+		this.bucklingObjs.labelHeight.userData.updateText(`h = ${h_exam.toFixed(3)} m (${(h_exam * 100).toFixed(1)} cm)`, '#ef4444');
+		}
+		},
+
+		/**
+		* حسابات وتحديث الطور 2: توافق الخرسانة المسلحة 3D (البيتون وقضبان التسليح)
+		*/
+		updateConcretePhysics(alpha_s, L0, dT, mag, rebarMat) {
+		const alpha_c = 12e-6; // معامل تمدد البيتون ثابت = 12 × 10^-6 C^-1
+		const dL_c_mm = alpha_c * L0 * dT * 1000;
+		const dL_s_mm = alpha_s * L0 * dT * 1000;
+
+		// فرق الانفعال الحراري Δε = |α_c - α_s| × ΔT
+		const diffStrain = Math.abs(alpha_c - alpha_s) * dT;
+		// حد التشقق الحراري للبيتون (حوالي 1.2 × 10^-4)
+		const isCracked = diffStrain > 1.2e-4;
+
+		// تحديث الشاشات الرقمية
+		document.getElementById('out-dlc').textContent = `${dL_c_mm.toFixed(2)} mm`;
+		document.getElementById('out-dls').textContent = `${dL_s_mm.toFixed(2)} mm`;
+		document.getElementById('out-alphas-sub').textContent = `α_s = ${(alpha_s * 1e6).toFixed(1)} × 10⁻⁶ °C⁻¹`;
+		document.getElementById('out-strain').textContent = `${(diffStrain * 1e4).toFixed(2)} × 10⁻⁴`;
+
+		const banner = document.getElementById('status-banner');
+		const statusText = document.getElementById('status-text');
+		const riskSub = document.getElementById('out-crack-risk');
+
+		if (!isCracked) {
+		banner.className = 'status-banner safe';
+		statusText.textContent = `توافق حراري ممتاز (${rebarMat.name}): يتمدد البيتون والتسليح معاً دون تشققات.`;
+		riskSub.textContent = 'توافق آمن — لا توجد شقوق حرارية';
+		} else {
+		banner.className = 'status-banner danger';
+		statusText.textContent = `عدم توافق حراري خطر (${rebarMat.name}): نشوء إجهادات داخلية وشقوق حرارية في البيتون!`;
+		riskSub.textContent = 'خطر: تجاوز حد الشد للبيتون وحدوث تشقق!';
+		}
+
+		// تحديث المعادلات
+		document.getElementById('equation-content').innerHTML = `
+		<div class="eq-line">
+			<span>α_concrete = 12 × 10⁻⁶ °C⁻¹  |  α_rebar = ${(alpha_s * 1e6).toFixed(1)} × 10⁻⁶ °C⁻¹</span>
+			<span>ΔT = ${dT.toFixed(1)} °C</span>
+		</div>
+		<div class="eq-line">
+			<span>Δε = |α_c - α_s| × ΔT = |12 - ${(alpha_s * 1e6).toFixed(1)}|×10⁻⁶ × ${dT}</span>
+			<span class="eq-highlight">Δε = ${(diffStrain * 1e4).toFixed(2)} × 10⁻⁴</span>
+		</div>
+		<div class="eq-line">
+			<span>فرق الاستطالة |ΔL_s - ΔL_c|</span>
+			<span class="eq-highlight">= ${Math.abs(dL_s_mm - dL_c_mm).toFixed(2)} mm</span>
+		</div>
+		`;
+
+		// تحديث المشهد ثلاثي الأبعاد للطور 2
+		const scaleC = 1 + (alpha_c * dT * 180 * mag);
+		const scaleS = 1 + (alpha_s * dT * 180 * mag);
+
+		this.concreteObjs.concreteShell.scale.x = scaleC;
+		this.concreteObjs.rebarsGroup.scale.x = scaleS;
+
+		// تلوين قضبان التسليح وإظهار الشقوق الحرارية الحمراء ثلاثية الأبعاد
+		const rebarColor = isCracked ? new THREE.Color(0xef4444) : this.computeThermalColor(rebarMat.baseColor, dT);
+		this.concreteObjs.rebarMaterial.color.copy(rebarColor);
+		this.concreteObjs.rebarMaterial.emissive.setHex(isCracked ? 0xdc2626 : 0x000000);
+		this.concreteObjs.rebarMaterial.emissiveIntensity = isCracked ? 0.65 : 0;
+
+		this.concreteObjs.cracksGroup.visible = isCracked;
+		this.concreteObjs.labelRebar.userData.updateText(
+		`التسليح: ${rebarMat.name} (Δε = ${(diffStrain * 1e4).toFixed(2)}×10⁻⁴)`,
+		isCracked ? '#ef4444' : '#10b981'
+		);
+		},
+
+		/**
+		* حسابات وتحديث الطور 3: برهان القرص المصمت والسلك الدائري المفرغ 3D
+		*/
+		updateDiscPhysics(alpha, R0, dT, mag, mat) {
+		const dR = R0 * alpha * dT;
+		const R_new = R0 + dR;
+		const C0 = 2 * Math.PI * R0;
+		const dC = 2 * Math.PI * R0 * alpha * dT;
+
+		// تحديث الشاشات الرقمية
+		document.getElementById('out-dr').textContent = `${(dR * 1000).toFixed(2)} mm`;
+		document.getElementById('out-r-new').textContent = `R = ${R_new.toFixed(4)} m`;
+		document.getElementById('out-c0').textContent = `${C0.toFixed(3)} m`;
+		document.getElementById('out-dc').textContent = `${(dC * 1000).toFixed(2)} mm (${(dC * 100).toFixed(3)} cm)`;
+
+		const banner = document.getElementById('status-banner');
+		const statusText = document.getElementById('status-text');
+		banner.className = 'status-banner safe';
+		statusText.textContent = `برهان فيزيائي: يتمدد محيط السلك الدائري المفرغ ومحيط القرص المصمت بنفس المقدار تماماً ΔC = ${(dC * 1000).toFixed(2)} mm!`;
+
+		document.getElementById('equation-content').innerHTML = `
+		<div class="eq-line">
+			<span>ΔR = R₀ × α × ΔT = ${R0} × ${alpha.toExponential(1)} × ${dT}</span>
+			<span class="eq-highlight">= ${(dR * 1000).toFixed(3)} mm</span>
+		</div>
+		<div class="eq-line">
+			<span>C₀ = 2π R₀ = ${C0.toFixed(4)} m</span>
+			<span>R = R₀(1 + αΔT)</span>
+		</div>
+		<div class="eq-line">
+			<span>ΔC = 2π R₀ α ΔT (للحلقة والقرص معاً)</span>
+			<span class="eq-highlight">ΔC = ${(dC * 1000).toFixed(2)} mm</span>
+		</div>
+		`;
+
+		// تحديث المشهد ثلاثي الأبعاد للطور 3
+		// تكبير بصري للتمدد الشعاعي ليلاحظ الطالب تباعد ذرات المحيط بوضوح
+		const visualFactor = 1 + (alpha * dT * 140 * mag);
+		this.discObjs.solidDiscMesh.scale.set(visualFactor, 1, visualFactor);
+		this.discObjs.wireRingMesh.scale.set(visualFactor, 1, visualFactor);
+
+		const thermalCol = this.computeThermalColor(0x0284c7, dT);
+		this.discObjs.discMaterial.color.copy(thermalCol);
+		this.discObjs.ringMaterial.color.copy(thermalCol);
+
+		// تحديث مواضع كرات ذرات المحيط المضيئة
+		const baseRadius = 3.2;
+		this.discObjs.discAtoms.forEach((atom) => {
+		const ang = atom.userData.angle;
+		atom.position.set(Math.cos(ang) * baseRadius, 0.18, Math.sin(ang) * baseRadius);
+		});
+
+		this.discObjs.ringAtoms.forEach((atom) => {
+		const ang = atom.userData.angle;
+		atom.position.set(Math.cos(ang) * baseRadius, 0.18, Math.sin(ang) * baseRadius);
+		});
+
+		this.discObjs.innerDiscAtoms.forEach((atom) => {
+		const ang = atom.userData.angle;
+		atom.position.set(Math.cos(ang) * (baseRadius * 0.55), 0.18, Math.sin(ang) * (baseRadius * 0.55));
+		});
+
+		this.discObjs.labelDisc.userData.updateText(`قرص مصمت: ΔC = ${(dC * 1000).toFixed(2)} mm`, '#38bdf8');
+		this.discObjs.labelRing.userData.updateText(`حلقة مفرغة: ΔC = ${(dC * 1000).toFixed(2)} mm`, '#fbbf24');
+		},
+
+		/**
+		* التعامل مع تغيير حجم نافذة المتصفح
+		*/
+		onWindowResize() {
+		this.camera.aspect = window.innerWidth / window.innerHeight;
+		this.camera.updateProjectionMatrix();
+		this.renderer.setSize(window.innerWidth, window.innerHeight);
+		},
+
+		/**
+		* حلقة التحريك المستمرة (Animation Loop)
+		*/
+		animate() {
+		requestAnimationFrame(() => this.animate());
+
+		this.state.clockTime += 0.025;
+
+		// في حال تفعيل التشغيل التلقائي للمحاكاة الحرارية
+		if (this.state.isPlaying) {
+		this.state.dT += this.state.playDirection * 0.25;
+		if (this.state.dT >= 80) {
+		this.state.dT = 80;
+		this.state.playDirection = -1;
+		} else if (this.state.dT <= 0) {
+		this.state.dT = 0;
+		this.state.playDirection = 1;
+		}
+		document.getElementById('slider-dt').value = this.state.dT;
+		this.updateSimulation();
+		}
+
+		// نبض بصري خفيف للشقوق الحرارية أو مفصل التطنب
+		if (this.state.mode === 'buckling' && this.bucklingObjs.jointMarker) {
+		const pulse = 1 + 0.12 * Math.sin(this.state.clockTime * 4);
+		this.bucklingObjs.jointMarker.scale.set(pulse, pulse, pulse);
+		}
+
+		this.controls.update();
+		this.renderer.render(this.scene, this.camera);
+		}
+		};
+
+		// تشغيل المختبر فور جاهزية الصفحة
+		window.addEventListener('DOMContentLoaded', () => {
+		ThermalBucklingApp.init();
+		});
+	</script>
+</body>
+</html>

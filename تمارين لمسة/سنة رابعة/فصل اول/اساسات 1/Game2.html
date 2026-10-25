@@ -1,0 +1,2186 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مختبر هندسة الأساسات 1 التفاعلي | Three.js WebGL</title>
+    <!-- خط تجوال من Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <!-- مكتبات Three.js r128 و OrbitControls عبر روابط CDN المباشرة الإلزامية -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.92);
+            --card-bg: rgba(15, 23, 42, 0.85);
+            --border-color: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-blue: #38bdf8;
+            --accent-indigo: #6366f1;
+            --safe-green: #10b981;
+            --fail-red: #ef4444;
+            --warn-yellow: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Tajawal', sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* الشريط العلوي والتبويبات */
+        header {
+            height: 68px;
+            background: rgba(15, 23, 42, 0.96);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 20;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-badge {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo));
+            color: #fff;
+            font-weight: 800;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
+        }
+
+        .brand h1 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .mode-tabs {
+            display: flex;
+            gap: 12px;
+        }
+
+        .tab-btn {
+            background: #1e293b;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-btn:hover {
+            border-color: var(--accent-blue);
+            color: var(--text-main);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #0284c7, #4f46e5);
+            color: #ffffff;
+            border-color: #38bdf8;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.35);
+        }
+
+        .sim-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: #1e293b;
+            color: var(--text-main);
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .action-btn.primary {
+            background: var(--safe-green);
+            border-color: #059669;
+            color: #042f2e;
+        }
+
+        .action-btn.warn {
+            background: var(--warn-yellow);
+            border-color: #d97706;
+            color: #451a03;
+        }
+
+        .action-btn:hover {
+            filter: brightness(1.12);
+            transform: translateY(-1px);
+        }
+
+        /* تخطيط مساحة العمل */
+        .workspace {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 390px 1fr 370px;
+            height: calc(100vh - 68px);
+            position: relative;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border-left: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            padding: 14px;
+            overflow-y: auto;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+        }
+
+        .panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .panel::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+
+        /* حاوية المشهد ثلاثي الأبعاد */
+        .viewport-area {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
+        }
+
+        #webgl-container {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* طبقات الواجهة فوق الـ 3D */
+        .viewport-overlay-top {
+            position: relative;
+            z-index: 5;
+            padding: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+        }
+
+        .badge-box {
+            pointer-events: auto;
+            background: rgba(15, 23, 42, 0.88);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 10px 14px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+        }
+
+        .viewport-overlay-bottom {
+            position: relative;
+            z-index: 5;
+            padding: 12px 16px;
+            background: linear-gradient(to top, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.75));
+            border-top: 1px solid var(--border-color);
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        /* تصميم البطاقات وعناصر الإدخال */
+        .section-title {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--accent-blue);
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .sub-switch {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            background: #090d16;
+            padding: 5px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .sub-btn {
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            padding: 8px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .sub-btn.active {
+            background: #1e293b;
+            color: var(--accent-blue);
+            border: 1px solid #38bdf8;
+        }
+
+        .control-group {
+            margin-bottom: 10px;
+        }
+
+        .control-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.84rem;
+            margin-bottom: 4px;
+        }
+
+        .control-val {
+            font-weight: 800;
+            color: var(--accent-blue);
+            direction: ltr;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent-blue);
+            cursor: pointer;
+            height: 6px;
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        select {
+            width: 100%;
+            background: #1e293b;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 7px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            outline: none;
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(56, 189, 248, 0.08);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            padding: 8px 10px;
+            border-radius: 8px;
+            margin-top: 8px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .checkbox-row input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--safe-green);
+            cursor: pointer;
+        }
+
+        /* بطاقات التحقق الهندسي (Telemetry Cards) */
+        .check-card {
+            background: var(--card-bg);
+            border-right: 4px solid var(--border-color);
+            border-top: 1px solid var(--border-color);
+            border-left: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 9px;
+            transition: 0.2s;
+        }
+
+        .check-card.safe {
+            border-right-color: var(--safe-green);
+            background: rgba(16, 185, 129, 0.06);
+        }
+
+        .check-card.fail {
+            border-right-color: var(--fail-red);
+            background: rgba(239, 68, 68, 0.09);
+        }
+
+        .check-card.warn {
+            border-right-color: var(--warn-yellow);
+            background: rgba(245, 158, 11, 0.08);
+        }
+
+        .check-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 700;
+            font-size: 0.86rem;
+            margin-bottom: 4px;
+        }
+
+        .status-pill {
+            font-size: 0.73rem;
+            padding: 2px 8px;
+            border-radius: 99px;
+            font-weight: 800;
+        }
+
+        .status-pill.safe { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .status-pill.fail { background: rgba(239, 68, 68, 0.25); color: #f87171; }
+        .status-pill.warn { background: rgba(245, 158, 11, 0.25); color: #fbbf24; }
+
+        .math-line {
+            font-size: 0.78rem;
+            color: #cbd5e1;
+            direction: ltr;
+            text-align: left;
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.35);
+            padding: 4px 7px;
+            border-radius: 5px;
+            margin-top: 4px;
+            overflow-x: auto;
+        }
+
+        /* شبكة المهمات الست في التمرين الثاني */
+        .mission-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .mission-btn {
+            background: #1e293b;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 8px 4px;
+            border-radius: 7px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            transition: 0.2s;
+        }
+
+        .mission-btn.active {
+            background: rgba(56, 189, 248, 0.18);
+            color: #fff;
+            border-color: var(--accent-blue);
+        }
+
+        .mission-btn.solved {
+            border-color: var(--safe-green);
+            color: #34d399;
+        }
+
+        .alert-banner {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid var(--fail-red);
+            color: #fecaca;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.83rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .alert-banner.solved {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: var(--safe-green);
+            color: #a7f3d0;
+        }
+
+        .bottom-stat {
+            background: rgba(30, 41, 59, 0.85);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 10px;
+        }
+
+        .bottom-stat .label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .bottom-stat .val {
+            font-size: 0.96rem;
+            font-weight: 800;
+            color: var(--accent-blue);
+            direction: ltr;
+            text-align: right;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- الشريط العلوي -->
+    <header>
+        <div class="brand">
+            <span class="brand-badge">هندسة الأساسات 1</span>
+            <h1>المحاكي التفاعلي لتصميم وإنقاذ الأساسات السطحية</h1>
+        </div>
+
+        <div class="mode-tabs">
+            <button id="tab-golden" class="tab-btn active" onclick="PhysicsExpLab.switchExercise('golden_thickness')">
+                <span>🏆</span>
+                <span>تحدي السُمك الذهبي (التصميم الأمثل)</span>
+            </button>
+            <button id="tab-rescue" class="tab-btn" onclick="PhysicsExpLab.switchExercise('rescue_lab')">
+                <span>🛠️</span>
+                <span>مختبر الإنقاذ الإنشائي (صائد الأخطاء الـ 6)</span>
+            </button>
+        </div>
+
+        <div class="sim-controls">
+            <button id="btn-toggle-load" class="action-btn primary" onclick="PhysicsExpLab.toggleSimulation()">▶ تطبيق الأحمال</button>
+            <button class="action-btn warn" onclick="PhysicsExpLab.reset()">↺ إعادة تعيين</button>
+        </div>
+    </header>
+
+    <!-- مساحة العمل الرئيسية -->
+    <div class="workspace">
+
+        <!-- اللوحة اليمنى: المدخلات والتحكم -->
+        <aside class="panel" id="right-control-panel">
+
+            <!-- واجهة تحكم التمرين الأول: تحدي السُمك الذهبي -->
+            <div id="controls-golden">
+                <div class="section-title">
+                    <span>1. نوع الأساس والسيناريو</span>
+                    <button class="action-btn" style="padding:3px 8px; font-size:0.75rem;" onclick="PhysicsExpLab.applyGoldenOptimal()">الحل الذهبي تلقائياً ✨</button>
+                </div>
+
+                <div class="sub-switch">
+                    <button id="btn-type-rc" class="sub-btn active" onclick="PhysicsExpLab.setFootingType('reinforced')">أساس منفرد مسلح (RC)</button>
+                    <button id="btn-type-plain" class="sub-btn" onclick="PhysicsExpLab.setFootingType('plain')">بيتون عادي / مغموس</button>
+                </div>
+
+                <div class="card">
+                    <div class="control-group">
+                        <div class="control-header">
+                            <span>الحمل الميت (D<sub>L</sub>)</span>
+                            <span class="control-val" id="val-dl">120 t</span>
+                        </div>
+                        <input type="range" id="inp-dl" min="30" max="140" step="5" value="120" oninput="PhysicsExpLab.onGoldenInput()">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-header">
+                            <span>الحمل الحي (L<sub>L</sub>)</span>
+                            <span class="control-val" id="val-ll">30 t</span>
+                        </div>
+                        <input type="range" id="inp-ll" min="10" max="40" step="2" value="30" oninput="PhysicsExpLab.onGoldenInput()">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-header">
+                            <span>قدرة تحمل التربة (S<sub>all</sub>)</span>
+                            <span class="control-val" id="val-sall">3.0 kg/cm² (30 t/m²)</span>
+                        </div>
+                        <input type="range" id="inp-sall" min="1.5" max="3.5" step="0.1" value="3.0" oninput="PhysicsExpLab.onGoldenInput()">
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                        <div>
+                            <div class="control-header"><span>f'<sub>c</sub> (kg/cm²)</span></div>
+                            <select id="inp-fc" onchange="PhysicsExpLab.onGoldenInput()">
+                                <option value="200" selected>200 kg/cm²</option>
+                                <option value="180">180 kg/cm²</option>
+                                <option value="150">150 kg/cm²</option>
+                            </select>
+                        </div>
+                        <div>
+                            <div class="control-header"><span>f<sub>y</sub> (kg/cm²)</span></div>
+                            <select id="inp-fy" onchange="PhysicsExpLab.onGoldenInput()">
+                                <option value="4000" selected>4000 kg/cm²</option>
+                                <option value="3600">3600 kg/cm²</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="font-size:0.76rem; color:var(--text-muted); margin-top:6px;">
+                        أبعاد العمود المعتمدة: b = 40 cm × l = 50 cm (غطاء خرساني 5 cm)
+                    </div>
+                </div>
+
+                <div class="section-title">
+                    <span>2. أبعاد القاعدة والسماكة (متغيرات التصميم)</span>
+                </div>
+
+                <div class="card">
+                    <div class="control-group">
+                        <div class="control-header">
+                            <span>عرض القاعدة (B)</span>
+                            <span class="control-val" id="val-B">2.30 m</span>
+                        </div>
+                        <input type="range" id="inp-B" min="1.20" max="4.00" step="0.05" value="2.30" oninput="PhysicsExpLab.onGoldenInput()">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-header">
+                            <span>طول القاعدة (L)</span>
+                            <span class="control-val" id="val-L">2.40 m</span>
+                        </div>
+                        <input type="range" id="inp-L" min="1.20" max="4.00" step="0.05" value="2.40" oninput="PhysicsExpLab.onGoldenInput()">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-header">
+                            <span>السماكة الكلية (H) [d = H - 5]</span>
+                            <span class="control-val" id="val-H">55 cm (d=50cm)</span>
+                        </div>
+                        <input type="range" id="inp-H" min="25" max="250" step="5" value="55" oninput="PhysicsExpLab.onGoldenInput()">
+                    </div>
+                </div>
+
+                <div id="rc-steel-controls" class="card">
+                    <div class="section-title" style="margin-bottom:8px;"><span>3. تفاصيل التسليح والانغراس</span></div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                        <div>
+                            <div class="control-header"><span>قطر القضيب (Φ)</span></div>
+                            <select id="inp-phi" onchange="PhysicsExpLab.onGoldenInput()">
+                                <option value="10">Φ 10 mm (مرفوض)</option>
+                                <option value="12">Φ 12 mm</option>
+                                <option value="14" selected>Φ 14 mm</option>
+                                <option value="16">Φ 16 mm</option>
+                                <option value="18">Φ 18 mm</option>
+                                <option value="20">Φ 20 mm</option>
+                            </select>
+                        </div>
+                        <div>
+                            <div class="control-header"><span>عدد القضبان / م</span></div>
+                            <input type="range" id="inp-bars" min="5" max="14" step="1" value="8" oninput="PhysicsExpLab.onGoldenInput()">
+                            <div style="text-align:left; font-size:0.78rem; color:var(--accent-blue);" id="val-bars">8 Φ 14 / m</div>
+                        </div>
+                    </div>
+
+                    <label class="checkbox-row">
+                        <span>تفعيل العكفة الرأسية 90° (عندما c' &lt; l<sub>b,min</sub>)</span>
+                        <input type="checkbox" id="inp-hook" checked onchange="PhysicsExpLab.onGoldenInput()">
+                    </label>
+                </div>
+
+                <div id="plain-concrete-controls" class="card hidden">
+                    <div class="section-title" style="margin-bottom:8px;"><span>3. خيار البيتون غير المسلح</span></div>
+                    <select id="inp-plain-mode" onchange="PhysicsExpLab.onGoldenInput()">
+                        <option value="cyclopean" selected>بيتون مغموس (يشترط α ≥ 63°)</option>
+                        <option value="plain">بيتون عادي (يشترط α ≥ 50°)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- واجهة تحكم التمرين الثاني: مختبر الإنقاذ الإنشائي -->
+            <div id="controls-rescue" class="hidden">
+                <div class="section-title">
+                    <span>مهمات الإنقاذ الإنشائي الـ 6</span>
+                    <span id="rescue-progress-text" style="font-size:0.8rem; color:#34d399;">0 / 6 مكتمل</span>
+                </div>
+
+                <div class="mission-grid">
+                    <button class="mission-btn active" id="mbtn-1" onclick="PhysicsExpLab.selectMission(1)">1. التحويلات</button>
+                    <button class="mission-btn" id="mbtn-2" onclick="PhysicsExpLab.selectMission(2)">2. الحمولات</button>
+                    <button class="mission-btn" id="mbtn-3" onclick="PhysicsExpLab.selectMission(3)">3. الوزن 1.1</button>
+                    <button class="mission-btn" id="mbtn-4" onclick="PhysicsExpLab.selectMission(4)">4. المجسات</button>
+                    <button class="mission-btn" id="mbtn-5" onclick="PhysicsExpLab.selectMission(5)">5. اللامركزية</button>
+                    <button class="mission-btn" id="mbtn-6" onclick="PhysicsExpLab.selectMission(6)">6. الالتحام</button>
+                </div>
+
+                <div id="mission-alert" class="alert-banner">
+                    تشخيص الخلل جارٍ...
+                </div>
+
+                <!-- أدوات المهمة 1 -->
+                <div id="mission-ui-1" class="card">
+                    <div class="section-title"><span>المهمة 1: معايرة معاملات تحويل الوحدات</span></div>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">
+                        المعادلات مدخلة بدون معاملات تحويل مما جعل القاعدة تنهار حسابياً. اضبط المعاملات الثلاثة الصحيحة:
+                    </p>
+                    <div class="control-group">
+                        <div class="control-header"><span>تحويل قدرة التربة S<sub>all</sub> (kg/cm² → t/m²)</span></div>
+                        <select id="m1-soil-factor" onchange="PhysicsExpLab.onRescueInput()">
+                            <option value="1">× 1 (بدون تحويل - خطأ)</option>
+                            <option value="10">× 10 (صحيح: 3 × 10 = 30 t/m²)</option>
+                            <option value="100">× 100</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <div class="control-header"><span>تحويل عزم الانعطاف M<sub>u</sub> (t.m → kg.cm)</span></div>
+                        <select id="m1-moment-factor" onchange="PhysicsExpLab.onRescueInput()">
+                            <option value="1">× 1 (بدون تحويل - خطأ)</option>
+                            <option value="1000">× 10³</option>
+                            <option value="100000">× 10⁵ (صحيح: طن.م إلى كغ.سم)</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <div class="control-header"><span>تحويل القص والثقب Q<sub>u</sub> (t → kg)</span></div>
+                        <select id="m1-shear-factor" onchange="PhysicsExpLab.onRescueInput()">
+                            <option value="1">× 1 (بدون تحويل - خطأ)</option>
+                            <option value="1000">× 10³ (صحيح: طن إلى كغ)</option>
+                            <option value="100000">× 10⁵</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- أدوات المهمة 2 -->
+                <div id="mission-ui-2" class="card hidden">
+                    <div class="section-title"><span>المهمة 2: توجيه الحمولات الاستثمارية والمصعدة</span></div>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">
+                        تم الخلط بين الحمولات الاستثمارية والحمولات المصعدة. صحح مسار توجيه الأحمال:
+                    </p>
+                    <div class="control-group">
+                        <div class="control-header"><span>الحمولة المستخدمة لحساب مساحة القاعدة (A<sub>min</sub>)</span></div>
+                        <select id="m2-area-load" onchange="PhysicsExpLab.onRescueInput()">
+                            <option value="Pu">P_u = 1.4 DL + 1.7 LL (خطأ: مساحة مبالغ فيها)</option>
+                            <option value="Ntotal">N_total = 1.1 (DL + LL) (صحيح: استثمارية شاملة)</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <div class="control-header"><span>الحمولة المستخدمة لحساب S<sub>net</sub> والعزم والقص</span></div>
+                        <select id="m2-strength-load" onchange="PhysicsExpLab.onRescueInput()">
+                            <option value="Pservice">P_service = DL + LL (خطأ: مقطع غير آمن)</option>
+                            <option value="Pu">P_u = 1.4 DL + 1.7 LL (صحيح: حمولة حدية مصعدة)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- أدوات المهمة 3 -->
+                <div id="mission-ui-3" class="card hidden">
+                    <div class="section-title"><span>المهمة 3: فخ الوزن الذاتي والردم (1.1)</span></div>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">
+                        القاعدة تغوص لأن المصمم أهمل وزنها الذاتي (10%) عند حساب المساحة. صحح الإعدادات والأبعاد:
+                    </p>
+                    <label class="checkbox-row">
+                        <span>تفعيل معامل الوزن الذاتي (× 1.1) في معادلة المساحة A<sub>min</sub></span>
+                        <input type="checkbox" id="m3-inc-area" onchange="PhysicsExpLab.onRescueInput()">
+                    </label>
+                    <label class="checkbox-row">
+                        <span>خطأ شائع: ضرب P<sub>u</sub> بـ 1.1 مرة ثانية في S<sub>net</sub> (يجب إلغاؤه)</span>
+                        <input type="checkbox" id="m3-inc-snet" checked onchange="PhysicsExpLab.onRescueInput()">
+                    </label>
+                    <div class="control-group" style="margin-top:10px;">
+                        <div class="control-header">
+                            <span>تعديل ضلع القاعدة المربعة (B = L)</span>
+                            <span class="control-val" id="val-m3-B">2.20 m</span>
+                        </div>
+                        <input type="range" id="m3-B" min="2.00" max="2.60" step="0.05" value="2.20" oninput="PhysicsExpLab.onRescueInput()">
+                    </div>
+                </div>
+
+                <!-- أدوات المهمة 4 -->
+                <div id="mission-ui-4" class="card hidden">
+                    <div class="section-title"><span>المهمة 4: موضعة مجسات المقاطع الحرجة (d = 50 cm)</span></div>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">
+                        حرك المجسات الليزرية الثلاثة في المشهد ثلاثي الأبعاد لوضعها في مسافاتها الصحيحة مقاسة من وجه العمود:
+                    </p>
+                    <div class="control-group">
+                        <div class="control-header">
+                            <span>مجس عزم الانعطاف (M<sub>u</sub>) من وجه العمود</span>
+                            <span class="control-val" id="val-m4-moment">25 cm</span>
+                        </div>
+                        <input type="range" id="m4-probe-m" min="0" max="60" step="5" value="25" oninput="PhysicsExpLab.onRescueInput()">
+                    </div>
+                    <div class="control-group">
+                        <div class="control-header">
+                            <span>مجس الثقب غير المباشر (τ<sub>u</sub>) من وجه العمود</span>
+                            <span class="control-val" id="val-m4-punch">0 cm</span>
+                        </div>
+                        <input type="range" id="m4-probe-p" min="0" max="60" step="5" value="0" oninput="PhysicsExpLab.onRescueInput()">
+                    </div>
+                    <div class="control-group">
+                        <div class="control-header">
+                            <span>مجس القص الأحادي (τ) من وجه العمود</span>
+                            <span class="control-val" id="val-m4-shear">0 cm</span>
+                        </div>
+                        <input type="range" id="m4-probe-s" min="0" max="60" step="5" value="0" oninput="PhysicsExpLab.onRescueInput()">
+                    </div>
+                </div>
+
+                <!-- أدوات المهمة 5 -->
+                <div id="mission-ui-5" class="card hidden">
+                    <div class="section-title"><span>المهمة 5: اللامركزية والشد تحت القاعدة</span></div>
+                    <div class="sub-switch">
+                        <button id="m5-sub-strap" class="sub-btn active" onclick="PhysicsExpLab.setM5SubMode('strap')">عمود جوار ("رجل البطة")</button>
+                        <button id="m5-sub-comb" class="sub-btn" onclick="PhysicsExpLab.setM5SubMode('combined')">أساس مشترك لعمودين</button>
+                    </div>
+                    <div id="m5-strap-controls">
+                        <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:8px;">
+                            عمود جوار (40×80 سم)، حمل N=59.4t. يوجد شد وانقلاب (S<sub>min</sub> &lt; 0)! اضبط B=1.5l=1.20m و L≥2.30m:
+                        </p>
+                        <div class="control-group">
+                            <div class="control-header">
+                                <span>عرض القاعدة بالاتجاه اللامركزي (B)</span>
+                                <span class="control-val" id="val-m5-B">0.95 m</span>
+                            </div>
+                            <input type="range" id="m5-B" min="0.80" max="1.60" step="0.05" value="0.95" oninput="PhysicsExpLab.onRescueInput()">
+                        </div>
+                        <div class="control-group">
+                            <div class="control-header">
+                                <span>طول القاعدة الموازي لحد الملكية (L)</span>
+                                <span class="control-val" id="val-m5-L">1.80 m</span>
+                            </div>
+                            <input type="range" id="m5-L" min="1.50" max="2.80" step="0.05" value="1.80" oninput="PhysicsExpLab.onRescueInput()">
+                        </div>
+                    </div>
+                    <div id="m5-comb-controls" class="hidden">
+                        <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:8px;">
+                            أساس مشترك (P₁=50t, P₂=90t, المسافة S=3.5m). مركز القوى Xp=2.5m. اضبط الطول L = 2·Xp = 5.0m لمنع الدوران:
+                        </p>
+                        <div class="control-group">
+                            <div class="control-header">
+                                <span>الطول الكلي للأساس المشترك (L)</span>
+                                <span class="control-val" id="val-m5-combL">3.80 m</span>
+                            </div>
+                            <input type="range" id="m5-combL" min="3.60" max="5.60" step="0.10" value="3.80" oninput="PhysicsExpLab.onRescueInput()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- أدوات المهمة 6 -->
+                <div id="mission-ui-6" class="card hidden">
+                    <div class="section-title"><span>المهمة 6: التسليح الأدنى وطول الالتحام (رجل البطة)</span></div>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">
+                        في الاتجاه القصير لقاعدة الجوار (B=1.2m, H=50cm)، ينزلق التسليح لأن c'<sub>B</sub>=35cm &lt; l<sub>b,min</sub> والقطر 10mm. أنقذ القاعدة:
+                    </p>
+                    <div class="control-group">
+                        <div class="control-header"><span>قطر التسليح المختار (Φ)</span></div>
+                        <select id="m6-phi" onchange="PhysicsExpLab.onRescueInput()">
+                            <option value="10" selected>Φ 10 mm (مرفوض في الأساسات)</option>
+                            <option value="12">Φ 12 mm (مقبول ≥ 12mm)</option>
+                            <option value="14">Φ 14 mm (مقبول ≥ 12mm)</option>
+                        </select>
+                    </div>
+                    <label class="checkbox-row">
+                        <span>تفعيل شرط التسليح الأدنى (A<sub>s,min</sub> = 4.5 cm²/m بدلاً من 2.66)</span>
+                        <input type="checkbox" id="m6-asmin" onchange="PhysicsExpLab.onRescueInput()">
+                    </label>
+                    <label class="checkbox-row">
+                        <span>تمديد القضبان رأسياً بزاوية 90° بمقدار min(H/2, 30) = 25 cm</span>
+                        <input type="checkbox" id="m6-hook" onchange="PhysicsExpLab.onRescueInput()">
+                    </label>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- الوسط: المشهد ثلاثي الأبعاد والبطاقات السفلية -->
+        <main class="viewport-area">
+            <div id="webgl-container"></div>
+
+            <!-- شريط المعلومات العائم أعلى المشهد -->
+            <div class="viewport-overlay-top">
+                <div class="badge-box">
+                    <div style="font-size:0.78rem; color:var(--text-muted);">حالة النموذج الإنشائي ثلاثي الأبعاد</div>
+                    <div id="scene-status-title" style="font-size:1.05rem; font-weight:800; color:var(--safe-green);">آمن ومستقر إنشائياً</div>
+                </div>
+
+                <div class="badge-box" id="efficiency-box">
+                    <div style="font-size:0.78rem; color:var(--text-muted);">مؤشر الكفاءة الاقتصادية (السُمك الذهبي)</div>
+                    <div id="golden-score-val" style="font-size:1.05rem; font-weight:800; color:var(--accent-blue);">100% — مطابق للسُمك الذهبي</div>
+                </div>
+            </div>
+
+            <!-- شريط القراءات الهندسية الفورية أسفل المشهد -->
+            <div class="viewport-overlay-bottom">
+                <div class="bottom-stat">
+                    <div class="label">الحمولات (الاستثمارية / المصعدة)</div>
+                    <div class="val" id="stat-loads">N=165.0t | Pu=219.0t</div>
+                </div>
+                <div class="bottom-stat">
+                    <div class="label">المساحة (المطلوبة / الفعلية)</div>
+                    <div class="val" id="stat-area">Amin=5.50m² | A=5.52m²</div>
+                </div>
+                <div class="bottom-stat">
+                    <div class="label">الإجهاد الصافي المصعد (S<sub>net</sub>)</div>
+                    <div class="val" id="stat-snet">39.67 t/m²</div>
+                </div>
+                <div class="bottom-stat">
+                    <div class="label">السماكة المثلى المحسوبة (H<sub>gold</sub>)</div>
+                    <div class="val" id="stat-hgold">H_opt = 55 cm (d=50)</div>
+                </div>
+            </div>
+        </main>
+
+        <!-- اللوحة اليسرى: بطاقات التحقق والمعادلات التفصيلية -->
+        <aside class="panel" id="left-telemetry-panel">
+            <div class="section-title">
+                <span>بطاقات التحقق الحية والمعادلات</span>
+            </div>
+            <div id="telemetry-cards-container">
+                <!-- يتم توليد البطاقات ديناميكياً عبر calculate() -->
+            </div>
+        </aside>
+
+    </div>
+
+    <!-- الكود البرمجي الكامل داخل الكائن الموحد PhysicsExpLab -->
+    <script>
+        const PhysicsExpLab = {
+            // حالة التطبيق العامة
+            currentMode: 'golden_thickness', // 'golden_thickness' | 'rescue_lab'
+            footingType: 'reinforced',       // 'reinforced' | 'plain'
+            isSimulating: true,
+            animFrameId: null,
+            clock: null,
+
+            // مراجع Three.js
+            container: null,
+            scene: null,
+            camera: null,
+            renderer: null,
+            controls: null,
+            modelGroup: null,
+            soilPressureMesh: null,
+            rebarGroup: null,
+            failureGroup: null,
+            probesGroup: null,
+
+            // dimensions of column (m)
+            colB: 0.40,
+            colL: 0.50,
+
+            // متغيرات التمرين الأول (تحدي السمك الذهبي)
+            goldenState: {
+                DL: 120,
+                LL: 30,
+                Sall: 3.0, // kg/cm2
+                fc: 200,
+                fy: 4000,
+                B: 2.30,
+                L: 2.40,
+                H: 55,     // cm
+                phi: 14,   // mm
+                barsPerM: 8,
+                useHook: true,
+                plainMode: 'cyclopean'
+            },
+
+            // متغيرات التمرين الثاني (مختبر الإنقاذ الإنشائي - 6 مهمات)
+            rescueState: {
+                activeMission: 1,
+                solvedMissions: { 1: false, 2: false, 3: false, 4: false, 5: false, 6: false },
+                m1: { soilFactor: 1, momentFactor: 1, shearFactor: 1 },
+                m2: { areaLoad: 'Pu', strengthLoad: 'Pservice' },
+                m3: { incArea11: false, incSnet11: true, B: 2.20 },
+                m4: { probeM: 25, probeP: 0, probeS: 0 },
+                m5: { subMode: 'strap', B: 0.95, L: 1.80, combL: 3.80 },
+                m6: { phi: 10, useAsMin: false, useHook: false }
+            },
+
+            // نتائج الحسابات الحالية للتحريك ثلاثي الأبعاد
+            simResults: {
+                isSafe: true,
+                soilSafe: true,
+                punchSafe: true,
+                momentSafe: true,
+                shearSafe: true,
+                tensionUnderFooting: false,
+                rebarSlipping: false,
+                goldenH: 55
+            },
+
+            /**
+             * 1. تهيئة المشهد ثلاثي الأبعاد والواجهة
+             */
+            init(containerId) {
+                this.container = document.getElementById(containerId);
+                if (!this.container) return;
+
+                this.clock = new THREE.Clock();
+
+                // إنشاء المشهد بخلفية كحلية داكنة (#0f172a)
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x0f172a);
+
+                // الكاميرا
+                const w = this.container.clientWidth || 800;
+                const h = this.container.clientHeight || 600;
+                this.camera = new THREE.PerspectiveCamera(42, w / h, 0.1, 100);
+                this.camera.position.set(4.2, 3.3, 4.5);
+
+                // المُصيّر
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+                this.renderer.setSize(w, h);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = true;
+                this.container.appendChild(this.renderer.domElement);
+
+                // المتحكمات
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.06;
+                this.controls.target.set(0, 0.4, 0);
+
+                // الإضاءة المتوازنة
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.68);
+                this.scene.add(ambientLight);
+
+                const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
+                dirLight.position.set(6, 10, 7);
+                dirLight.castShadow = true;
+                this.scene.add(dirLight);
+
+                const fillLight = new THREE.DirectionalLight(0x38bdf8, 0.3);
+                fillLight.position.set(-6, 4, -5);
+                this.scene.add(fillLight);
+
+                // الشبكة الأرضية الهندسية
+                const grid = new THREE.GridHelper(12, 24, 0x38bdf8, 0x1e293b);
+                grid.position.y = -0.01;
+                this.scene.add(grid);
+
+                // طبقة التربة التأسيسية
+                const soilGeo = new THREE.BoxGeometry(8, 0.35, 8);
+                const soilMat = new THREE.MeshStandardMaterial({
+                    color: 0x3f2e21,
+                    roughness: 0.9,
+                    metalness: 0.05
+                });
+                const soilMesh = new THREE.Mesh(soilGeo, soilMat);
+                soilMesh.position.y = -0.18;
+                soilMesh.receiveShadow = true;
+                this.scene.add(soilMesh);
+
+                // المجموعات الفرعية للمجسمات الديناميكية
+                this.modelGroup = new THREE.Group();
+                this.rebarGroup = new THREE.Group();
+                this.failureGroup = new THREE.Group();
+                this.probesGroup = new THREE.Group();
+
+                this.modelGroup.add(this.rebarGroup);
+                this.modelGroup.add(this.failureGroup);
+                this.modelGroup.add(this.probesGroup);
+                this.scene.add(this.modelGroup);
+
+                // الاستجابة لتغيير حجم النافذة
+                this._onResizeBound = () => this.onWindowResize();
+                window.addEventListener('resize', this._onResizeBound);
+
+                // الحساب الأولي وبناء المشهد
+                this.calculate();
+                this.animate();
+            },
+
+            onWindowResize() {
+                if (!this.container || !this.renderer || !this.camera) return;
+                const w = this.container.clientWidth;
+                const h = this.container.clientHeight;
+                this.camera.aspect = w / h;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(w, h);
+            },
+
+            /**
+             * 2. التبديل النظيف والمستقل بين التمرين الأول والتمرين الثاني
+             */
+            switchExercise(mode) {
+                this.currentMode = mode;
+
+                const tabGolden = document.getElementById('tab-golden');
+                const tabRescue = document.getElementById('tab-rescue');
+                const ctrlGolden = document.getElementById('controls-golden');
+                const ctrlRescue = document.getElementById('controls-rescue');
+                const effBox = document.getElementById('efficiency-box');
+
+                if (mode === 'golden_thickness') {
+                    tabGolden.classList.add('active');
+                    tabRescue.classList.remove('active');
+                    ctrlGolden.classList.remove('hidden');
+                    ctrlRescue.classList.add('hidden');
+                    effBox.classList.remove('hidden');
+                    this.camera.position.set(4.2, 3.3, 4.5);
+                } else {
+                    tabGolden.classList.remove('active');
+                    tabRescue.classList.add('active');
+                    ctrlGolden.classList.add('hidden');
+                    ctrlRescue.classList.remove('hidden');
+                    effBox.classList.add('hidden');
+                    this.camera.position.set(4.5, 3.4, 4.8);
+                }
+
+                this.controls.target.set(0, 0.4, 0);
+                this.calculate();
+            },
+
+            setFootingType(type) {
+                this.footingType = type;
+                document.getElementById('btn-type-rc').classList.toggle('active', type === 'reinforced');
+                document.getElementById('btn-type-plain').classList.toggle('active', type === 'plain');
+                document.getElementById('rc-steel-controls').classList.toggle('hidden', type !== 'reinforced');
+                document.getElementById('plain-concrete-controls').classList.toggle('hidden', type !== 'plain');
+
+                if (type === 'plain' && this.goldenState.H < 95) {
+                    this.goldenState.H = 105;
+                    document.getElementById('inp-H').value = 105;
+                } else if (type === 'reinforced' && this.goldenState.H > 100) {
+                    this.goldenState.H = 55;
+                    document.getElementById('inp-H').value = 55;
+                }
+                this.onGoldenInput();
+            },
+
+            toggleSimulation() {
+                this.isSimulating = !this.isSimulating;
+                const btn = document.getElementById('btn-toggle-load');
+                if (this.isSimulating) {
+                    btn.textContent = '⏸ إيقاف الأحمال';
+                    btn.classList.add('primary');
+                } else {
+                    btn.textContent = '▶ تطبيق الأحمال';
+                    btn.classList.remove('primary');
+                    this.modelGroup.position.set(0, 0, 0);
+                    this.modelGroup.rotation.set(0, 0, 0);
+                }
+            },
+
+            /**
+             * 3. قراءة المدخلات وتحديث الحسابات
+             */
+            onGoldenInput() {
+                const s = this.goldenState;
+                s.DL = parseFloat(document.getElementById('inp-dl').value);
+                s.LL = parseFloat(document.getElementById('inp-ll').value);
+                s.Sall = parseFloat(document.getElementById('inp-sall').value);
+                s.fc = parseFloat(document.getElementById('inp-fc').value);
+                s.fy = parseFloat(document.getElementById('inp-fy').value);
+                s.B = parseFloat(document.getElementById('inp-B').value);
+                s.L = parseFloat(document.getElementById('inp-L').value);
+                s.H = parseFloat(document.getElementById('inp-H').value);
+                s.phi = parseInt(document.getElementById('inp-phi').value, 10);
+                s.barsPerM = parseInt(document.getElementById('inp-bars').value, 10);
+                s.useHook = document.getElementById('inp-hook').checked;
+                s.plainMode = document.getElementById('inp-plain-mode').value;
+
+                // تحديث النصوص في الواجهة
+                document.getElementById('val-dl').textContent = `${s.DL} t`;
+                document.getElementById('val-ll').textContent = `${s.LL} t`;
+                document.getElementById('val-sall').textContent = `${s.Sall.toFixed(1)} kg/cm² (${(s.Sall * 10).toFixed(0)} t/m²)`;
+                document.getElementById('val-B').textContent = `${s.B.toFixed(2)} m`;
+                document.getElementById('val-L').textContent = `${s.L.toFixed(2)} m`;
+                document.getElementById('val-H').textContent = `${s.H} cm (d=${s.H - 5}cm)`;
+                document.getElementById('val-bars').textContent = `${s.barsPerM} Φ ${s.phi} / m`;
+
+                this.calculate();
+            },
+
+            /**
+             * حساب السمك الذهبي عبر حلقة WHILE التكرارية (بزيادة 5 سم حتى تتحقق الشروط الأربعة)
+             */
+            computeOptimalGoldenState() {
+                const s = this.goldenState;
+                const P_service = s.DL + s.LL;
+                const N_total = 1.1 * P_service;
+                const P_u = 1.4 * s.DL + 1.7 * s.LL;
+                const A_min = N_total / (s.Sall * 10);
+
+                // حساب البروز المتساوي المثالي
+                const b = this.colB;
+                const l = this.colL;
+                const C_ideal = (Math.sqrt(4 * Math.pow(b + l, 2) - 16 * (b * l - A_min)) - 2 * (b + l)) / 8;
+
+                // تقريب الأبعاد لأقرب 0.05m تحقق المساحة الدنيا
+                const B_opt = Math.ceil(((b + 2 * C_ideal) * 20)) / 20;
+                const L_opt = Math.ceil(((l + 2 * C_ideal) * 20)) / 20;
+                const A_opt = B_opt * L_opt;
+                const S_net = P_u / A_opt;
+                const C_max = Math.max((B_opt - b) / 2, (L_opt - l) / 2);
+
+                if (this.footingType === 'plain') {
+                    const Mu = S_net * Math.pow(C_max, 2) / 2;
+                    const delta_t = 0.9 * Math.sqrt(s.fc);
+                    const H_tension = Math.sqrt((6 * Mu * 1e5) / (100 * delta_t));
+                    const reqAngleDeg = s.plainMode === 'cyclopean' ? 63 : 50;
+                    const H_angle = (C_max * 100) * Math.tan(reqAngleDeg * Math.PI / 180);
+                    let H_try = 30;
+                    while (H_try < Math.max(H_tension, H_angle) && H_try < 250) {
+                        H_try += 5;
+                    }
+                    return { B_opt, L_opt, H_opt: H_try };
+                }
+
+                // حلقة WHILE التكرارية للأساس المسلح (بخطوة 5 سم)
+                let H_try = 25;
+                const alpha_max = 0.5 * (5355 / (6300 + s.fy));
+                const A0_max = alpha_max * (1 - 0.5 * alpha_max);
+                const R0 = 1 / Math.sqrt(A0_max);
+                const Mu = S_net * Math.pow(C_max, 2) / 2;
+                const d_min_flex = R0 * Math.sqrt((Mu * 1e5) / (0.9 * 100 * 0.85 * s.fc));
+
+                while (H_try <= 250) {
+                    const d_try = H_try - 5;
+                    const condRigidity = H_try >= Math.max((C_max * 100) / 2, 30);
+
+                    const Apunch = (b + d_try / 100) * (l + d_try / 100);
+                    const bw = 2 * ((b + d_try / 100) + (l + d_try / 100)) * 100;
+                    const tau_u = ((P_u - S_net * Apunch) * 1e3) / (0.85 * bw * d_try);
+                    const condPunch = tau_u <= Math.sqrt(s.fc);
+
+                    const condMoment = d_try >= d_min_flex;
+
+                    const Qu = S_net * Math.max(0, C_max - d_try / 100);
+                    const tau_one = (Qu * 1e3) / (0.85 * 100 * d_try);
+                    const condShear = tau_one <= 0.8 * Math.sqrt(s.fc);
+
+                    if (condRigidity && condPunch && condMoment && condShear) {
+                        break;
+                    }
+                    H_try += 5;
+                }
+
+                return { B_opt, L_opt, H_opt: H_try };
+            },
+
+            applyGoldenOptimal() {
+                const opt = this.computeOptimalGoldenState();
+                this.goldenState.B = opt.B_opt;
+                this.goldenState.L = opt.L_opt;
+                this.goldenState.H = opt.H_opt;
+                if (this.goldenState.phi < 12) this.goldenState.phi = 14;
+                this.goldenState.useHook = true;
+
+                document.getElementById('inp-B').value = opt.B_opt;
+                document.getElementById('inp-L').value = opt.L_opt;
+                document.getElementById('inp-H').value = opt.H_opt;
+                document.getElementById('inp-phi').value = this.goldenState.phi;
+                document.getElementById('inp-hook').checked = true;
+
+                this.onGoldenInput();
+            },
+
+            /**
+             * 4. إدارة المهمات الست في التمرين الثاني (مختبر الإنقاذ الإنشائي)
+             */
+            selectMission(mNum) {
+                this.rescueState.activeMission = mNum;
+                for (let i = 1; i <= 6; i++) {
+                    document.getElementById(`mbtn-${i}`).classList.toggle('active', i === mNum);
+                    document.getElementById(`mission-ui-${i}`).classList.toggle('hidden', i !== mNum);
+                }
+                this.calculate();
+            },
+
+            setM5SubMode(sub) {
+                this.rescueState.m5.subMode = sub;
+                document.getElementById('m5-sub-strap').classList.toggle('active', sub === 'strap');
+                document.getElementById('m5-sub-comb').classList.toggle('active', sub === 'combined');
+                document.getElementById('m5-strap-controls').classList.toggle('hidden', sub !== 'strap');
+                document.getElementById('m5-comb-controls').classList.toggle('hidden', sub !== 'combined');
+                this.calculate();
+            },
+
+            onRescueInput() {
+                const r = this.rescueState;
+                r.m1.soilFactor = parseFloat(document.getElementById('m1-soil-factor').value);
+                r.m1.momentFactor = parseFloat(document.getElementById('m1-moment-factor').value);
+                r.m1.shearFactor = parseFloat(document.getElementById('m1-shear-factor').value);
+
+                r.m2.areaLoad = document.getElementById('m2-area-load').value;
+                r.m2.strengthLoad = document.getElementById('m2-strength-load').value;
+
+                r.m3.incArea11 = document.getElementById('m3-inc-area').checked;
+                r.m3.incSnet11 = document.getElementById('m3-inc-snet').checked;
+                r.m3.B = parseFloat(document.getElementById('m3-B').value);
+                document.getElementById('val-m3-B').textContent = `${r.m3.B.toFixed(2)} m`;
+
+                r.m4.probeM = parseFloat(document.getElementById('m4-probe-m').value);
+                r.m4.probeP = parseFloat(document.getElementById('m4-probe-p').value);
+                r.m4.probeS = parseFloat(document.getElementById('m4-probe-s').value);
+                document.getElementById('val-m4-moment').textContent = `${r.m4.probeM} cm`;
+                document.getElementById('val-m4-punch').textContent = `${r.m4.probeP} cm`;
+                document.getElementById('val-m4-shear').textContent = `${r.m4.probeS} cm`;
+
+                r.m5.B = parseFloat(document.getElementById('m5-B').value);
+                r.m5.L = parseFloat(document.getElementById('m5-L').value);
+                r.m5.combL = parseFloat(document.getElementById('m5-combL').value);
+                document.getElementById('val-m5-B').textContent = `${r.m5.B.toFixed(2)} m`;
+                document.getElementById('val-m5-L').textContent = `${r.m5.L.toFixed(2)} m`;
+                document.getElementById('val-m5-combL').textContent = `${r.m5.combL.toFixed(2)} m`;
+
+                r.m6.phi = parseInt(document.getElementById('m6-phi').value, 10);
+                r.m6.useAsMin = document.getElementById('m6-asmin').checked;
+                r.m6.useHook = document.getElementById('m6-hook').checked;
+
+                this.calculate();
+            },
+
+            /**
+             * 5. المحرك الحسابي المركزي وفحص الشروط الهندسية (calculate / update)
+             */
+            calculate() {
+                if (this.currentMode === 'golden_thickness') {
+                    this.calculateGoldenMode();
+                } else {
+                    this.calculateRescueMode();
+                }
+                this.build3DScene();
+            },
+
+            update() {
+                this.calculate();
+            },
+
+            calculateGoldenMode() {
+                const s = this.goldenState;
+                const b = this.colB;
+                const l = this.colL;
+
+                // 1. الأحمال والمساحة
+                const P_service = s.DL + s.LL;
+                const N_total = 1.1 * P_service;
+                const P_u = 1.4 * s.DL + 1.7 * s.LL;
+                const A_min = N_total / (s.Sall * 10);
+                const A_act = s.B * s.L;
+                const C_ideal = (Math.sqrt(4 * Math.pow(b + l, 2) - 16 * (b * l - A_min)) - 2 * (b + l)) / 8;
+
+                const C_B = (s.B - b) / 2;
+                const C_L = (s.L - l) / 2;
+                const C = Math.max(C_B, C_L);
+                const S_net = P_u / A_act;
+                const d = s.H - 5;
+
+                const opt = this.computeOptimalGoldenState();
+                this.simResults.goldenH = opt.H_opt;
+
+                const soilSafe = A_act >= A_min - 0.01;
+                const symSafe = Math.abs(C_B - C_L) <= 0.06;
+
+                let cardsHTML = '';
+
+                // بطاقة 1: التربة والمساحة
+                cardsHTML += this.renderCheckCard(
+                    '1. تحقيق قدرة تحمل التربة والمساحة',
+                    soilSafe ? (A_act > A_min * 1.18 ? 'warn' : 'safe') : 'fail',
+                    soilSafe ? (A_act > A_min * 1.18 ? 'آمن لكن غير اقتصادي' : 'آمن ومثالي') : 'هبوط في التربة!',
+                    `N_total = 1.1(${s.DL}+${s.LL}) = ${N_total.toFixed(1)} t | P_u = ${P_u.toFixed(1)} t`,
+                    `A_min = ${N_total.toFixed(1)} / (${s.Sall}×10) = ${A_min.toFixed(2)} m² ≤ A_act = ${A_act.toFixed(2)} m²`,
+                    `C_ideal = ${C_ideal.toFixed(3)} m | C_B = ${C_B.toFixed(2)} m, C_L = ${C_L.toFixed(2)} m`
+                );
+
+                if (this.footingType === 'reinforced') {
+                    // الشرط 1: الصلابة
+                    const H_rig = Math.max((C * 100) / 2, 30);
+                    const rigSafe = s.H >= H_rig - 0.01;
+
+                    // الشرط 2: الثقب غير المباشر عند d/2
+                    const A_punch = (b + d / 100) * (l + d / 100);
+                    const b_w = 2 * ((b + d / 100) + (l + d / 100)) * 100;
+                    const tau_u = ((P_u - S_net * A_punch) * 1e3) / (0.85 * b_w * d);
+                    const tau_cu = Math.sqrt(s.fc);
+                    const punchSafe = tau_u <= tau_cu;
+
+                    // الشرط 3: عزم الانعطاف عند وجه العمود
+                    const M_u = S_net * (C * C) / 2;
+                    const alpha_max = 0.5 * (5355 / (6300 + s.fy));
+                    const A0_max = alpha_max * (1 - 0.5 * alpha_max);
+                    const R0 = 1 / Math.sqrt(A0_max);
+                    const d_min = R0 * Math.sqrt((M_u * 1e5) / (0.9 * 100 * 0.85 * s.fc));
+                    const momentSafe = d >= d_min;
+
+                    // الشرط 4: القص بالاتجاه الواحد عند مسافة d
+                    const Q_u = S_net * Math.max(0, C - d / 100);
+                    const tau_one = (Q_u * 1e3) / (0.85 * 100 * d);
+                    const tau_allow = 0.8 * Math.sqrt(s.fc);
+                    const shearSafe = tau_one <= tau_allow;
+
+                    // حساب التسليح وطول الالتحام
+                    const A0 = Math.min(0.45, (M_u * 1e5) / (0.9 * 100 * 0.85 * s.fc * d * d));
+                    const alpha = 1 - Math.sqrt(1 - 2 * A0);
+                    const gamma = 1 - 0.5 * alpha;
+                    const As_calc = (M_u * 1e5) / (0.9 * s.fy * gamma * d);
+                    const As_min = Math.min(0.001 * 100 * d, 1.33 * As_calc);
+                    const As_req = Math.max(As_calc, As_min);
+                    const phi_cm = s.phi / 10;
+                    const barArea = Math.PI * Math.pow(phi_cm, 2) / 4;
+                    const As_prov = s.barsPerM * barArea;
+
+                    const c_prime = (C * 100) - 5;
+                    const lb_min = Math.max(
+                        0.05 * (s.fy / Math.sqrt(s.fc)) * Math.pow(phi_cm, 2),
+                        0.0075 * phi_cm * s.fy,
+                        30
+                    );
+                    const needHook = c_prime < lb_min;
+                    const hookSafe = !needHook || s.useHook;
+                    const steelSafe = s.phi >= 12 && As_prov >= As_req && hookSafe;
+
+                    cardsHTML += this.renderCheckCard(
+                        '2. شرط الصلابة (Rigidity Condition)',
+                        rigSafe ? 'safe' : 'fail',
+                        rigSafe ? 'محقق (قاعدة صلبة)' : 'غير محقق',
+                        `H_min = max(C×100/2, 30) = ${H_rig.toFixed(1)} cm`,
+                        `H = ${s.H} cm ${rigSafe ? '≥' : '<'} ${H_rig.toFixed(1)} cm`
+                    );
+
+                    cardsHTML += this.renderCheckCard(
+                        '3. شرط الثقب غير المباشر (عند d/2 من وجه العمود)',
+                        punchSafe ? 'safe' : 'fail',
+                        punchSafe ? 'آمن ضد الثقب' : 'انهيار ثقب مخروطي!',
+                        `A_punch = ${A_punch.toFixed(2)} m² | b_w = ${b_w.toFixed(0)} cm (×10³ kg)`,
+                        `τ_u = ${tau_u.toFixed(2)} kg/cm² ${punchSafe ? '≤' : '>'} τ_cu = √f'c = ${tau_cu.toFixed(2)} kg/cm²`
+                    );
+
+                    cardsHTML += this.renderCheckCard(
+                        '4. شرط عزم الانعطاف (عند وجه العمود مباشرة)',
+                        momentSafe ? 'safe' : 'fail',
+                        momentSafe ? 'آمن للانعطاف' : 'فشل انعطاف!',
+                        `M_u = ${M_u.toFixed(2)} t.m/m (×10⁵ kg.cm) | R_0 = ${R0.toFixed(2)}`,
+                        `d = ${d} cm ${momentSafe ? '≥' : '<'} d_min = ${d_min.toFixed(2)} cm`
+                    );
+
+                    cardsHTML += this.renderCheckCard(
+                        '5. شرط القص الأحادي (عند مسافة d من وجه العمود)',
+                        shearSafe ? 'safe' : 'fail',
+                        shearSafe ? 'آمن للقص الأحادي' : 'انزلاق قص مائل!',
+                        `Q_u = ${Q_u.toFixed(2)} t/m (×10³ kg)`,
+                        `τ = ${tau_one.toFixed(2)} kg/cm² ${shearSafe ? '≤' : '>'} 0.8√f'c = ${tau_allow.toFixed(2)} kg/cm²`
+                    );
+
+                    cardsHTML += this.renderCheckCard(
+                        '6. التسليح وطول الالتحام والانغراس (l_b)',
+                        steelSafe ? 'safe' : 'fail',
+                        steelSafe ? 'تسليح وانغراس آمن' : 'خلل بالتسليح أو الالتحام!',
+                        `As_calc=${As_calc.toFixed(2)} | As_req=${As_req.toFixed(2)} ≤ As_prov=${As_prov.toFixed(2)} cm²/m`,
+                        `c' = ${c_prime.toFixed(1)} cm vs l_b,min = ${lb_min.toFixed(1)} cm (${needHook ? (s.useHook ? 'عكفة 90° مفعلة ✓' : 'يلزم عكفة 90° ✗') : 'كافٍ بدون عكفة'})`
+                    );
+
+                    this.simResults.soilSafe = soilSafe;
+                    this.simResults.punchSafe = punchSafe;
+                    this.simResults.momentSafe = momentSafe;
+                    this.simResults.shearSafe = shearSafe;
+                    this.simResults.rebarSlipping = !steelSafe;
+                    this.simResults.tensionUnderFooting = false;
+                    this.simResults.isSafe = soilSafe && rigSafe && punchSafe && momentSafe && shearSafe && steelSafe;
+                } else {
+                    // حسابات الأساس العادي / المغموس
+                    const M_u = S_net * (C * C) / 2;
+                    const delta_t = 0.9 * Math.sqrt(s.fc);
+                    const H_min_tension = Math.sqrt((6 * M_u * 1e5) / (100 * delta_t));
+                    const tanAlpha = s.H / (C * 100);
+                    const alphaDeg = Math.atan(tanAlpha) * (180 / Math.PI);
+                    const reqAngle = s.plainMode === 'cyclopean' ? 63 : 50;
+
+                    const tensionSafe = s.H >= H_min_tension;
+                    const angleSafe = alphaDeg >= reqAngle;
+
+                    cardsHTML += this.renderCheckCard(
+                        '2. مقاومة الشد بالانعطاف للبيتون غير المسلح',
+                        tensionSafe ? 'safe' : 'fail',
+                        tensionSafe ? 'آمن ضد تشقق الشد' : 'تشقق شد في القاعدة!',
+                        `δ_t = 0.9√f'c = ${delta_t.toFixed(2)} kg/cm² | M_u = ${M_u.toFixed(2)} t.m/m`,
+                        `H = ${s.H} cm ${tensionSafe ? '≥' : '<'} H_min = ${H_min_tension.toFixed(1)} cm`
+                    );
+
+                    cardsHTML += this.renderCheckCard(
+                        '3. زاوية توزع الحمل داخل الكتلة (α)',
+                        angleSafe ? 'safe' : 'fail',
+                        angleSafe ? 'زاوية توزع محققة' : 'زاوية توزع غير كافية!',
+                        `tan(α) = H / (C×100) = ${tanAlpha.toFixed(2)}`,
+                        `α = ${alphaDeg.toFixed(1)}° ${angleSafe ? '≥' : '<'} ${reqAngle}°`
+                    );
+
+                    this.simResults.soilSafe = soilSafe;
+                    this.simResults.punchSafe = tensionSafe;
+                    this.simResults.momentSafe = tensionSafe;
+                    this.simResults.shearSafe = angleSafe;
+                    this.simResults.rebarSlipping = false;
+                    this.simResults.tensionUnderFooting = false;
+                    this.simResults.isSafe = soilSafe && tensionSafe && angleSafe;
+                }
+
+                document.getElementById('telemetry-cards-container').innerHTML = cardsHTML;
+
+                // تحديث شريط الإحصائيات السفلي ومؤشر الكفاءة الاقتصادية
+                document.getElementById('stat-loads').textContent = `N=${N_total.toFixed(1)}t | Pu=${P_u.toFixed(1)}t`;
+                document.getElementById('stat-area').textContent = `Amin=${A_min.toFixed(2)}m² | A=${A_act.toFixed(2)}m²`;
+                document.getElementById('stat-snet').textContent = `${S_net.toFixed(2)} t/m²`;
+                document.getElementById('stat-hgold').textContent = `H_gold = ${opt.H_opt} cm (B=${opt.B_opt}, L=${opt.L_opt})`;
+
+                const statusEl = document.getElementById('scene-status-title');
+                const scoreEl = document.getElementById('golden-score-val');
+
+                if (!this.simResults.isSafe) {
+                    statusEl.textContent = '⚠️ فشل إنشائي — راجع الشروط الحمراء!';
+                    statusEl.style.color = '#ef4444';
+                    scoreEl.textContent = '0% (التصميم غير آمن إنشائياً)';
+                    scoreEl.style.color = '#ef4444';
+                } else {
+                    statusEl.textContent = '✅ آمن ومستقر إنشائياً';
+                    statusEl.style.color = '#10b981';
+
+                    const volUser = s.B * s.L * (s.H / 100);
+                    const volGold = opt.B_opt * opt.L_opt * (opt.H_opt / 100);
+                    const eff = Math.min(100, Math.round((volGold / volUser) * 100));
+
+                    if (s.H === opt.H_opt && Math.abs(s.B - opt.B_opt) <= 0.05 && Math.abs(s.L - opt.L_opt) <= 0.05 && symSafe) {
+                        scoreEl.textContent = '🏆 100% — أحسنت! وصلت للسُمك الذهبي الأمثل';
+                        scoreEl.style.color = '#10b981';
+                    } else {
+                        scoreEl.textContent = `${eff}% — آمن ولكن يمكن توفير البيتون (H_gold=${opt.H_opt}cm)`;
+                        scoreEl.style.color = '#f59e0b';
+                    }
+                }
+            },
+
+            /**
+             * حسابات المهمات التشخيصية الست في التمرين الثاني
+             */
+            calculateRescueMode() {
+                const r = this.rescueState;
+                const m = r.activeMission;
+                let cardsHTML = '';
+                let solved = false;
+                let alertMsg = '';
+
+                // إعادة ضبط الحالات البصرية الافتراضية
+                this.simResults = {
+                    isSafe: false,
+                    soilSafe: true,
+                    punchSafe: true,
+                    momentSafe: true,
+                    shearSafe: true,
+                    tensionUnderFooting: false,
+                    rebarSlipping: false,
+                    goldenH: 55
+                };
+
+                if (m === 1) {
+                    const okSoil = r.m1.soilFactor === 10;
+                    const okMom = r.m1.momentFactor === 100000;
+                    const okShear = r.m1.shearFactor === 1000;
+                    solved = okSoil && okMom && okShear;
+
+                    this.simResults.soilSafe = okSoil;
+                    this.simResults.momentSafe = okMom;
+                    this.simResults.punchSafe = okShear;
+                    this.simResults.shearSafe = okShear;
+                    this.simResults.isSafe = solved;
+
+                    alertMsg = solved
+                        ? '✅ ممتاز! تمت معايرة جميع الوحدات الهندسية بنجاح واستقر النموذج.'
+                        : '🚨 تنبيه عدم تطابق الوحدات (Unit Mismatch Alert): المعادلات تخلط بين الطن والكغ والمتر والسنتيمتر!';
+
+                    cardsHTML += this.renderCheckCard(
+                        'معايرة قدرة تحمل التربة S_all',
+                        okSoil ? 'safe' : 'fail',
+                        okSoil ? 'صحيح (×10)' : 'خطأ بالوحدة',
+                        `S_all = 3 kg/cm² × ${r.m1.soilFactor} = ${3 * r.m1.soilFactor} t/m²`,
+                        `A_min = 165 / ${3 * r.m1.soilFactor} = ${(165 / (3 * r.m1.soilFactor)).toFixed(2)} m²`
+                    );
+                    cardsHTML += this.renderCheckCard(
+                        'معايرة عزم الانعطاف M_u',
+                        okMom ? 'safe' : 'fail',
+                        okMom ? 'صحيح (×10⁵)' : 'خطأ بالوحدة',
+                        `M_u = 17.9 t.m × ${r.m1.momentFactor} = ${(17.9 * r.m1.momentFactor).toExponential(2)} kg.cm`,
+                        `للتعويض مع f'c (kg/cm²) و d (cm) يجب الضرب بـ 10⁵`
+                    );
+                    cardsHTML += this.renderCheckCard(
+                        'معايرة القص والثقب Q_u',
+                        okShear ? 'safe' : 'fail',
+                        okShear ? 'صحيح (×10³)' : 'خطأ بالوحدة',
+                        `Q_u (t) × ${r.m1.shearFactor} → kg`,
+                        `للتعويض مع τ_cu = √f'c (kg/cm²) يجب الضرب بـ 10³`
+                    );
+                } else if (m === 2) {
+                    const okArea = r.m2.areaLoad === 'Ntotal';
+                    const okStr = r.m2.strengthLoad === 'Pu';
+                    solved = okArea && okStr;
+
+                    this.simResults.soilSafe = okArea;
+                    this.simResults.momentSafe = okStr;
+                    this.simResults.punchSafe = okStr;
+                    this.simResults.isSafe = solved;
+
+                    alertMsg = solved
+                        ? '✅ أحسنت! تم فصل الحمولات الاستثمارية (للمساحة) عن الحمولات المصعدة (للمقطع الخرساني).'
+                        : '🚨 فخ الخلط بين الحمولات: استخدام Pu للمساحة يضخم القاعدة، واستخدام P_service للمقطع يسبب انهياراً!';
+
+                    cardsHTML += this.renderCheckCard(
+                        'مرحلة الجيوتكنيك (حساب مساحة القاعدة A_min)',
+                        okArea ? 'safe' : 'warn',
+                        okArea ? 'حمولة استثمارية شاملة ✓' : 'خطأ: حمولة مصعدة!',
+                        okArea ? 'A_min = 1.1(DL+LL) / S_all = 165 / 30 = 5.50 m²' : 'A_min = Pu / S_all = 219 / 30 = 7.30 m² (تضخم غير اقتصادي)'
+                    );
+                    cardsHTML += this.renderCheckCard(
+                        'مرحلة البيتون المسلح (حساب S_net والعزم والقص)',
+                        okStr ? 'safe' : 'fail',
+                        okStr ? 'حمولة حدية مصعدة ✓' : 'خطر: حمولة غير مصعدة!',
+                        okStr ? 'S_net = Pu / A_act = 219 / 5.52 = 39.67 t/m²' : 'S_net = 150 / 5.52 = 27.17 t/m² (سماكة وتسليح ناقصان!)'
+                    );
+                } else if (m === 3) {
+                    const P_serv = 150;
+                    const N_calc = r.m3.incArea11 ? 1.1 * P_serv : P_serv;
+                    const A_act = r.m3.B * r.m3.B;
+                    const actualSoilStress = (1.1 * P_serv) / A_act; // الإجهاد الحقيقي شاملاً وزن القاعدة
+                    const soilOk = r.m3.incArea11 && actualSoilStress <= 30.05;
+                    const snetOk = !r.m3.incSnet11;
+                    solved = soilOk && snetOk;
+
+                    this.simResults.soilSafe = soilOk;
+                    this.simResults.isSafe = solved;
+
+                    alertMsg = solved
+                        ? '✅ تم إنقاذ القاعدة من الغوص! الوزن الذاتي يُحسب في المساحة ولا يتكرر في S_net.'
+                        : '🚨 القاعدة تغوص في التربة أو تعاني من ازدواجية ضرب المعامل 1.1!';
+
+                    cardsHTML += this.renderCheckCard(
+                        'إجهاد التربة الفعلي تحت القاعدة',
+                        soilOk ? 'safe' : 'fail',
+                        soilOk ? 'آمن (≤ 30 t/m²)' : 'تجاوز قدرة التربة!',
+                        `N_actual = 1.1 × 150 = 165 t | A_act = ${r.m3.B.toFixed(2)}² = ${A_act.toFixed(2)} m²`,
+                        `σ_actual = 165 / ${A_act.toFixed(2)} = ${actualSoilStress.toFixed(2)} t/m² vs S_all = 30 t/m²`
+                    );
+                    cardsHTML += this.renderCheckCard(
+                        'عدم تكرار الوزن الذاتي في الإجهاد الصافي S_net',
+                        snetOk ? 'safe' : 'warn',
+                        snetOk ? 'صحيح (Pu / A)' : 'خطأ: ضرب مزدوج بـ 1.1',
+                        snetOk ? 'S_net = Pu / A (الوزن الذاتي متوازن مع رد فعل التربة ولا يسبب عزماً)' : 'S_net = 1.1 × Pu / A (خطأ مفاهيمي شائع)'
+                    );
+                } else if (m === 4) {
+                    const okM = r.m4.probeM === 0;
+                    const okP = r.m4.probeP === 25; // d/2 = 50/2 = 25 cm
+                    const okS = r.m4.probeS === 50; // d = 50 cm
+                    solved = okM && okP && okS;
+                    this.simResults.isSafe = solved;
+
+                    alertMsg = solved
+                        ? '✅ جميع المجسات الليزرية الثلاثة في مواقعها الحرجة الصحيحة وتضيء بالأخضر!'
+                        : '🎯 حرك أشرطة المجسات الثلاثة لمطابقة مواقع المقاطع الحرجة (d = 50 cm).';
+
+                    cardsHTML += this.renderCheckCard(
+                        'مجس عزم الانعطاف (M_u)',
+                        okM ? 'safe' : 'fail',
+                        okM ? 'منطبق عند 0 cm ✓' : 'موقع خاطئ',
+                        `الموقع الحالي: x = ${r.m4.probeM} cm | المطلوب: x = 0 cm (وجه العمود)`
+                    );
+                    cardsHTML += this.renderCheckCard(
+                        'مجس الثقب غير المباشر (τ_u)',
+                        okP ? 'safe' : 'fail',
+                        okP ? 'منطبق عند d/2 = 25 cm ✓' : 'موقع خاطئ',
+                        `الموقع الحالي: x = ${r.m4.probeP} cm | المطلوب: x = d/2 = 25 cm`
+                    );
+                    cardsHTML += this.renderCheckCard(
+                        'مجس القص بالاتجاه الواحد (τ)',
+                        okS ? 'safe' : 'fail',
+                        okS ? 'منطبق عند d = 50 cm ✓' : 'موقع خاطئ',
+                        `الموقع الحالي: x = ${r.m4.probeS} cm | المطلوب: x = d = 50 cm`
+                    );
+                } else if (m === 5) {
+                    if (r.m5.subMode === 'strap') {
+                        // عمود جوار رجل البطة: DL=38, LL=16 => P=54, N=59.4t, l=0.80m, Sall=35 t/m2
+                        const N = 59.4;
+                        const l = 0.80;
+                        const B = r.m5.B;
+                        const L = r.m5.L;
+                        const e = Math.max(0, (B / 2) - (l / 2));
+                        const S_max = (N / (B * L)) * (1 + (6 * e) / B);
+                        const S_min = (N / (B * L)) * (1 - (6 * e) / B);
+                        const allowMax = 1.25 * 35; // 43.75 t/m2
+
+                        const noTension = S_min >= -0.05 && B >= 1.20;
+                        const maxOk = S_max <= allowMax;
+                        solved = noTension && maxOk;
+
+                        this.simResults.tensionUnderFooting = !noTension;
+                        this.simResults.soilSafe = maxOk;
+                        this.simResults.isSafe = solved;
+
+                        alertMsg = solved
+                            ? '✅ ممتاز! تحقق شرط الشد الصفري (B = 1.5 l = 1.20m) وتوقف انقلاب قاعدة الجوار.'
+                            : '🚨 خطر انقلاب! يوجد إجهاد شد سالب تحت القاعدة (S_min < 0) يظهر باللون الأحمر الخاطف!';
+
+                        cardsHTML += this.renderCheckCard(
+                            'شرط انعدام الشد تحت قاعدة الجوار (S_min ≥ 0)',
+                            noTension ? 'safe' : 'fail',
+                            noTension ? 'لا يوجد شد ✓' : 'شد وانقلاب (S_min < 0)!',
+                            `e = B/2 - l/2 = ${e.toFixed(3)} m | الشرط الحدي: B = 1.5×l = 1.20 m`,
+                            `S_min = ${S_min.toFixed(2)} t/m² ${noTension ? '≥ 0' : '< 0 (منطقة شد حمراء!)'}`
+                        );
+                        cardsHTML += this.renderCheckCard(
+                            'شرط الإجهاد الأقصى المسموح (S_max ≤ 1.25 S_all)',
+                            maxOk ? 'safe' : 'fail',
+                            maxOk ? 'ضمن المسموح ✓' : 'تجاوز 1.25 S_all!',
+                            `S_max = ${S_max.toFixed(2)} t/m² ≤ 1.25 × 35 = ${allowMax.toFixed(2)} t/m² (يتحقق عند L ≥ 2.30m)`
+                        );
+                    } else {
+                        // أساس مشترك: P1=50, P2=90, S=3.5 => Xp = 90*3.5/140 = 2.25m + 0.25m = 2.5m => L_opt = 5.0m
+                        const Xp = 2.50;
+                        const Xc = r.m5.combL / 2;
+                        const e = Math.abs(Xp - Xc);
+                        solved = e <= 0.05;
+
+                        this.simResults.tensionUnderFooting = !solved;
+                        this.simResults.isSafe = solved;
+
+                        alertMsg = solved
+                            ? '✅ تطابق مركز ثقل القاعدة مع نقطة تطبيق المحصلة (L = 2·Xp = 5.0 m) وأصبح الإجهاد منتظماً!'
+                            : '🚨 لا مركزية في الأساس المشترك (Xc ≠ Xp) تسبب توزيع إجهاد شبه منحرف وميلاناً!';
+
+                        cardsHTML += this.renderCheckCard(
+                            'انطباق مركز المساحة X_c مع محصلة القوى X_p',
+                            solved ? 'safe' : 'fail',
+                            solved ? 'إجهاد منتظم (e = 0) ✓' : `يوجد لا مركزية e = ${e.toFixed(2)}m`,
+                            `X_p = 2.50 m | X_c = L/2 = ${Xc.toFixed(2)} m → الشرط: L = 2 × 2.50 = 5.00 m`
+                        );
+                    }
+                } else if (m === 6) {
+                    const okPhi = r.m6.phi >= 12;
+                    const okAs = r.m6.useAsMin;
+                    const okHook = r.m6.useHook;
+                    solved = okPhi && okAs && okHook;
+
+                    this.simResults.rebarSlipping = !solved;
+                    this.simResults.isSafe = solved;
+
+                    alertMsg = solved
+                        ? '✅ تم تثبيت التسليح بنجاح! القطر ≥ 12mm، التسليح الأدنى مفعل، والعكفة الرأسية 25cm أوقفت الانزلاق.'
+                        : '🚨 قضبان التسليح تنزلق من البيتون في الاتجاه القصير بسبب صغر البروز c\'_B = 35 cm < l_b!';
+
+                    cardsHTML += this.renderCheckCard(
+                        'القطر الأدنى والتسليح الأدنى بالاتجاه القصير',
+                        (okPhi && okAs) ? 'safe' : 'fail',
+                        (okPhi && okAs) ? 'محقق (Φ≥12 و As_min) ✓' : 'تسليح غير كافٍ!',
+                        `As_calc = 2.66 cm²/m < As_min = 0.001×100×45 = 4.50 cm²/m | Φ = ${r.m6.phi} mm`
+                    );
+                    cardsHTML += this.renderCheckCard(
+                        'طول الالتحام والانغراس بالاتجاه القصير (c\'_B vs l_b)',
+                        okHook ? 'safe' : 'fail',
+                        okHook ? 'مثبت بعكفة رأسية 25 cm ✓' : 'انزلاق القضبان (c\'_B < l_b)!',
+                        `c'_B = 40 - 5 = 35 cm < l_b = 42 cm → يلزم عكفة رأسية 90° بطول min(H/2, 30) = 25 cm`
+                    );
+                }
+
+                // تحديث حالة المهمة في المصفوفة
+                if (solved) {
+                    r.solvedMissions[m] = true;
+                }
+                for (let i = 1; i <= 6; i++) {
+                    document.getElementById(`mbtn-${i}`).classList.toggle('solved', r.solvedMissions[i]);
+                }
+                const solvedCount = Object.values(r.solvedMissions).filter(Boolean).length;
+                document.getElementById('rescue-progress-text').textContent = `${solvedCount} / 6 مكتمل`;
+
+                const alertEl = document.getElementById('mission-alert');
+                alertEl.textContent = alertMsg;
+                alertEl.className = solved ? 'alert-banner solved' : 'alert-banner';
+
+                document.getElementById('telemetry-cards-container').innerHTML = cardsHTML;
+                const statusEl = document.getElementById('scene-status-title');
+                statusEl.textContent = solved ? `✅ المهمة ${m}: تم الإنقاذ الإنشائي بنجاح` : `🚨 المهمة ${m}: خلل إنشائي نشط يتطلب التدخل`;
+                statusEl.style.color = solved ? '#10b981' : '#ef4444';
+            },
+
+            renderCheckCard(title, status, badgeText, line1, line2 = '', line3 = '') {
+                return `
+                    <div class="check-card ${status}">
+                        <div class="check-header">
+                            <span>${title}</span>
+                            <span class="status-pill ${status}">${badgeText}</span>
+                        </div>
+                        <div class="math-line">${line1}</div>
+                        ${line2 ? `<div class="math-line">${line2}</div>` : ''}
+                        ${line3 ? `<div class="math-line">${line3}</div>` : ''}
+                    </div>
+                `;
+            },
+
+            /**
+             * 6. بناء وتحديث المجسمات ثلاثية الأبعاد (القاعدة، العمود، التسليح، مخطط إجهاد التربة، ومستويات الفشل)
+             */
+            clearGroup(group) {
+                while (group.children.length > 0) {
+                    const child = group.children[0];
+                    if (child.children && child.children.length > 0) {
+                        this.clearGroup(child);
+                    }
+                    if (child.geometry) child.geometry.dispose();
+                    if (child.material) {
+                        if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+                        else child.material.dispose();
+                    }
+                    group.remove(child);
+                }
+            },
+
+            build3DScene() {
+                if (!this.modelGroup) return;
+
+                // تفريغ المجسمات السابقة لمنع تسريب الذاكرة
+                this.clearGroup(this.rebarGroup);
+                this.clearGroup(this.failureGroup);
+                this.clearGroup(this.probesGroup);
+
+                // إزالة المجسمات المباشرة في modelGroup مع الإبقاء على المجموعات الفرعية الثلاث
+                for (let i = this.modelGroup.children.length - 1; i >= 0; i--) {
+                    const ch = this.modelGroup.children[i];
+                    if (ch !== this.rebarGroup && ch !== this.failureGroup && ch !== this.probesGroup) {
+                        if (ch.geometry) ch.geometry.dispose();
+                        if (ch.material) ch.material.dispose();
+                        this.modelGroup.remove(ch);
+                    }
+                }
+
+                // تحديد الأبعاد الهندسية حسب التمرين النشط
+                let B = this.goldenState.B;
+                let L = this.goldenState.L;
+                let H = this.goldenState.H / 100; // متر
+                let colB = this.colB;
+                let colL = this.colL;
+                let isStrap = false;
+                let isCombined = false;
+
+                if (this.currentMode === 'rescue_lab') {
+                    const m = this.rescueState.activeMission;
+                    B = 2.30;
+                    L = 2.40;
+                    H = 0.55;
+                    if (m === 3) {
+                        B = this.rescueState.m3.B;
+                        L = this.rescueState.m3.B;
+                    } else if (m === 5) {
+                        if (this.rescueState.m5.subMode === 'strap') {
+                            B = this.rescueState.m5.B;
+                            L = this.rescueState.m5.L;
+                            H = 0.50;
+                            colB = 0.80;
+                            colL = 0.40;
+                            isStrap = true;
+                        } else {
+                            B = 1.80;
+                            L = this.rescueState.m5.combL;
+                            H = 0.65;
+                            isCombined = true;
+                        }
+                    } else if (m === 6) {
+                        B = 1.20;
+                        L = 2.30;
+                        H = 0.50;
+                        colB = 0.80;
+                        colL = 0.40;
+                        isStrap = true;
+                    }
+                }
+
+                // 1. مجسم القاعدة الخرسانية (شفاف جزئياً لرؤية التسليح ومستويات القص)
+                const footGeo = new THREE.BoxGeometry(B, H, L);
+                const footMat = new THREE.MeshPhysicalMaterial({
+                    color: this.simResults.isSafe ? 0x94a3b8 : 0xfca5a5,
+                    transparent: true,
+                    opacity: 0.52,
+                    roughness: 0.3,
+                    metalness: 0.1
+                });
+                const footMesh = new THREE.Mesh(footGeo, footMat);
+                footMesh.position.y = H / 2;
+                this.modelGroup.add(footMesh);
+
+                // حواف القاعدة (Wireframe Edges)
+                const edgesGeo = new THREE.EdgesGeometry(footGeo);
+                const edgesMat = new THREE.LineBasicMaterial({ color: 0xe2e8f0 });
+                const edgesLine = new THREE.LineSegments(edgesGeo, edgesMat);
+                edgesLine.position.y = H / 2;
+                this.modelGroup.add(edgesLine);
+
+                // 2. مجسم العمود (أو العمودين في الأساس المشترك)
+                const colMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.5 });
+                if (isCombined) {
+                    const cGeo = new THREE.BoxGeometry(0.45, 1.1, 0.45);
+                    const col1 = new THREE.Mesh(cGeo, colMat);
+                    col1.position.set(0, H + 0.55, -L / 2 + 0.5);
+                    this.modelGroup.add(col1);
+
+                    const col2 = new THREE.Mesh(cGeo, colMat);
+                    col2.position.set(0, H + 0.55, -L / 2 + 3.5);
+                    this.modelGroup.add(col2);
+                } else {
+                    const cGeo = new THREE.BoxGeometry(colB, 1.1, colL);
+                    const colMesh = new THREE.Mesh(cGeo, colMat);
+                    // إذا كان عمود جوار يوضع على الحافة اليسرى للقاعدة
+                    const colX = isStrap ? (-B / 2 + colB / 2) : 0;
+                    colMesh.position.set(colX, H + 0.55, 0);
+                    this.modelGroup.add(colMesh);
+
+                    // سهم الحمولة الرأسي فوق العمود
+                    const arrowDir = new THREE.Vector3(0, -1, 0);
+                    const arrowOrigin = new THREE.Vector3(colX, H + 1.85, 0);
+                    const arrowHelper = new THREE.ArrowHelper(arrowDir, arrowOrigin, 0.7, 0x38bdf8, 0.22, 0.16);
+                    this.modelGroup.add(arrowHelper);
+                }
+
+                // 3. مخطط توزيع إجهادات التربة تحت القاعدة (3D Stress Carpet)
+                const carpetGeo = new THREE.PlaneGeometry(B, L, 16, 16);
+                carpetGeo.rotateX(-Math.PI / 2);
+                const count = carpetGeo.attributes.position.count;
+                const colors = new Float32Array(count * 3);
+
+                for (let i = 0; i < count; i++) {
+                    const x = carpetGeo.attributes.position.getX(i);
+                    let rCol = 0.06, gCol = 0.72, bCol = 0.50; // أخضر آمن
+
+                    if (this.simResults.tensionUnderFooting) {
+                        // في حال وجود شد تحت القاعدة (المهمة 5): تلوين منطقة الشد بالأحمر الفاقع
+                        if (x > 0) {
+                            rCol = 0.98; gCol = 0.15; bCol = 0.15;
+                        } else {
+                            rCol = 0.95; gCol = 0.62; bCol = 0.05;
+                        }
+                    } else if (!this.simResults.soilSafe) {
+                        rCol = 0.94; gCol = 0.26; bCol = 0.26; // أحمر فشل تربة
+                    }
+
+                    colors[i * 3] = rCol;
+                    colors[i * 3 + 1] = gCol;
+                    colors[i * 3 + 2] = bCol;
+                }
+                carpetGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                const carpetMat = new THREE.MeshBasicMaterial({
+                    vertexColors: true,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.78
+                });
+                const carpetMesh = new THREE.Mesh(carpetGeo, carpetMat);
+                carpetMesh.position.y = 0.005;
+                this.modelGroup.add(carpetMesh);
+
+                // 4. رسم شبكة قضبان التسليح السفلية أو مخروط البيتون العادي
+                const showPlainCone = (this.currentMode === 'golden_thickness' && this.footingType === 'plain');
+                if (showPlainCone) {
+                    const coneGeo = new THREE.CylinderGeometry(colB * 0.65, B * 0.68, H, 24, 1, true);
+                    const coneMat = new THREE.MeshBasicMaterial({
+                        color: this.simResults.shearSafe ? 0x38bdf8 : 0xef4444,
+                        wireframe: true
+                    });
+                    const coneMesh = new THREE.Mesh(coneGeo, coneMat);
+                    coneMesh.position.y = H / 2;
+                    this.failureGroup.add(coneMesh);
+                } else {
+                    this.buildRebarMesh(B, L, H);
+                }
+
+                // 5. رسم مؤثرات الفشل أو مجسات المهمة 4
+                if (this.currentMode === 'rescue_lab' && this.rescueState.activeMission === 4) {
+                    this.buildMission4Probes(B, L, H, colB, colL);
+                } else {
+                    this.buildFailureVisuals(B, L, H, colB, colL);
+                }
+            },
+
+            buildRebarMesh(B, L, H) {
+                const isM6 = (this.currentMode === 'rescue_lab' && this.rescueState.activeMission === 6);
+                const useHook = isM6 ? this.rescueState.m6.useHook : this.goldenState.useHook;
+                const radius = isM6 ? (this.rescueState.m6.phi / 1000) : (this.goldenState.phi / 1000);
+                const barColor = this.simResults.rebarSlipping ? 0xef4444 : 0xf59e0b;
+                const barMat = new THREE.MeshStandardMaterial({ color: barColor, metalness: 0.7, roughness: 0.3 });
+
+                const cover = 0.05;
+                const spanX = B - 2 * cover;
+                const spanZ = L - 2 * cover;
+                const hookHeight = Math.min(H / 2, 0.30);
+                const numBars = 7;
+
+                // قضبان موازية للمحور X
+                for (let i = 0; i < numBars; i++) {
+                    const zPos = -spanZ / 2 + (i / (numBars - 1)) * spanZ;
+                    const geoX = new THREE.CylinderGeometry(radius, radius, spanX, 8);
+                    geoX.rotateZ(Math.PI / 2);
+                    const barX = new THREE.Mesh(geoX, barMat);
+                    barX.position.set(0, cover, zPos);
+                    this.rebarGroup.add(barX);
+
+                    if (useHook) {
+                        const hGeo1 = new THREE.CylinderGeometry(radius, radius, hookHeight, 8);
+                        const h1 = new THREE.Mesh(hGeo1, barMat);
+                        h1.position.set(-spanX / 2, cover + hookHeight / 2, zPos);
+                        this.rebarGroup.add(h1);
+
+                        const hGeo2 = new THREE.CylinderGeometry(radius, radius, hookHeight, 8);
+                        const h2 = new THREE.Mesh(hGeo2, barMat);
+                        h2.position.set(spanX / 2, cover + hookHeight / 2, zPos);
+                        this.rebarGroup.add(h2);
+                    }
+                }
+
+                // قضبان موازية للمحور Z
+                for (let i = 0; i < numBars; i++) {
+                    const xPos = -spanX / 2 + (i / (numBars - 1)) * spanX;
+                    const geoZ = new THREE.CylinderGeometry(radius, radius, spanZ, 8);
+                    geoZ.rotateX(Math.PI / 2);
+                    const barZ = new THREE.Mesh(geoZ, barMat);
+                    barZ.position.set(xPos, cover + radius * 2.2, 0);
+                    this.rebarGroup.add(barZ);
+                }
+            },
+
+            buildFailureVisuals(B, L, H, colB, colL) {
+                const d = H - 0.05;
+
+                // مخروط الثقب غير المباشر عند d/2 إذا فشل الثقب
+                if (!this.simResults.punchSafe) {
+                    const punchW = colB + d;
+                    const coneGeo = new THREE.CylinderGeometry(colB * 0.65, punchW * 0.75, H, 24, 1, true);
+                    const coneMat = new THREE.MeshBasicMaterial({
+                        color: 0xef4444,
+                        transparent: true,
+                        opacity: 0.65,
+                        side: THREE.DoubleSide
+                    });
+                    const cone = new THREE.Mesh(coneGeo, coneMat);
+                    cone.position.y = H / 2;
+                    this.failureGroup.add(cone);
+                }
+
+                // مستوى القص الأحادي عند مسافة d إذا فشل القص
+                if (!this.simResults.shearSafe) {
+                    const planeGeo = new THREE.PlaneGeometry(H * 1.3, L);
+                    planeGeo.rotateZ(Math.PI / 4);
+                    const planeMat = new THREE.MeshBasicMaterial({
+                        color: 0xef4444,
+                        transparent: true,
+                        opacity: 0.65,
+                        side: THREE.DoubleSide
+                    });
+                    const shearPlane = new THREE.Mesh(planeGeo, planeMat);
+                    shearPlane.position.set(colB / 2 + d, H / 2, 0);
+                    this.failureGroup.add(shearPlane);
+                }
+            },
+
+            buildMission4Probes(B, L, H, colB, colL) {
+                const r4 = this.rescueState.m4;
+
+                // 1. مجس العزم (المطلوب عند x = 0 من وجه العمود)
+                const xM = colB / 2 + (r4.probeM / 100);
+                const okM = r4.probeM === 0;
+                const mGeo = new THREE.PlaneGeometry(H + 0.25, L + 0.1);
+                mGeo.rotateY(Math.PI / 2);
+                mGeo.rotateZ(Math.PI / 2);
+                const mMat = new THREE.MeshBasicMaterial({
+                    color: okM ? 0x10b981 : 0xf59e0b,
+                    transparent: true,
+                    opacity: 0.55,
+                    side: THREE.DoubleSide
+                });
+                const mPlane = new THREE.Mesh(mGeo, mMat);
+                mPlane.position.set(xM, H / 2, 0);
+                this.probesGroup.add(mPlane);
+
+                // 2. مجس محيط الثقب (المطلوب عند d/2 = 25 cm من وجوه العمود)
+                const offsetP = r4.probeP / 100;
+                const okP = r4.probeP === 25;
+                const pGeo = new THREE.BoxGeometry(colB + 2 * offsetP, H + 0.15, colL + 2 * offsetP);
+                const pEdges = new THREE.EdgesGeometry(pGeo);
+                const pMat = new THREE.LineBasicMaterial({ color: okP ? 0x10b981 : 0xef4444 });
+                const pBox = new THREE.LineSegments(pEdges, pMat);
+                pBox.position.set(0, H / 2, 0);
+                this.probesGroup.add(pBox);
+
+                // 3. مجس القص الأحادي (المطلوب عند d = 50 cm من وجه العمود)
+                const xS = -(colB / 2 + (r4.probeS / 100));
+                const okS = r4.probeS === 50;
+                const sGeo = new THREE.PlaneGeometry(H + 0.25, L + 0.1);
+                sGeo.rotateY(Math.PI / 2);
+                sGeo.rotateZ(Math.PI / 2);
+                const sMat = new THREE.MeshBasicMaterial({
+                    color: okS ? 0x10b981 : 0x38bdf8,
+                    transparent: true,
+                    opacity: 0.55,
+                    side: THREE.DoubleSide
+                });
+                const sPlane = new THREE.Mesh(sGeo, sMat);
+                sPlane.position.set(xS, H / 2, 0);
+                this.probesGroup.add(sPlane);
+            },
+
+            /**
+             * 7. حلقة التحريك المستمرة (Animation Loop) لمحاكاة الفشل، الهبوط، الانقلاب، وانزلاق التسليح
+             */
+            animate() {
+                this.animFrameId = requestAnimationFrame(() => this.animate());
+
+                const elapsed = this.clock ? this.clock.getElapsedTime() : 0;
+
+                if (this.isSimulating && this.modelGroup) {
+                    // 1. حركة الدوران والانقلاب في حال وجود شد تحت القاعدة (S_min < 0)
+                    if (this.simResults.tensionUnderFooting) {
+                        this.modelGroup.rotation.z = -0.10 - Math.sin(elapsed * 3.5) * 0.04;
+                        this.modelGroup.position.y = 0.04;
+                    } else {
+                        this.modelGroup.rotation.z = 0;
+                    }
+
+                    // 2. حركة هبوط وغوص القاعدة عند تجاوز قدرة تحمل التربة
+                    if (!this.simResults.soilSafe) {
+                        this.modelGroup.position.y = -0.12 - Math.abs(Math.sin(elapsed * 2.5)) * 0.06;
+                    } else if (!this.simResults.tensionUnderFooting) {
+                        this.modelGroup.position.y = 0;
+                    }
+
+                    // 3. حركة انزلاق قضبان التسليح عند نقص طول الالتحام (المهمة 6 أو التمرين 1)
+                    if (this.simResults.rebarSlipping && this.rebarGroup) {
+                        this.rebarGroup.position.x = Math.sin(elapsed * 5) * 0.14;
+                    } else if (this.rebarGroup) {
+                        this.rebarGroup.position.x = 0;
+                    }
+                }
+
+                if (this.controls) this.controls.update();
+                if (this.renderer && this.scene && this.camera) {
+                    this.renderer.render(this.scene, this.camera);
+                }
+            },
+
+            /**
+             * 8. إعادة التعيين للوضع الافتراضي
+             */
+            reset() {
+                if (this.currentMode === 'golden_thickness') {
+                    this.goldenState = {
+                        DL: 120,
+                        LL: 30,
+                        Sall: 3.0,
+                        fc: 200,
+                        fy: 4000,
+                        B: 2.30,
+                        L: 2.40,
+                        H: 55,
+                        phi: 14,
+                        barsPerM: 8,
+                        useHook: true,
+                        plainMode: 'cyclopean'
+                    };
+                    document.getElementById('inp-dl').value = 120;
+                    document.getElementById('inp-ll').value = 30;
+                    document.getElementById('inp-sall').value = 3.0;
+                    document.getElementById('inp-fc').value = 200;
+                    document.getElementById('inp-fy').value = 4000;
+                    document.getElementById('inp-B').value = 2.30;
+                    document.getElementById('inp-L').value = 2.40;
+                    document.getElementById('inp-H').value = 55;
+                    document.getElementById('inp-phi').value = 14;
+                    document.getElementById('inp-bars').value = 8;
+                    document.getElementById('inp-hook').checked = true;
+                    this.setFootingType('reinforced');
+                } else {
+                    this.rescueState.m1 = { soilFactor: 1, momentFactor: 1, shearFactor: 1 };
+                    this.rescueState.m2 = { areaLoad: 'Pu', strengthLoad: 'Pservice' };
+                    this.rescueState.m3 = { incArea11: false, incSnet11: true, B: 2.20 };
+                    this.rescueState.m4 = { probeM: 25, probeP: 0, probeS: 0 };
+                    this.rescueState.m5 = { subMode: 'strap', B: 0.95, L: 1.80, combL: 3.80 };
+                    this.rescueState.m6 = { phi: 10, useAsMin: false, useHook: false };
+
+                    document.getElementById('m1-soil-factor').value = '1';
+                    document.getElementById('m1-moment-factor').value = '1';
+                    document.getElementById('m1-shear-factor').value = '1';
+                    document.getElementById('m2-area-load').value = 'Pu';
+                    document.getElementById('m2-strength-load').value = 'Pservice';
+                    document.getElementById('m3-inc-area').checked = false;
+                    document.getElementById('m3-inc-snet').checked = true;
+                    document.getElementById('m3-B').value = 2.20;
+                    document.getElementById('m4-probe-m').value = 25;
+                    document.getElementById('m4-probe-p').value = 0;
+                    document.getElementById('m4-probe-s').value = 0;
+                    document.getElementById('m5-B').value = 0.95;
+                    document.getElementById('m5-L').value = 1.80;
+                    document.getElementById('m5-combL').value = 3.80;
+                    document.getElementById('m6-phi').value = '10';
+                    document.getElementById('m6-asmin').checked = false;
+                    document.getElementById('m6-hook').checked = false;
+
+                    this.onRescueInput();
+                }
+            },
+
+            /**
+             * 9. دالة التنظيف الإلزامية لمنع تسريب ذاكرة WebGL
+             */
+            destroy() {
+                if (this.animFrameId) {
+                    cancelAnimationFrame(this.animFrameId);
+                    this.animFrameId = null;
+                }
+                if (this._onResizeBound) {
+                    window.removeEventListener('resize', this._onResizeBound);
+                }
+                if (this.scene) {
+                    this.scene.traverse((obj) => {
+                        if (obj.geometry) obj.geometry.dispose();
+                        if (obj.material) {
+                            if (Array.isArray(obj.material)) {
+                                obj.material.forEach(mat => {
+                                    if (mat.map) mat.map.dispose();
+                                    mat.dispose();
+                                });
+                            } else {
+                                if (obj.material.map) obj.material.map.dispose();
+                                obj.material.dispose();
+                            }
+                        }
+                    });
+                }
+                if (this.renderer) {
+                    this.renderer.dispose();
+                    if (this.renderer.domElement && this.renderer.domElement.parentNode) {
+                        this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+                    }
+                }
+            }
+        };
+
+        // تشغيل المختبر فور تحميل الصفحة
+        window.addEventListener('DOMContentLoaded', () => {
+            PhysicsExpLab.init('webgl-container');
+        });
+    </script>
+</body>
+</html>

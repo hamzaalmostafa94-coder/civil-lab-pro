@@ -1,0 +1,2174 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مختبر التمدد الظاهري والخزانات وشذوذ الماء (Flask & Tank 3D Sim) - فيزياء الهندسة المدنية</title>
+
+  <!-- خط تجوال Tajawal -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" />
+
+  <!-- مكتبة Three.js (الإصدار r128) و OrbitControls عبر روابط CDN المباشرة -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <style>
+    /* ==========================================================================
+       الهوية البصرية وتنسيقات واجهة المستخدم الهندسية (RTL + Tajawal)
+       ========================================================================== */
+    :root {
+      --bg-navy: #0f172a;
+      --panel-bg: rgba(15, 23, 42, 0.90);
+      --card-bg: rgba(30, 41, 59, 0.80);
+      --border-cyan: rgba(56, 189, 248, 0.28);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --cyan: #38bdf8;
+      --amber: #f59e0b;
+      --emerald: #10b981;
+      --red: #ef4444;
+      --purple: #a855f7;
+      --font-ar: 'Tajawal', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-navy);
+      color: var(--text-primary);
+      font-family: var(--font-ar);
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* حاوية المشهد ثلاثي الأبعاد */
+    #sim-canvas-container {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+    }
+
+    /* الشريط العلوي */
+    .top-header {
+      position: fixed;
+      top: 10px;
+      right: 12px;
+      left: 12px;
+      z-index: 25;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 15px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--border-cyan);
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+      flex-wrap: wrap;
+    }
+
+    .brand-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-tag {
+      background: linear-gradient(135deg, #0284c7, #38bdf8);
+      color: #fff;
+      font-weight: 800;
+      font-size: 0.78rem;
+      padding: 5px 9px;
+      border-radius: 8px;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+    }
+
+    .brand-info h1 {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .brand-info p {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    /* أزرار التبديل بين الأطوار الثلاثة */
+    .mode-switcher {
+      display: flex;
+      gap: 6px;
+      background: rgba(2, 6, 23, 0.65);
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+    }
+
+    .tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 11px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: var(--font-ar);
+      font-size: 0.81rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn:hover {
+      color: #fff;
+      background: rgba(56, 189, 248, 0.1);
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.3), rgba(56, 189, 248, 0.12));
+      color: var(--cyan);
+      border-color: rgba(56, 189, 248, 0.45);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.18);
+    }
+
+    .tab-badge {
+      width: 19px;
+      height: 19px;
+      border-radius: 50%;
+      background: rgba(56, 189, 248, 0.22);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.73rem;
+    }
+
+    /* أزرار التشغيل وإعادة الضبط ومسائل الدورات */
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-family: var(--font-ar);
+      font-size: 0.81rem;
+      font-weight: 700;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-play {
+      background: linear-gradient(135deg, #0284c7, #0ea5e9);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(14, 165, 233, 0.35);
+    }
+
+    .btn-play:hover {
+      background: linear-gradient(135deg, #0369a1, #0284c7);
+    }
+
+    .btn-exam {
+      background: rgba(245, 158, 11, 0.18);
+      color: #fbbf24;
+      border-color: rgba(245, 158, 11, 0.45);
+    }
+
+    .btn-exam:hover {
+      background: rgba(245, 158, 11, 0.3);
+    }
+
+    .btn-reset {
+      background: rgba(51, 65, 85, 0.65);
+      color: #e2e8f0;
+      border-color: rgba(148, 163, 184, 0.25);
+    }
+
+    .btn-reset:hover {
+      background: rgba(71, 85, 105, 0.85);
+    }
+
+    /* لوحة التحكم الجانبية اليمنى */
+    .side-panel {
+      position: fixed;
+      top: 76px;
+      right: 12px;
+      width: 350px;
+      max-height: calc(100vh - 88px);
+      z-index: 20;
+      background: var(--panel-bg);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--border-cyan);
+      border-radius: 14px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-title-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 15px;
+      background: rgba(2, 6, 23, 0.45);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+    }
+
+    .panel-title-bar h2 {
+      font-size: 0.92rem;
+      font-weight: 800;
+      color: var(--cyan);
+    }
+
+    .toggle-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1.05rem;
+      cursor: pointer;
+    }
+
+    .panel-scroll {
+      padding: 12px 14px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+    }
+
+    .control-card {
+      background: var(--card-bg);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      border-radius: 10px;
+      padding: 10px 11px;
+    }
+
+    .field-label {
+      display: block;
+      font-size: 0.79rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin-bottom: 6px;
+    }
+
+    .select-box {
+      width: 100%;
+      padding: 7px 9px;
+      border-radius: 7px;
+      background: #0f172a;
+      color: #fff;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      font-family: var(--font-ar);
+      font-size: 0.79rem;
+      font-weight: 600;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .coeff-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 6px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: rgba(56, 189, 248, 0.1);
+      font-size: 0.75rem;
+      color: var(--cyan);
+    }
+
+    .slider-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .val-pill {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-weight: 800;
+      font-size: 0.78rem;
+      color: #fff;
+    }
+
+    .val-pill.hot { color: #fb923c; }
+    .val-pill.cyan { color: var(--cyan); }
+    .val-pill.amber { color: var(--amber); }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      accent-color: var(--cyan);
+      cursor: pointer;
+    }
+
+    .slider-ticks {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.68rem;
+      color: var(--text-secondary);
+      margin-top: 3px;
+    }
+
+    /* شريط مراحل الدورق (1 -> 1' -> 2) */
+    .stage-stepper {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+      margin-top: 6px;
+    }
+
+    .stage-pill {
+      text-align: center;
+      padding: 5px 4px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .stage-pill.active {
+      background: rgba(56, 189, 248, 0.22);
+      border-color: var(--cyan);
+      color: #fff;
+    }
+
+    /* الجداول المرجعية للثوابت الفيزيائية */
+    .ref-details {
+      background: var(--card-bg);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+
+    .ref-details summary {
+      font-size: 0.79rem;
+      font-weight: 700;
+      color: var(--amber);
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .ref-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 7px;
+      font-size: 0.72rem;
+    }
+
+    .ref-table th, .ref-table td {
+      padding: 4px 5px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+      text-align: right;
+    }
+
+    .ref-table th {
+      color: var(--cyan);
+    }
+
+    /* لوحة النتائج الرقمية والمعادلات (الجانب الأيسر) */
+    .results-panel {
+      position: fixed;
+      top: 76px;
+      left: 12px;
+      width: 445px;
+      z-index: 20;
+      background: var(--panel-bg);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--border-cyan);
+      border-radius: 14px;
+      padding: 13px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: calc(100vh - 88px);
+      overflow-y: auto;
+    }
+
+    .status-strip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 11px;
+      border-radius: 9px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .status-strip.info {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      color: #7dd3fc;
+    }
+
+    .status-strip.safe {
+      background: rgba(16, 185, 129, 0.16);
+      border: 1px solid rgba(16, 185, 129, 0.45);
+      color: #6ee7b7;
+    }
+
+    .status-strip.danger {
+      background: rgba(239, 68, 68, 0.18);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      color: #fca5a5;
+    }
+
+    .pulse-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 8px currentColor;
+      flex-shrink: 0;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .metric-box {
+      background: var(--card-bg);
+      border: 1px solid rgba(148, 163, 184, 0.15);
+      border-radius: 9px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .metric-box.featured {
+      border-color: rgba(245, 158, 11, 0.5);
+      background: linear-gradient(180deg, rgba(245, 158, 11, 0.12), rgba(30, 41, 59, 0.85));
+    }
+
+    .m-label {
+      font-size: 0.73rem;
+      color: var(--text-secondary);
+      margin-bottom: 3px;
+    }
+
+    .m-val {
+      font-size: 0.92rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .m-sub {
+      font-size: 0.69rem;
+      color: #cbd5e1;
+      margin-top: 3px;
+    }
+
+    /* صندوق المعادلات الفيزيائية */
+    .formula-card {
+      background: rgba(2, 6, 23, 0.78);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 10px;
+      padding: 9px 11px;
+    }
+
+    .formula-header {
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--cyan);
+      margin-bottom: 5px;
+    }
+
+    .formula-lines {
+      font-family: 'Courier New', monospace;
+      font-size: 0.75rem;
+      line-height: 1.55;
+      color: #e2e8f0;
+    }
+
+    .f-row {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px dashed rgba(148, 163, 184, 0.12);
+      padding: 2px 0;
+      gap: 8px;
+    }
+
+    .f-row:last-child {
+      border-bottom: none;
+    }
+
+    .f-accent {
+      color: #fbbf24;
+      font-weight: 700;
+    }
+
+    /* تلميح الفأرة أسفل الشاشة */
+    .bottom-hint {
+      position: fixed;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      background: rgba(15, 23, 42, 0.82);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 0.74rem;
+      color: var(--text-secondary);
+      display: flex;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* التجاوب مع الشاشات المتوسطة والهواتف */
+    @media (max-width: 1120px) {
+      .side-panel {
+        top: auto;
+        bottom: 10px;
+        right: 10px;
+        width: 320px;
+        max-height: 46vh;
+      }
+      .results-panel {
+        top: auto;
+        bottom: 10px;
+        left: 10px;
+        width: 360px;
+        max-height: 46vh;
+      }
+      .bottom-hint {
+        display: none;
+      }
+    }
+
+    @media (max-width: 740px) {
+      .brand-info p { display: none; }
+      .side-panel {
+        left: 10px;
+        right: 10px;
+        width: auto;
+        bottom: 8px;
+        max-height: 36vh;
+      }
+      .results-panel {
+        top: 128px;
+        left: 10px;
+        right: 10px;
+        width: auto;
+        bottom: auto;
+        max-height: 32vh;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- حاوية المشهد ثلاثي الأبعاد -->
+  <div id="sim-canvas-container" aria-label="مشهد محاكاة الفيزياء ثلاثي الأبعاد"></div>
+
+  <!-- الشريط العلوي -->
+  <header class="top-header">
+    <div class="brand-info">
+      <span class="brand-tag">3D PHYSICS</span>
+      <div>
+        <h1>مختبر التمدد الظاهري والخزانات وشذوذ الماء</h1>
+        <p>فيزياء الهندسة المدنية — الدورق المدرّج، الكرية الجوفاء، وتصدع البيتون بالصقيع</p>
+      </div>
+    </div>
+
+    <!-- أزرار التبديل بين الأطوار الثلاثة -->
+    <nav class="mode-switcher" role="tablist">
+      <button class="tab-btn active" data-mode="flask" id="tab-flask">
+        <span class="tab-badge">1</span>
+        <span>الدورق الزجاجي (1 ← 1' ← 2)</span>
+      </button>
+      <button class="tab-btn" data-mode="sphere" id="tab-sphere">
+        <span class="tab-badge">2</span>
+        <span>الكرية الجوفاء وفراغ الخزانات</span>
+      </button>
+      <button class="tab-btn" data-mode="water" id="tab-water">
+        <span class="tab-badge">3</span>
+        <span>شذوذ الماء (0°C-4°C) وتصدع البيتون</span>
+      </button>
+    </nav>
+
+    <!-- أزرار التحكم السريعة -->
+    <div class="header-actions">
+      <button id="btn-play" class="btn btn-play" title="تشغيل أو إيقاف المحاكاة التفاعلية">
+        <span id="play-icon">▶</span>
+        <span id="play-label">تشغيل المحاكاة</span>
+      </button>
+      <button id="btn-exam-preset" class="btn btn-exam" title="تطبيق أرقام مسألة الدورة الامتحانية للطور الحالي">
+        ★ تطبيق مسألة دورة 2015-2016
+      </button>
+      <button id="btn-reset" class="btn btn-reset" title="إعادة تعيين التجربة">
+        ↺ إعادة تعيين
+      </button>
+    </div>
+  </header>
+
+  <!-- لوحة التحكم الجانبية اليمنى -->
+  <aside class="side-panel">
+    <div class="panel-title-bar">
+      <h2>⚙️ لوحة التحكم والمعاملات الفيزيائية</h2>
+      <button id="btn-collapse-panel" class="toggle-btn" title="طي/فتح اللوحة">☰</button>
+    </div>
+
+    <div class="panel-scroll" id="panel-scroll-body">
+
+      <!-- عناصر التحكم المشتركة للطور 1 والطور 2 (مادة الوعاء ونوع السائل) -->
+      <div class="control-card" id="ctrl-materials">
+        <label class="field-label" for="select-vessel">مادة الوعاء / الخزان الصلب (α_V):</label>
+        <select id="select-vessel" class="select-box">
+          <option value="flask_2015" selected>زجاج الدورق (دورة 2015-2016: α_V = 8×10⁻⁶ °C⁻¹)</option>
+          <option value="sphere_2018">زجاج الكرية الجوفاء (دورة 2017-2018: α_V = 7.2×10⁻⁶ °C⁻¹)</option>
+          <option value="ordinary_glass">الزجاج العادي (Ordinary Glass: α_V = 9×10⁻⁶ °C⁻¹)</option>
+          <option value="pyrex">زجاج البيركس (Pyrex Glass: α_V = 3.2×10⁻⁶ °C⁻¹)</option>
+          <option value="steel">الفولاذ لخزانات الوقود (Steel: α_V = 11×10⁻⁶ °C⁻¹)</option>
+          <option value="concrete">البيتون للخزانات الأرضية (Concrete: α_V = 12×10⁻⁶ °C⁻¹)</option>
+        </select>
+        <div class="coeff-row">
+          <span>معامل التمدد الحجمي للوعاء (γ_V = 3α_V):</span>
+          <strong id="read-gamma-v" dir="ltr">2.40 × 10⁻⁵ °C⁻¹</strong>
+        </div>
+
+        <label class="field-label" for="select-liquid" style="margin-top:9px;">السائل المختبر ومعامله الحقيقي (γ_L):</label>
+        <select id="select-liquid" class="select-box">
+          <option value="exam_2015" selected>سائل مسألة دورة 2015-2016 (γ_L = 120×10⁻⁵ °C⁻¹)</option>
+          <option value="mercury">الزئبق - Mercury (دورة 2017-2018: γ_L = 1.81×10⁻⁴ °C⁻¹)</option>
+          <option value="alcohol">الكحول الإيتيلي - Ethyl Alcohol (γ_L = 1.12×10⁻³ °C⁻¹)</option>
+          <option value="benzene">البنزن - Benzene (γ_L = 1.24×10⁻³ °C⁻¹)</option>
+          <option value="gasoline">الغازولين / الوقود - Gasoline (γ_L = 9.6×10⁻⁴ °C⁻¹)</option>
+          <option value="glycerin">الغليسرين - Glycerin (γ_L = 4.85×10⁻⁴ °C⁻¹)</option>
+        </select>
+        <div class="coeff-row">
+          <span>معامل التمدد الظاهري (γ'_L = γ_L - 3α_V):</span>
+          <strong id="read-gamma-app" dir="ltr">117.60 × 10⁻⁵ °C⁻¹</strong>
+        </div>
+      </div>
+
+      <!-- عناصر تحكم الطور الأول: الدورق الزجاجي (1 -> 1' -> 2) -->
+      <div id="controls-flask">
+        <div class="control-card">
+          <div class="slider-top">
+            <span>مرحلة التسخين البطيء (ص 42 من الكتاب):</span>
+            <span class="val-pill cyan" id="val-flask-stage">المرحلة النهائية (2)</span>
+          </div>
+          <input type="range" id="slider-stage" min="0" max="1" step="0.01" value="1" />
+          <div class="stage-stepper">
+            <div class="stage-pill" data-stage-jump="0">العلامة (1) ابتداؤه</div>
+            <div class="stage-pill" data-stage-jump="0.42">العلامة (1') هبوط مؤقت</div>
+            <div class="stage-pill active" data-stage-jump="1">العلامة (2) توازن نهائي</div>
+          </div>
+        </div>
+
+        <div class="control-card" style="margin-top:9px;">
+          <div class="slider-top">
+            <label for="slider-v0">حجم الدورق الابتدائي (V₀):</label>
+            <span class="val-pill" id="val-v0" dir="ltr">100 cm³</span>
+          </div>
+          <input type="range" id="slider-v0" min="50" max="500" step="10" value="100" />
+          <div class="slider-ticks">
+            <span>50 cm³</span>
+            <span>100 cm³ (مسألة الدورة)</span>
+            <span>500 cm³</span>
+          </div>
+        </div>
+
+        <div class="control-card" style="margin-top:9px;">
+          <div class="slider-top">
+            <label for="slider-tube-s">مساحة مقطع عنق الأنبوبة (S):</label>
+            <span class="val-pill cyan" id="val-tube-s" dir="ltr">1.0 mm² (0.01 cm²)</span>
+          </div>
+          <input type="range" id="slider-tube-s" min="0.5" max="10" step="0.5" value="1.0" />
+          <div class="slider-ticks">
+            <span>0.5 mm²</span>
+            <span>1.0 mm² (مسألة الدورة)</span>
+            <span>10 mm²</span>
+          </div>
+        </div>
+
+        <div class="control-card" style="margin-top:9px;">
+          <div class="slider-top">
+            <label for="slider-flask-dt">رفع درجة الحرارة (ΔT = T₂ - T₁):</label>
+            <span class="val-pill hot" id="val-flask-dt" dir="ltr">20 °C (20°→40°)</span>
+          </div>
+          <input type="range" id="slider-flask-dt" min="0" max="80" step="1" value="20" />
+          <div class="slider-ticks">
+            <span>0°C</span>
+            <span>20°C (مسألة الدورة)</span>
+            <span>80°C</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- عناصر تحكم الطور الثاني: الكرية الزجاجية الجوفاء وفراغ الخزانات -->
+      <div id="controls-sphere" class="hidden">
+        <div class="control-card">
+          <div class="slider-top">
+            <label for="slider-void0">حجم الفراغ الابتدائي عند 0°C (V_void0):</label>
+            <span class="val-pill cyan" id="val-void0" dir="ltr">1.00 cm³</span>
+          </div>
+          <input type="range" id="slider-void0" min="0.2" max="5.0" step="0.05" value="1.00" />
+          <div class="slider-ticks">
+            <span>0.20 cm³</span>
+            <span>1.00 cm³ (مسألة الدورة)</span>
+            <span>5.00 cm³</span>
+          </div>
+        </div>
+
+        <div class="control-card" style="margin-top:9px;">
+          <div class="slider-top">
+            <label for="slider-vhg0">حجم السائل/الزئبق الابتدائي عند 0°C (V_Hg0):</label>
+            <span class="val-pill amber" id="val-vhg0" dir="ltr">3.272 cm³</span>
+          </div>
+          <input type="range" id="slider-vhg0" min="1.0" max="200.0" step="0.01" value="3.272" />
+          <div class="slider-ticks">
+            <span>1 cm³</span>
+            <span>3.27 cm³ (حل المسألة)</span>
+            <span>200 cm³ (فائض)</span>
+          </div>
+        </div>
+
+        <div class="control-card" style="margin-top:9px;">
+          <div class="slider-top">
+            <label for="slider-sphere-dt">فرق درجة الحرارة (ΔT من 0°C):</label>
+            <span class="val-pill hot" id="val-sphere-dt" dir="ltr">40 °C</span>
+          </div>
+          <input type="range" id="slider-sphere-dt" min="0" max="100" step="1" value="40" />
+          <div class="slider-ticks">
+            <span>0°C</span>
+            <span>40°C (مسألة الدورة)</span>
+            <span>100°C</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- عناصر تحكم الطور الثالث: شذوذ تمدد الماء (0°C - 4°C) وتصدع البيتون -->
+      <div id="controls-water" class="hidden">
+        <div class="control-card">
+          <div class="slider-top">
+            <label for="slider-water-t">درجة حرارة الماء في شق البيتون (T):</label>
+            <span class="val-pill cyan" id="val-water-t" dir="ltr">4.0 °C (277 K)</span>
+          </div>
+          <input type="range" id="slider-water-t" min="-5" max="15" step="0.1" value="4.0" />
+          <div class="slider-ticks">
+            <span>-5°C (جليد متمدد)</span>
+            <span>0°C (شذوذ)</span>
+            <span>4°C (أعظم كثافة)</span>
+            <span>15°C</span>
+          </div>
+
+          <div class="stage-stepper" style="margin-top:8px;">
+            <div class="stage-pill" data-water-jump="10">10°C (سائل عادي)</div>
+            <div class="stage-pill active" data-water-jump="4">4°C (ذروة الكثافة)</div>
+            <div class="stage-pill" data-water-jump="0">0°C (تمدد شاذ + تصدع)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- جدول الثوابت الفيزيائية المرجعي من الكتاب المقرر ص 31 -->
+      <details class="ref-details">
+        <summary>📋 جدول الثوابت المعتمدة (الجدول 1.1 ص 31 ومسائل الدورات)</summary>
+        <table class="ref-table">
+          <thead>
+            <tr>
+              <th>المادة / السائل</th>
+              <th>المعامل المعتمد (°C⁻¹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>زجاج الدورق (دورة 2015-2016)</td><td dir="ltr">α_V = 8×10⁻⁶ | γ_V = 2.4×10⁻⁵</td></tr>
+            <tr><td>زجاج الكرية (دورة 2017-2018)</td><td dir="ltr">α_V = 7.2×10⁻⁶ | γ_V = 2.16×10⁻⁵</td></tr>
+            <tr><td>الزجاج العادي / البيركس</td><td dir="ltr">α_V = 9×10⁻⁶ / 3.2×10⁻⁶</td></tr>
+            <tr><td>الفولاذ / البيتون</td><td dir="ltr">α_V = 11×10⁻⁶ / 12×10⁻⁶</td></tr>
+            <tr><td>سائل دورة 2015-2016</td><td dir="ltr">γ_L = 120×10⁻⁵ (1.20×10⁻³)</td></tr>
+            <tr><td>الزئبق (Mercury)</td><td dir="ltr">γ_L = 1.81×10⁻⁴</td></tr>
+            <tr><td>الكحول الإيتيلي / البنزن</td><td dir="ltr">γ_L = 1.12×10⁻³ / 1.24×10⁻³</td></tr>
+            <tr><td>الغازولين / الغليسرين</td><td dir="ltr">γ_L = 9.6×10⁻⁴ / 4.85×10⁻⁴</td></tr>
+          </tbody>
+        </table>
+      </details>
+
+    </div>
+  </aside>
+
+  <!-- لوحة النتائج الرقمية والمعادلات الفورية (الجانب الأيسر) -->
+  <section class="results-panel" aria-live="polite">
+    <div class="status-strip info" id="status-banner">
+      <span class="pulse-dot"></span>
+      <span id="status-message">الطور الأول: رصد الفرق بين التمدد الحقيقي (1'←2) والتمدد الظاهري (1←2).</span>
+    </div>
+
+    <!-- شاشات الطور الأول: الدورق -->
+    <div id="metrics-flask" class="metrics-grid">
+      <div class="metric-box">
+        <span class="m-label">هبوط السائل لتمدد الوعاء (1 ← 1')</span>
+        <strong class="m-val" id="out-dv-vessel" dir="ltr">ΔV_V = 0.048 cm³</strong>
+        <span class="m-sub" id="out-h-drop" dir="ltr">هبوط مؤقت: 48.0 mm</span>
+      </div>
+
+      <div class="metric-box">
+        <span class="m-label">التمدد الحقيقي للسائل (1' ← 2)</span>
+        <strong class="m-val cyan" id="out-dv-real" dir="ltr">ΔV_real = 2.400 cm³</strong>
+        <span class="m-sub" id="out-dv-real-mm" dir="ltr">= 2400.0 mm³</span>
+      </div>
+
+      <div class="metric-box">
+        <span class="m-label">التمدد الظاهري الصافي (1 ← 2)</span>
+        <strong class="m-val amber" id="out-dv-app" dir="ltr">ΔV_app = 2.352 cm³</strong>
+        <span class="m-sub" id="out-dv-app-mm" dir="ltr">= 2352.0 mm³</span>
+      </div>
+
+      <div class="metric-box featured">
+        <span class="m-label">ارتفاع السائل فوق الإشارة (h_rise)</span>
+        <strong class="m-val amber" id="out-h-rise" dir="ltr">2352 mm (235.2 cm)</strong>
+        <span class="m-sub" id="out-current-level" dir="ltr">المستوى الآني: العلامة (2)</span>
+      </div>
+    </div>
+
+    <!-- شاشات الطور الثاني: الكرية الجوفاء والخزانات -->
+    <div id="metrics-sphere" class="metrics-grid hidden">
+      <div class="metric-box">
+        <span class="m-label">حجم الزئبق الابتدائي عند 0°C</span>
+        <strong class="m-val" id="out-vhg0" dir="ltr">3.272 cm³</strong>
+        <span class="m-sub" id="out-vhg0-approx" dir="ltr">(بالتقريب الظاهري: 3.137 cm³)</span>
+      </div>
+
+      <div class="metric-box">
+        <span class="m-label">حجم الزئبق النهائي عند T₂</span>
+        <strong class="m-val cyan" id="out-vhg-final" dir="ltr">3.296 cm³</strong>
+        <span class="m-sub" id="out-dvhg" dir="ltr">ΔV_Hg = +0.0237 cm³</span>
+      </div>
+
+      <div class="metric-box">
+        <span class="m-label">التغير في حجم الفراغ (ΔV_void)</span>
+        <strong class="m-val" id="out-dv-void" dir="ltr">-0.020 cm³</strong>
+        <span class="m-sub" id="out-dv-tank" dir="ltr">تمدد الكرية: +0.0037 cm³</span>
+      </div>
+
+      <div class="metric-box featured">
+        <span class="m-label">حجم الفراغ المتبقي (V_void)</span>
+        <strong class="m-val amber" id="out-void-rem" dir="ltr">0.980 cm³</strong>
+        <span class="m-sub" id="out-void-pct">نسبة أمان الفراغ: 98.0%</span>
+      </div>
+    </div>
+
+    <!-- شاشات الطور الثالث: شذوذ الماء وتصدع البيتون -->
+    <div id="metrics-water" class="metrics-grid hidden">
+      <div class="metric-box">
+        <span class="m-label">درجة الحرارة المطلقة والمئوية</span>
+        <strong class="m-val cyan" id="out-water-temp" dir="ltr">4.0 °C (277.15 K)</strong>
+        <span class="m-sub" id="out-water-phase">الحالة: سائل في ذروة التراص</span>
+      </div>
+
+      <div class="metric-box">
+        <span class="m-label">كثافة الماء ρ(T)</span>
+        <strong class="m-val amber" id="out-water-rho" dir="ltr">1.00000 g/cm³</strong>
+        <span class="m-sub">القيمة العظمى عند 4°C</span>
+      </div>
+
+      <div class="metric-box">
+        <span class="m-label">الحجم النوعي (1/ρ)</span>
+        <strong class="m-val" id="out-water-vol" dir="ltr">1.00000 cm³/g</strong>
+        <span class="m-sub" id="out-hex-rings">بنية الجزيئات: متراصة</span>
+      </div>
+
+      <div class="metric-box featured">
+        <span class="m-label">إجهاد الصقيع على جدران البيتون</span>
+        <strong class="m-val amber" id="out-frost-stress" dir="ltr">0.0 MPa (آمن)</strong>
+        <span class="m-sub" id="out-frost-state">لا يوجد ضغط تدميري</span>
+      </div>
+    </div>
+
+    <!-- صندوق المعادلات الفيزيائية الحية -->
+    <div class="formula-card">
+      <div class="formula-header">📐 العلاقات الفيزيائية والتعويض العددي الفوري:</div>
+      <div id="formula-box" class="formula-lines" dir="ltr"></div>
+    </div>
+  </section>
+
+  <!-- تلميح الفأرة -->
+  <div class="bottom-hint">
+    <span>🖱️ تدوير 3D: الزر الأيسر</span>
+    <span>•</span>
+    <span>🔍 تقريب: عجلة الفأرة</span>
+    <span>•</span>
+    <span>✋ تحريك: الزر الأيمن</span>
+  </div>
+
+  <!-- ==========================================================================
+       المنطق الفيزيائي والمحاكاة ثلاثية الأبعاد داخل الكائن الموحد PhysicsExpLab
+       ========================================================================== -->
+  <script>
+	  const PhysicsExpLab = {
+	  // 1. الثوابت الفيزيائية المعتمدة من الجدول 1.1 ص 31 ومسائل الدورات
+	  vessels: {
+	  flask_2015:     { name: 'زجاج الدورق (دورة 2015-2016)', alpha: 8.0e-6, gamma: 2.40e-5 },
+	  sphere_2018:    { name: 'زجاج الكرية الجوفاء (دورة 2017-2018)', alpha: 7.2e-6, gamma: 2.16e-5 },
+	  ordinary_glass: { name: 'الزجاج العادي (Ordinary Glass)', alpha: 9.0e-6, gamma: 2.70e-5 },
+	  pyrex:          { name: 'زجاج البيركس (Pyrex Glass)', alpha: 3.2e-6, gamma: 0.96e-5 },
+	  steel:          { name: 'الفولاذ لخزانات الوقود (Steel)', alpha: 11.0e-6, gamma: 3.30e-5 },
+	  concrete:       { name: 'البيتون للخزانات الأرضية (Concrete)', alpha: 12.0e-6, gamma: 3.60e-5 }
+	  },
+
+	  liquids: {
+	  exam_2015: { name: 'سائل دورة 2015-2016', gamma: 120.0e-5, color: 0x0ea5e9 },
+	  mercury:   { name: 'الزئبق (Mercury)', gamma: 1.81e-4, color: 0x94a3b8 },
+	  alcohol:   { name: 'الكحول الإيتيلي (Ethyl Alcohol)', gamma: 1.12e-3, color: 0x38bdf8 },
+	  benzene:   { name: 'البنزن (Benzene)', gamma: 1.24e-3, color: 0xf59e0b },
+	  gasoline:  { name: 'الغازولين / الوقود (Gasoline)', gamma: 9.60e-4, color: 0xeab308 },
+	  glycerin:  { name: 'الغليسرين (Glycerin)', gamma: 4.85e-4, color: 0xa855f7 }
+	  },
+
+	  // حالة المحاكاة
+	  state: {
+	  mode: 'flask',           // 'flask' | 'sphere' | 'water'
+	  vesselKey: 'flask_2015',
+	  liquidKey: 'exam_2015',
+
+	  // معاملات الطور 1 (الدورق)
+	  V0: 100.0,               // cm^3
+	  tubeS: 1.0,              // mm^2 (0.01 cm^2)
+	  flaskDT: 20.0,           // °C (من 20 إلى 40)
+	  stageProgress: 1.0,      // 0 = العلامة (1)، 0.42 = العلامة (1')، 1.0 = العلامة (2)
+
+	  // معاملات الطور 2 (الكرية الجوفاء والخزان)
+	  void0: 1.00,             // cm^3 عند 0°C
+	  vHg0: 3.2723,            // cm^3 عند 0°C (القيمة التي تحقق نقص الفراغ إلى 0.98 عند 40°C)
+	  sphereDT: 40.0,          // °C
+
+	  // معاملات الطور 3 (شذوذ الماء وتصدع البيتون)
+	  waterT: 4.0,             // °C (-5 إلى 15)
+
+	  // التحريك
+	  isPlaying: false,
+	  animId: null,
+	  clock: 0
+	  },
+
+	  // مراجع Three.js
+	  container: null,
+	  scene: null,
+	  camera: null,
+	  renderer: null,
+	  controls: null,
+	  resizeHandler: null,
+
+	  // مجموعات الأطوار الثلاثة
+	  modeGroups: {
+	  flask: null,
+	  sphere: null,
+	  water: null
+	  },
+
+	  // مراجع كائنات الطور 1
+	  flaskObjs: {
+	  glassBulb: null,
+	  glassNeck: null,
+	  liquidBulb: null,
+	  liquidColumn: null,
+	  burnerFlame: null,
+	  mark1Group: null,
+	  mark1PrimeGroup: null,
+	  mark2Group: null,
+	  meniscusRing: null,
+	  liquidMat: null,
+	  flameMat: null,
+	  labelMark1: null,
+	  labelMark1Prime: null,
+	  labelMark2: null
+	  },
+
+	  // مراجع كائنات الطور 2
+	  sphereObjs: {
+	  outerShell: null,
+	  liquidSphere: null,
+	  voidCap: null,
+	  overflowDrops: null,
+	  cracksLines: null,
+	  liquidMat: null,
+	  voidMat: null,
+	  labelVoid: null,
+	  labelLiquid: null
+	  },
+
+	  // مراجع كائنات الطور 3
+	  waterObjs: {
+	  concreteLeft: null,
+	  concreteRight: null,
+	  waterPocket: null,
+	  frostCracks: null,
+	  moleculesGroup: null,
+	  hexBondsLines: null,
+	  curveMarker: null,
+	  labelDensity: null,
+	  labelCrystal: null
+	  },
+
+	  /**
+	  * 1. دالة التهيئة الإلزامية init(containerId)
+	  */
+	  init(containerId = 'sim-canvas-container') {
+	  this.container = document.getElementById(containerId);
+	  if (!this.container) return;
+
+	  // إنشاء المشهد والكاميرا
+	  this.scene = new THREE.Scene();
+	  this.scene.background = new THREE.Color(0x0f172a);
+	  this.scene.fog = new THREE.FogExp2(0x0f172a, 0.014);
+
+	  this.camera = new THREE.PerspectiveCamera(
+	  44,
+	  window.innerWidth / window.innerHeight,
+	  0.1,
+	  300
+	  );
+	  this.camera.position.set(0, 6.2, 18.5);
+
+	  this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+	  this.renderer.setSize(window.innerWidth, window.innerHeight);
+	  this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+	  this.renderer.shadowMap.enabled = true;
+	  this.container.appendChild(this.renderer.domElement);
+
+	  this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+	  this.controls.enableDamping = true;
+	  this.controls.dampingFactor = 0.06;
+	  this.controls.target.set(0, 3.2, 0);
+	  this.controls.maxPolarAngle = Math.PI / 2 + 0.05;
+	  this.controls.minDistance = 5;
+	  this.controls.maxDistance = 45;
+
+	  // الإضاءة الهندسية المتوازنة
+	  const ambient = new THREE.AmbientLight(0xe0f2fe, 0.7);
+	  this.scene.add(ambient);
+
+	  const keyLight = new THREE.DirectionalLight(0xffffff, 1.15);
+	  keyLight.position.set(14, 24, 16);
+	  keyLight.castShadow = true;
+	  this.scene.add(keyLight);
+
+	  const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.5);
+	  rimLight.position.set(-15, 10, -12);
+	  this.scene.add(rimLight);
+
+	  // الأرضية الشبكية الهندسية
+	  const grid = new THREE.GridHelper(60, 60, 0x38bdf8, 0x1e293b);
+	  this.scene.add(grid);
+
+	  const floorGeo = new THREE.PlaneGeometry(80, 80);
+	  const floorMat = new THREE.MeshStandardMaterial({
+	  color: 0x090f1d,
+	  roughness: 0.9,
+	  metalness: 0.1
+	  });
+	  const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+	  floorMesh.rotation.x = -Math.PI / 2;
+	  floorMesh.position.y = -0.02;
+	  floorMesh.receiveShadow = true;
+	  this.scene.add(floorMesh);
+
+	  // إنشاء مجموعات الأطوار الثلاثة
+	  this.modeGroups.flask = new THREE.Group();
+	  this.modeGroups.sphere = new THREE.Group();
+	  this.modeGroups.water = new THREE.Group();
+
+	  this.scene.add(this.modeGroups.flask);
+	  this.scene.add(this.modeGroups.sphere);
+	  this.scene.add(this.modeGroups.water);
+
+	  this.modeGroups.sphere.visible = false;
+	  this.modeGroups.water.visible = false;
+
+	  // بناء المجسمات ثلاثية الأبعاد للأطوار الثلاثة
+	  this.buildFlaskScene();
+	  this.buildSphereScene();
+	  this.buildWaterScene();
+
+	  // ربط الأحداث وتحديث المحاكاة
+	  this.bindEvents();
+	  this.update();
+
+	  // استجابة تغيير حجم الشاشة
+	  this.resizeHandler = () => {
+	  if (!this.camera || !this.renderer) return;
+	  this.camera.aspect = window.innerWidth / window.innerHeight;
+	  this.camera.updateProjectionMatrix();
+	  this.renderer.setSize(window.innerWidth, window.innerHeight);
+	  };
+	  window.addEventListener('resize', this.resizeHandler);
+
+	  // بدء حلقة الرسم المستمرة
+	  this.animate();
+	  },
+
+	  /**
+	  * أداة مساعدة لإنشاء لافتات نصية ثلاثية الأبعاد (3D Canvas Sprites)
+	  */
+	  createLabelSprite(initialText, borderCol = '#38bdf8', textCol = '#ffffff') {
+	  const canvas = document.createElement('canvas');
+	  canvas.width = 512;
+	  canvas.height = 128;
+	  const ctx = canvas.getContext('2d');
+	  const tex = new THREE.CanvasTexture(canvas);
+	  tex.minFilter = THREE.LinearFilter;
+
+	  const mat = new THREE.SpriteMaterial({
+	  map: tex,
+	  transparent: true,
+	  depthTest: false
+	  });
+	  const sprite = new THREE.Sprite(mat);
+	  sprite.scale.set(4.1, 1.02, 1);
+	  sprite.renderOrder = 999;
+
+	  sprite.userData.setText = (txt, bCol = borderCol, tCol = textCol) => {
+	  ctx.clearRect(0, 0, canvas.width, canvas.height);
+	  ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+	  ctx.strokeStyle = bCol;
+	  ctx.lineWidth = 5;
+
+	  const r = 20;
+	  ctx.beginPath();
+	  ctx.moveTo(r, 10);
+	  ctx.lineTo(canvas.width - r, 10);
+	  ctx.quadraticCurveTo(canvas.width - 10, 10, canvas.width - 10, r);
+	  ctx.lineTo(canvas.width - 10, canvas.height - r);
+	  ctx.quadraticCurveTo(canvas.width - 10, canvas.height - 10, canvas.width - r, canvas.height - 10);
+	  ctx.lineTo(r, canvas.height - 10);
+	  ctx.quadraticCurveTo(10, canvas.height - 10, 10, canvas.height - r);
+	  ctx.lineTo(10, r);
+	  ctx.quadraticCurveTo(10, 10, r, 10);
+	  ctx.closePath();
+	  ctx.fill();
+	  ctx.stroke();
+
+	  ctx.font = 'bold 31px Tajawal, Arial, sans-serif';
+	  ctx.fillStyle = tCol;
+	  ctx.textAlign = 'center';
+	  ctx.textBaseline = 'middle';
+	  ctx.fillText(txt, canvas.width / 2, canvas.height / 2);
+	  tex.needsUpdate = true;
+	  };
+
+	  sprite.userData.setText(initialText);
+	  return sprite;
+	  },
+
+	  /**
+	  * بناء الطور الأول: الدورق الزجاجي ثلاثي الأبعاد ذو العنق المدرّج والمنبع الحراري
+	  */
+	  buildFlaskScene() {
+	  const g = this.modeGroups.flask;
+
+	  // 1. حامل المنبع الحراري الثلاثي (Tripod Stand + Burner)
+	  const standRingGeo = new THREE.TorusGeometry(1.7, 0.08, 16, 48);
+	  standRingGeo.rotateX(Math.PI / 2);
+	  const metalMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.8, roughness: 0.3 });
+	  const standRing = new THREE.Mesh(standRingGeo, metalMat);
+	  standRing.position.y = 1.35;
+	  g.add(standRing);
+
+	  // أرجل الحامل الثلاث
+	  for (let i = 0; i < 3; i++) {
+          const ang = (i * Math.PI * 2) / 3;
+          const legGeo = new THREE.CylinderGeometry(0.06, 0.06, 1.4, 12);
+          const leg = new THREE.Mesh(legGeo, metalMat);
+          leg.position.set(Math.cos(ang) * 1.6, 0.68, Math.sin(ang) * 1.6);
+          g.add(leg);
+        }
+
+        // قاعدة موقد بنزن واللهب الحراري التفاعلي
+        const burnerBase = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.85, 0.3, 24), metalMat);
+        burnerBase.position.y = 0.15;
+        g.add(burnerBase);
+
+        const burnerTube = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.65, 20), metalMat);
+        burnerTube.position.y = 0.55;
+        g.add(burnerTube);
+
+        this.flaskObjs.flameMat = new THREE.MeshBasicMaterial({
+          color: 0xf97316,
+          transparent: true,
+          opacity: 0.85
+        });
+        const flameGeo = new THREE.ConeGeometry(0.45, 0.9, 24);
+        this.flaskObjs.burnerFlame = new THREE.Mesh(flameGeo, this.flaskObjs.flameMat);
+        this.flaskObjs.burnerFlame.position.y = 1.05;
+        g.add(this.flaskObjs.burnerFlame);
+
+        // 2. مادة الزجاج الشفاف للدورق والعنق
+        const glassMat = new THREE.MeshPhysicalMaterial({
+          color: 0xe0f2fe,
+          transparent: true,
+          opacity: 0.28,
+          roughness: 0.1,
+          metalness: 0.05,
+          transmission: 0.4,
+          depthWrite: false
+        });
+
+        // انتفاخ الدورق الكروي (Bulb)
+        const bulbGeo = new THREE.SphereGeometry(1.65, 40, 40);
+        this.flaskObjs.glassBulb = new THREE.Mesh(bulbGeo, glassMat);
+        this.flaskObjs.glassBulb.position.y = 2.95;
+        g.add(this.flaskObjs.glassBulb);
+
+        // عنق الأنبوبة المدرّج الرفيع (Graduated Narrow Tube)
+        const neckGeo = new THREE.CylinderGeometry(0.32, 0.32, 5.2, 32, 1, true);
+        this.flaskObjs.glassNeck = new THREE.Mesh(neckGeo, glassMat);
+        this.flaskObjs.glassNeck.position.y = 6.8;
+        g.add(this.flaskObjs.glassNeck);
+
+        // تدريجات الأنبوبة الزجاجية
+        const tickMat = new THREE.LineBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.55 });
+        for (let y = 4.5; y <= 9.1; y += 0.25) {
+	  const r = 0.33;
+	  const pts = [
+	  new THREE.Vector3(-r, y, 0.12),
+	  new THREE.Vector3(r * 0.6, y, 0.12)
+	  ];
+	  const tGeo = new THREE.BufferGeometry().setFromPoints(pts);
+	  g.add(new THREE.Line(tGeo, tickMat));
+	  }
+
+	  // 3. السائل داخل الدورق وعمود السائل في العنق
+	  this.flaskObjs.liquidMat = new THREE.MeshStandardMaterial({
+	  color: 0x0ea5e9,
+	  roughness: 0.2,
+	  metalness: 0.1,
+	  transparent: true,
+	  opacity: 0.88
+	  });
+
+	  const liqBulbGeo = new THREE.SphereGeometry(1.56, 36, 36);
+	  this.flaskObjs.liquidBulb = new THREE.Mesh(liqBulbGeo, this.flaskObjs.liquidMat);
+	  this.flaskObjs.liquidBulb.position.y = 2.95;
+	  g.add(this.flaskObjs.liquidBulb);
+
+	  // عمود السائل في الأنبوبة (القاعدة عند y = 4.2)
+	  const colGeo = new THREE.CylinderGeometry(0.26, 0.26, 1.0, 28);
+	  colGeo.translate(0, 0.5, 0); // نقل نقطة الارتكاز لأسفل العمود
+	  this.flaskObjs.liquidColumn = new THREE.Mesh(colGeo, this.flaskObjs.liquidMat);
+	  this.flaskObjs.liquidColumn.position.y = 4.2;
+	  g.add(this.flaskObjs.liquidColumn);
+
+	  // حلقة مضيئة لسطح السائل الآني (Meniscus)
+	  const menGeo = new THREE.TorusGeometry(0.28, 0.035, 16, 32);
+	  menGeo.rotateX(Math.PI / 2);
+	  const menMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+	  this.flaskObjs.meniscusRing = new THREE.Mesh(menGeo, menMat);
+	  g.add(this.flaskObjs.meniscusRing);
+
+	  // 4. العلامات الثلاث المضيئة في الفضاء 3D: (1) و (1') و (2)
+	  const buildMarkerRing = (hexColor, xOffsetDir, labelTxt) => {
+	  const mg = new THREE.Group();
+	  const ringG = new THREE.TorusGeometry(0.38, 0.03, 12, 32);
+	  ringG.rotateX(Math.PI / 2);
+	  const ringM = new THREE.MeshBasicMaterial({ color: hexColor });
+	  mg.add(new THREE.Mesh(ringG, ringM));
+
+	  // خط إشارة أفقي نحو اللافتة
+	  const linePts = [
+	  new THREE.Vector3(xOffsetDir * 0.4, 0, 0),
+	  new THREE.Vector3(xOffsetDir * 1.45, 0, 0)
+	  ];
+	  const lineG = new THREE.BufferGeometry().setFromPoints(linePts);
+	  mg.add(new THREE.Line(lineG, new THREE.LineBasicMaterial({ color: hexColor })));
+
+	  const sp = this.createLabelSprite(labelTxt, '#' + hexColor.toString(16).padStart(6, '0'));
+	  sp.position.set(xOffsetDir * 3.55, 0, 0);
+	  mg.add(sp);
+	  mg.userData.sprite = sp;
+	  return mg;
+	  };
+
+	  this.flaskObjs.mark1Group = buildMarkerRing(0x38bdf8, -1, 'العلامة (1): المستوى الابتدائي T₁');
+	  this.flaskObjs.mark1PrimeGroup = buildMarkerRing(0xef4444, 1, "العلامة (1'): هبوط تمدد الوعاء");
+	  this.flaskObjs.mark2Group = buildMarkerRing(0xf59e0b, -1, 'العلامة (2): التوازن النهائي T₂');
+
+	  g.add(this.flaskObjs.mark1Group);
+	  g.add(this.flaskObjs.mark1PrimeGroup);
+	  g.add(this.flaskObjs.mark2Group);
+	  },
+
+	  /**
+	  * بناء الطور الثاني: الكرية الزجاجية الجوفاء وحساب حجم الفراغ (Ullage / Void)
+	  */
+	  buildSphereScene() {
+	  const g = this.modeGroups.sphere;
+
+	  // قاعدة استناد الكرية الخزانية
+	  const pedGeo = new THREE.CylinderGeometry(1.4, 1.9, 0.8, 32);
+	  const pedMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7, metalness: 0.3 });
+	  const pedestal = new THREE.Mesh(pedGeo, pedMat);
+	  pedestal.position.y = 0.4;
+	  g.add(pedestal);
+
+	  // الجدار الزجاجي/المعدني الخارجي للكرية الجوفاء (نصف قطر 3.0 وحدات، مركزه y = 3.6)
+	  const shellGeo = new THREE.SphereGeometry(3.0, 48, 48);
+	  const shellMat = new THREE.MeshPhysicalMaterial({
+	  color: 0xe2e8f0,
+	  transparent: true,
+	  opacity: 0.26,
+	  roughness: 0.12,
+	  transmission: 0.35,
+	  depthWrite: false
+	  });
+	  this.sphereObjs.outerShell = new THREE.Mesh(shellGeo, shellMat);
+	  this.sphereObjs.outerShell.position.y = 3.6;
+	  g.add(this.sphereObjs.outerShell);
+
+	  // خطوط طول وعرض هندسية لإبراز تكور الخزان
+	  const wireGeo = new THREE.EdgesGeometry(new THREE.SphereGeometry(3.02, 18, 12));
+	  const wireMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.22 });
+	  this.sphereObjs.outerShell.add(new THREE.LineSegments(wireGeo, wireMat));
+
+	  // السائل داخل الكرية (الزئبق أو الوقود)
+	  this.sphereObjs.liquidMat = new THREE.MeshStandardMaterial({
+	  color: 0x94a3b8,
+	  metalness: 0.85,
+	  roughness: 0.18
+	  });
+	  const liqSphereGeo = new THREE.SphereGeometry(2.88, 40, 40);
+	  this.sphereObjs.liquidSphere = new THREE.Mesh(liqSphereGeo, this.sphereObjs.liquidMat);
+	  this.sphereObjs.liquidSphere.position.y = 3.6;
+	  g.add(this.sphereObjs.liquidSphere);
+
+	  // قبة فراغ الأمان الحراري في أعلى الكرية (Void / Ullage Cap)
+	  this.sphereObjs.voidMat = new THREE.MeshBasicMaterial({
+	  color: 0x38bdf8,
+	  transparent: true,
+	  opacity: 0.42,
+	  side: THREE.DoubleSide
+	  });
+	  const voidGeo = new THREE.SphereGeometry(2.91, 36, 24, 0, Math.PI * 2, 0, Math.PI * 0.38);
+	  this.sphereObjs.voidCap = new THREE.Mesh(voidGeo, this.sphereObjs.voidMat);
+	  this.sphereObjs.voidCap.position.y = 3.6;
+	  g.add(this.sphereObjs.voidCap);
+
+	  // شقوق انفجار/فيضان الكرية عند انعدام الفراغ (V_void <= 0)
+	  this.sphereObjs.cracksLines = new THREE.Group();
+	  this.sphereObjs.cracksLines.position.y = 3.6;
+	  const crackMat = new THREE.LineBasicMaterial({ color: 0xef4444, linewidth: 3 });
+	  for (let i = 0; i < 6; i++) {
+          const ang = (i / 6) * Math.PI * 2;
+          const pts = [
+            new THREE.Vector3(0, 3.05, 0),
+            new THREE.Vector3(Math.cos(ang) * 1.2, 2.6, Math.sin(ang) * 1.2),
+            new THREE.Vector3(Math.cos(ang + 0.2) * 2.3, 1.4, Math.sin(ang + 0.2) * 2.3),
+            new THREE.Vector3(Math.cos(ang) * 2.95, 0.2, Math.sin(ang) * 2.95)
+          ];
+          const cg = new THREE.BufferGeometry().setFromPoints(pts);
+          this.sphereObjs.cracksLines.add(new THREE.Line(cg, crackMat));
+        }
+        g.add(this.sphereObjs.cracksLines);
+
+        // لافتات ثلاثية الأبعاد للفراغ والزئبق
+        this.sphereObjs.labelVoid = this.createLabelSprite('فراغ الأمان: V_void = 0.98 cm³', '#38bdf8');
+        this.sphereObjs.labelVoid.position.set(0, 7.3, 0);
+        g.add(this.sphereObjs.labelVoid);
+
+        this.sphereObjs.labelLiquid = this.createLabelSprite('الزئبق: V_Hg0 = 3.272 cm³', '#f59e0b');
+        this.sphereObjs.labelLiquid.position.set(0, 2.2, 3.4);
+        g.add(this.sphereObjs.labelLiquid);
+      },
+
+      /**
+       * بناء الطور الثالث: شذوذ تمدد الماء (0°C - 4°C) وتصدع البيتون بالصقيع
+       */
+      buildWaterScene() {
+        const g = this.modeGroups.water;
+
+        // 1. اليمين (x = -4.2): مقطع ثلاثي الأبعاد في شق خرساني مملوء بالماء/الجليد
+        const blockGeo = new THREE.BoxGeometry(2.1, 3.8, 2.8);
+        const concreteMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.85 });
+
+        this.waterObjs.concreteLeft = new THREE.Mesh(blockGeo, concreteMat);
+        this.waterObjs.concreteLeft.position.set(-5.6, 1.9, 0);
+        g.add(this.waterObjs.concreteLeft);
+
+        this.waterObjs.concreteRight = new THREE.Mesh(blockGeo, concreteMat);
+        this.waterObjs.concreteRight.position.set(-2.8, 1.9, 0);
+        g.add(this.waterObjs.concreteRight);
+
+        // الماء/الجليد المحصور داخل شق البيتون
+        const waterPocketGeo = new THREE.BoxGeometry(0.75, 3.2, 2.6);
+        const waterPocketMat = new THREE.MeshPhysicalMaterial({
+          color: 0x38bdf8,
+          transparent: true,
+          opacity: 0.78,
+          roughness: 0.15
+        });
+        this.waterObjs.waterPocket = new THREE.Mesh(waterPocketGeo, waterPocketMat);
+        this.waterObjs.waterPocket.position.set(-4.2, 1.8, 0);
+        g.add(this.waterObjs.waterPocket);
+
+        // شقوق الصقيع التدميرية الحمراء على كتلة البيتون (Frost Cracking)
+        this.waterObjs.frostCracks = new THREE.Group();
+        const fCrackMat = new THREE.LineBasicMaterial({ color: 0xef4444, linewidth: 3 });
+        const crackCoords = [
+          [new THREE.Vector3(-4.6, 2.8, 1.42), new THREE.Vector3(-5.4, 2.5, 1.42), new THREE.Vector3(-6.2, 1.8, 1.42)],
+          [new THREE.Vector3(-4.6, 1.4, 1.42), new THREE.Vector3(-5.5, 1.0, 1.42), new THREE.Vector3(-6.4, 0.5, 1.42)],
+          [new THREE.Vector3(-3.8, 2.6, 1.42), new THREE.Vector3(-2.9, 2.2, 1.42), new THREE.Vector3(-2.0, 1.5, 1.42)],
+          [new THREE.Vector3(-3.8, 1.2, 1.42), new THREE.Vector3(-2.7, 0.9, 1.42), new THREE.Vector3(-1.9, 0.4, 1.42)]
+        ];
+        crackCoords.forEach((pts) => {
+          const cg = new THREE.BufferGeometry().setFromPoints(pts);
+          this.waterObjs.frostCracks.add(new THREE.Line(cg, fCrackMat));
+        });
+        g.add(this.waterObjs.frostCracks);
+
+        // 2. اليسار (x = +3.8): نافذة تكبير لبنية جزيئات الماء H2O السداسية ومنحني الكثافة
+        this.waterObjs.moleculesGroup = new THREE.Group();
+        this.waterObjs.moleculesGroup.position.set(3.8, 3.3, 0);
+        g.add(this.waterObjs.moleculesGroup);
+
+        // إطار دائري لمجهر تكبير جزيئات H2O
+        const scopeRing = new THREE.Mesh(
+          new THREE.TorusGeometry(2.55, 0.08, 16, 64),
+          new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
+        );
+        this.waterObjs.moleculesGroup.add(scopeRing);
+
+        // إنشاء 6 جزيئات ماء H2O تشكل حلقة بلورية سداسية ذات فراغ داخلي ("كأحجار تُبنى منها غرف")
+        const oxyGeo = new THREE.SphereGeometry(0.26, 20, 20);
+        const oxyMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.25 });
+        const hydGeo = new THREE.SphereGeometry(0.14, 16, 16);
+        const hydMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.25 });
+
+        this.waterObjs.moleculesGroup.userData.molecules = [];
+        for (let i = 0; i < 6; i++) {
+          const mol = new THREE.Group();
+          const oxy = new THREE.Mesh(oxyGeo, oxyMat);
+          const h1 = new THREE.Mesh(hydGeo, hydMat);
+          const h2 = new THREE.Mesh(hydGeo, hydMat);
+          h1.position.set(0.28, 0.22, 0);
+          h2.position.set(-0.28, 0.22, 0);
+          mol.add(oxy, h1, h2);
+          mol.userData.index = i;
+          this.waterObjs.moleculesGroup.add(mol);
+          this.waterObjs.moleculesGroup.userData.molecules.push(mol);
+        }
+
+        // روابط هيدروجينية سداسية تصل بين الجزيئات الـ 6
+        const hexPts = new Float32Array(21); // 7 نقاط لإغلاق السداسي
+        const hexGeo = new THREE.BufferGeometry();
+        hexGeo.setAttribute('position', new THREE.BufferAttribute(hexPts, 3));
+        const hexMat = new THREE.LineBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.9 });
+        this.waterObjs.hexBondsLines = new THREE.Line(hexGeo, hexMat);
+        this.waterObjs.moleculesGroup.add(this.waterObjs.hexBondsLines);
+
+        // لافتات ثلاثية الأبعاد للطور الثالث
+        this.waterObjs.labelDensity = this.createLabelSprite('شق البيتون: ρ = 1.0000 g/cm³', '#38bdf8');
+        this.waterObjs.labelDensity.position.set(-4.2, 4.6, 0);
+        g.add(this.waterObjs.labelDensity);
+
+        this.waterObjs.labelCrystal = this.createLabelSprite('جزيئات H₂O: تراص أعظمي عند 4°C', '#fbbf24');
+        this.waterObjs.labelCrystal.position.set(3.8, 6.4, 0);
+        g.add(this.waterObjs.labelCrystal);
+      },
+
+      /**
+       * ربط عناصر الواجهة وأزرار التحكم
+       */
+      bindEvents() {
+        // التبديل بين الأطوار الثلاثة
+        document.querySelectorAll('.tab-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            this.switchMode(btn.dataset.mode);
+          });
+        });
+
+        // قوائم اختيار مادة الوعاء والسائل
+        document.getElementById('select-vessel').addEventListener('change', (e) => {
+          this.state.vesselKey = e.target.value;
+          this.update();
+        });
+
+        document.getElementById('select-liquid').addEventListener('change', (e) => {
+          this.state.liquidKey = e.target.value;
+          this.update();
+        });
+
+        // ربط المنزلقات
+        const bindRange = (id, key) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.addEventListener('input', (e) => {
+            this.state[key] = parseFloat(e.target.value);
+            this.update();
+          });
+        };
+
+        bindRange('slider-stage', 'stageProgress');
+        bindRange('slider-v0', 'V0');
+        bindRange('slider-tube-s', 'tubeS');
+        bindRange('slider-flask-dt', 'flaskDT');
+        bindRange('slider-void0', 'void0');
+        bindRange('slider-vhg0', 'vHg0');
+        bindRange('slider-sphere-dt', 'sphereDT');
+        bindRange('slider-water-t', 'waterT');
+
+        // أزرار القفز السريع لمراحل الدورق (1 -> 1' -> 2)
+        document.querySelectorAll('[data-stage-jump]').forEach((pill) => {
+          pill.addEventListener('click', () => {
+            this.state.isPlaying = false;
+            this.syncPlayButtonUI();
+            this.state.stageProgress = parseFloat(pill.getAttribute('data-stage-jump'));
+            document.getElementById('slider-stage').value = this.state.stageProgress;
+            this.update();
+          });
+        });
+
+        // أزرار القفز السريع لدرجات حرارة شذوذ الماء
+        document.querySelectorAll('[data-water-jump]').forEach((pill) => {
+          pill.addEventListener('click', () => {
+            this.state.isPlaying = false;
+            this.syncPlayButtonUI();
+            this.state.waterT = parseFloat(pill.getAttribute('data-water-jump'));
+            document.getElementById('slider-water-t').value = this.state.waterT;
+            this.update();
+          });
+        });
+
+        // زر تشغيل / إيقاف المحاكاة
+        document.getElementById('btn-play').addEventListener('click', () => {
+          this.state.isPlaying = !this.state.isPlaying;
+          if (this.state.isPlaying && this.state.mode === 'flask' && this.state.stageProgress >= 0.99) {
+	  this.state.stageProgress = 0;
+	  }
+	  this.syncPlayButtonUI();
+	  });
+
+	  // زر تطبيق مسألة الدورة الامتحانية حسب الطور الحالي
+	  document.getElementById('btn-exam-preset').addEventListener('click', () => {
+	  this.applyExamPresetForCurrentMode();
+	  });
+
+	  // زر إعادة تعيين التجربة
+	  document.getElementById('btn-reset').addEventListener('click', () => {
+	  this.reset();
+	  });
+
+	  // طي لوحة التحكم الجانبية
+	  document.getElementById('btn-collapse-panel').addEventListener('click', () => {
+	  document.getElementById('panel-scroll-body').classList.toggle('hidden');
+	  });
+	  },
+
+	  syncPlayButtonUI() {
+	  document.getElementById('play-icon').textContent = this.state.isPlaying ? '⏸' : '▶';
+	  document.getElementById('play-label').textContent = this.state.isPlaying ? 'إيقاف مؤقت' : 'تشغيل المحاكاة';
+	  },
+
+	  /**
+	  * التبديل بين الأطوار الثلاثة
+	  */
+	  switchMode(mode) {
+	  this.state.mode = mode;
+	  this.state.isPlaying = false;
+	  this.syncPlayButtonUI();
+
+	  this.modeGroups.flask.visible = (mode === 'flask');
+	  this.modeGroups.sphere.visible = (mode === 'sphere');
+	  this.modeGroups.water.visible = (mode === 'water');
+
+	  // إظهار وإخفاء لوحات التحكم والشاشات الرقمية الخاصة بكل طور
+	  document.getElementById('ctrl-materials').classList.toggle('hidden', mode === 'water');
+	  document.getElementById('controls-flask').classList.toggle('hidden', mode !== 'flask');
+	  document.getElementById('controls-sphere').classList.toggle('hidden', mode !== 'sphere');
+	  document.getElementById('controls-water').classList.toggle('hidden', mode !== 'water');
+
+	  document.getElementById('metrics-flask').classList.toggle('hidden', mode !== 'flask');
+	  document.getElementById('metrics-sphere').classList.toggle('hidden', mode !== 'sphere');
+	  document.getElementById('metrics-water').classList.toggle('hidden', mode !== 'water');
+
+	  // تحديث نص زر مسألة الدورة الامتحانية
+	  const examBtn = document.getElementById('btn-exam-preset');
+	  if (mode === 'flask') {
+	  examBtn.textContent = '★ تطبيق مسألة دورة 2015-2016';
+	  this.applyExamPresetForCurrentMode();
+	  } else if (mode === 'sphere') {
+	  examBtn.textContent = '★ تطبيق مسألة دورة الكرية والزئبق';
+	  this.applyExamPresetForCurrentMode();
+	  } else {
+	  examBtn.textContent = '★ ضبط الدرجة الحرجة 4°C ← 0°C';
+	  this.applyExamPresetForCurrentMode();
+	  }
+	  },
+
+	  /**
+	  * ضبط قيم مسائل الدورات الامتحانية بدقة
+	  */
+	  applyExamPresetForCurrentMode() {
+	  this.state.isPlaying = false;
+	  this.syncPlayButtonUI();
+
+	  if (this.state.mode === 'flask') {
+	  // مسألة دورة 2015-2016: V0 = 100 cm^3, S = 1 mm^2, ΔT = 20°C, γ_L = 120e-5, α_V = 8e-6
+	  this.state.vesselKey = 'flask_2015';
+	  this.state.liquidKey = 'exam_2015';
+	  this.state.V0 = 100.0;
+	  this.state.tubeS = 1.0;
+	  this.state.flaskDT = 20.0;
+	  this.state.stageProgress = 1.0;
+
+	  document.getElementById('select-vessel').value = 'flask_2015';
+	  document.getElementById('select-liquid').value = 'exam_2015';
+	  document.getElementById('slider-v0').value = 100;
+	  document.getElementById('slider-tube-s').value = 1.0;
+	  document.getElementById('slider-flask-dt').value = 20;
+	  document.getElementById('slider-stage').value = 1.0;
+	  } else if (this.state.mode === 'sphere') {
+	  // مسألة دورة الكرية والزئبق: V_void0 = 1 cm^3 عند 0°C يصبح 0.98 cm^3 عند 40°C
+	  // α_glass = 7.2e-6 (γ_V = 2.16e-5), γ_Hg = 1.81e-4
+	  this.state.vesselKey = 'sphere_2018';
+	  this.state.liquidKey = 'mercury';
+	  this.state.void0 = 1.00;
+	  this.state.sphereDT = 40.0;
+	  // من المعادلة: ΔV_void = (V_Hg0 + V_void0)*γ_V*ΔT - V_Hg0*γ_Hg*ΔT = -0.02
+	  // V_Hg0 = (0.02 + 1.0 * 2.16e-5 * 40) / ((1.81e-4 - 2.16e-5) * 40) = 3.27227 cm^3
+	  this.state.vHg0 = 3.2723;
+
+	  document.getElementById('select-vessel').value = 'sphere_2018';
+	  document.getElementById('select-liquid').value = 'mercury';
+	  document.getElementById('slider-void0').value = 1.00;
+	  document.getElementById('slider-vhg0').value = 3.272;
+	  document.getElementById('slider-sphere-dt').value = 40;
+	  } else if (this.state.mode === 'water') {
+	  this.state.waterT = 0.0;
+	  document.getElementById('slider-water-t').value = 0.0;
+	  }
+
+	  this.update();
+	  },
+
+	  /**
+	  * 2. دالة الحساب الفيزيائي calculate()
+	  */
+	  calculate() {
+	  const vessel = this.vessels[this.state.vesselKey];
+	  const liquid = this.liquids[this.state.liquidKey];
+
+	  const alpha_V = vessel.alpha;
+	  const gamma_V = 3 * alpha_V;
+	  const gamma_L = liquid.gamma;
+	  const gamma_app = gamma_L - gamma_V;
+
+	  // أ) حسابات الطور الأول (الدورق الزجاجي)
+	  const V0 = this.state.V0;           // cm^3
+	  const dT_flask = this.state.flaskDT;
+	  const S_mm2 = this.state.tubeS;     // mm^2
+	  const S_cm2 = S_mm2 * 0.01;         // 1 mm^2 = 0.01 cm^2
+
+	  const dV_vessel = V0 * gamma_V * dT_flask;   // cm^3 (مقدار الهبوط من 1 إلى 1')
+	  const dV_real   = V0 * gamma_L * dT_flask;   // cm^3 (التمدد الحقيقي من 1' إلى 2)
+	  const dV_app    = V0 * gamma_app * dT_flask; // cm^3 (التمدد الظاهري من 1 إلى 2)
+
+	  const h_drop_mm = (dV_vessel * 1000) / S_mm2; // mm
+	  const h_rise_mm = (dV_app * 1000) / S_mm2;    // mm
+	  const h_rise_cm = h_rise_mm / 10.0;           // cm
+
+	  // ب) حسابات الطور الثاني (الكرية الجوفاء وفراغ الخزان)
+	  const V_void0 = this.state.void0;
+	  const V_Hg0 = this.state.vHg0;
+	  const V_total0 = V_Hg0 + V_void0;
+	  const dT_sphere = this.state.sphereDT;
+
+	  const dV_tank = V_total0 * gamma_V * dT_sphere;
+	  const dV_Hg   = V_Hg0 * gamma_L * dT_sphere;
+	  const dV_void = dV_tank - dV_Hg;
+	  const V_void_final = V_void0 + dV_void;
+	  const V_Hg_final = V_Hg0 + dV_Hg;
+
+	  // قيمة V_Hg0 لو اعتبرنا V_V ≈ V_Hg0 كما في التقريب السريع لبعض الطلاب: ΔV_void ≈ -V_Hg0*(γ_Hg - γ_V)*ΔT
+	  const V_Hg0_approx = 0.02 / ((gamma_L - gamma_V) * 40.0);
+
+	  // ج) حسابات الطور الثالث (شذوذ الماء 0°C - 4°C وتصدع البيتون)
+	  const T_w = this.state.waterT;
+	  let rho_w = 1.00000;
+	  if (T_w >= 0) {
+	  // صيغة فيزيائية دقيقة تحقق الذروة العظمى ρ = 1.00000 g/cm^3 عند 4.0°C تماماً
+	  rho_w = 1.00000 - 8.0e-6 * Math.pow(T_w - 4.0, 2);
+	  } else {
+	  // عند التجمد تحت 0°C يتحول إلى جليد كثافته ~0.917 g/cm^3 (يتمدد حجمه بنسبة ~9%)
+	  const freezeFactor = Math.min(1, Math.abs(T_w) / 2.0);
+	  rho_w = 0.99987 - freezeFactor * 0.08287;
+	  }
+	  const specificVol = 1.0 / rho_w;
+
+	  // حساب إجهاد الصقيع التدميري عند التمدد الشاذ والتجمد (T < 4°C)
+        let frostStressMPa = 0;
+        if (T_w < 4.0 && T_w >= 0) {
+	  frostStressMPa = ((4.0 - T_w) / 4.0) * 2.8;
+	  } else if (T_w < 0) {
+          frostStressMPa = 2.8 + Math.min(1, Math.abs(T_w) / 3.0) * 18.5;
+        }
+
+        return {
+          alpha_V, gamma_V, gamma_L, gamma_app,
+          dV_vessel, dV_real, dV_app, h_drop_mm, h_rise_mm, h_rise_cm,
+          V_void0, V_Hg0, V_total0, dV_tank, dV_Hg, dV_void, V_void_final, V_Hg_final, V_Hg0_approx,
+          T_w, rho_w, specificVol, frostStressMPa
+        };
+      },
+
+      /**
+       * 3. دالة التحديث الشاملة update() للواجهة والمشهد ثلاثي الأبعاد
+       */
+      update() {
+        const res = this.calculate();
+        const liquid = this.liquids[this.state.liquidKey];
+
+        // تحديث قراءات المعاملات المشتركة
+        document.getElementById('read-gamma-v').textContent = `${(res.gamma_V * 1e5).toFixed(2)} × 10⁻⁵ °C⁻¹`;
+        document.getElementById('read-gamma-app').textContent = `${(res.gamma_app * 1e5).toFixed(2)} × 10⁻⁵ °C⁻¹`;
+
+        if (this.state.mode === 'flask') {
+          this.updateFlaskMode(res, liquid);
+        } else if (this.state.mode === 'sphere') {
+          this.updateSphereMode(res, liquid);
+        } else if (this.state.mode === 'water') {
+          this.updateWaterMode(res);
+        }
+      },
+
+      /**
+       * تحديث الطور الأول: الدورق الزجاجي (المراحل 1 ← 1' ← 2)
+       */
+      updateFlaskMode(res, liquid) {
+        const p = this.state.stageProgress; // 0 -> 0.42 (1 -> 1') ثم 0.42 -> 1.0 (1' -> 2)
+
+        document.getElementById('val-v0').textContent = `${this.state.V0.toFixed(0)} cm³`;
+        document.getElementById('val-tube-s').textContent = `${this.state.tubeS.toFixed(1)} mm² (${(this.state.tubeS * 0.01).toFixed(3)} cm²)`;
+        document.getElementById('val-flask-dt').textContent = `${this.state.flaskDT.toFixed(0)} °C`;
+
+        // تحديث شاشات الأرقام
+        document.getElementById('out-dv-vessel').textContent = `ΔV_V = ${res.dV_vessel.toFixed(3)} cm³`;
+        document.getElementById('out-h-drop').textContent = `هبوط مؤقت: ${res.h_drop_mm.toFixed(1)} mm`;
+
+        document.getElementById('out-dv-real').textContent = `ΔV_real = ${res.dV_real.toFixed(3)} cm³`;
+        document.getElementById('out-dv-real-mm').textContent = `= ${(res.dV_real * 1000).toFixed(1)} mm³`;
+
+        document.getElementById('out-dv-app').textContent = `ΔV_app = ${res.dV_app.toFixed(3)} cm³`;
+        document.getElementById('out-dv-app-mm').textContent = `= ${(res.dV_app * 1000).toFixed(0)} mm³`;
+
+        document.getElementById('out-h-rise').textContent = `${res.h_rise_mm.toFixed(0)} mm (${res.h_rise_cm.toFixed(1)} cm)`;
+
+        // تحديد المرحلة الحالية (1 أو 1' أو 2)
+        const pills = document.querySelectorAll('[data-stage-jump]');
+        pills.forEach(el => el.classList.remove('active'));
+
+        let stageDesc = '';
+        if (p < 0.15) {
+          pills[0].classList.add('active');
+          stageDesc = 'العلامة (1): قبل التسخين';
+          document.getElementById('val-flask-stage').textContent = 'العلامة (1) ابتداؤه';
+        } else if (p < 0.60) {
+          pills[1].classList.add('active');
+          stageDesc = "العلامة (1'): تمدد الوعاء أولاً وهبوط السائل";
+          document.getElementById('val-flask-stage').textContent = "المرحلة الأولى (1 ← 1')";
+        } else {
+          pills[2].classList.add('active');
+          stageDesc = 'العلامة (2): التوازن الحراري النهائي';
+          document.getElementById('val-flask-stage').textContent = "المرحلة الثانية (1' ← 2)";
+        }
+        document.getElementById('out-current-level').textContent = stageDesc;
+
+        // تحديث شريط الحالة والمعادلات
+        const banner = document.getElementById('status-banner');
+        banner.className = p >= 0.15 && p < 0.6 ? 'status-strip danger' : 'status-strip safe';
+        document.getElementById('status-message').textContent =
+          p < 0.15
+            ? 'عند البدء (العلامة 1): السائل والوعاء في توازن حراري ابتدائي عند T₁.'
+            : p < 0.60
+            ? "المرحلة الأولى (1 ← 1'): يسخن جدار الدورق الزجاجي ويتمدد أولاً فينخفض مستوى السائل مؤقتاً!"
+            : "المرحلة الثانية (1' ← 2): تصل الحرارة للسائل فيتمدد من 1' إلى 2 (حقيقي)، والفرق الصافي من 1 إلى 2 هو التمدد الظاهري.";
+
+        document.getElementById('formula-box').innerHTML = `
+          <div class="f-row">
+		  <span>γ_V = 3 × α_V = 3 × ${(res.alpha_V * 1e6).toFixed(1)}×10⁻⁶</span>
+		  <span class="f-accent">= ${(res.gamma_V * 1e5).toFixed(2)} × 10⁻⁵ °C⁻¹</span>
+	  </div>
+	  <div class="f-row">
+		  <span>γ'_L = γ_L - γ_V = (${(res.gamma_L * 1e5).toFixed(1)} - ${(res.gamma_V * 1e5).toFixed(2)})×10⁻⁵</span>
+		  <span class="f-accent">= ${(res.gamma_app * 1e5).toFixed(2)} × 10⁻⁵ °C⁻¹</span>
+	  </div>
+	  <div class="f-row">
+		  <span>ΔV_app = V₀ × γ'_L × ΔT = ${this.state.V0} × ${(res.gamma_app * 1e5).toFixed(1)}×10⁻⁵ × ${this.state.flaskDT}</span>
+		  <span class="f-accent">= ${res.dV_app.toFixed(3)} cm³ (${(res.dV_app * 1000).toFixed(0)} mm³)</span>
+	  </div>
+	  <div class="f-row">
+		  <span>h_rise = ΔV_app / S = ${(res.dV_app * 1000).toFixed(0)} mm³ / ${this.state.tubeS} mm²</span>
+		  <span class="f-accent">h = ${res.h_rise_mm.toFixed(0)} mm (${res.h_rise_cm.toFixed(1)} cm)</span>
+	  </div>
+	  `;
+
+	  // تحديث المشهد ثلاثي الأبعاد للدورق
+	  const yMark1 = 5.85; // موقع العلامة (1) الابتدائية
+	  // نحسب إزاحة العلامة (1') والعلامة (2) في المشهد 3D بشكل متناسب واضح بصرياً
+	  const dropVisual = Math.min(0.95, Math.max(0.28, (res.h_drop_mm / 100) * 0.9));
+	  const riseVisual = Math.min(2.65, Math.max(0.45, (res.h_rise_mm / 1200) * 1.45));
+
+	  const yMark1Prime = yMark1 - dropVisual;
+	  const yMark2 = (res.h_rise_mm >= 0) ? (yMark1 + riseVisual) : (yMark1 - 0.3);
+
+	  this.flaskObjs.mark1Group.position.y = yMark1;
+	  this.flaskObjs.mark1PrimeGroup.position.y = yMark1Prime;
+	  this.flaskObjs.mark2Group.position.y = yMark2;
+
+	  this.flaskObjs.mark1PrimeGroup.userData.sprite.userData.setText(
+	  `العلامة (1'): هبوط ΔV_V = ${res.dV_vessel.toFixed(3)} cm³`,
+	  '#ef4444'
+	  );
+	  this.flaskObjs.mark2Group.userData.sprite.userData.setText(
+	  `العلامة (2): h = ${res.h_rise_cm.toFixed(1)} cm (${res.h_rise_mm.toFixed(0)} mm)`,
+	  '#f59e0b'
+	  );
+
+	  // حساب ارتفاع عمود السائل الآني حسب شريط المراحل p (0 -> 0.42 -> 1.0)
+	  let currentY = yMark1;
+	  let bulbScale = 1.0;
+	  if (p <= 0.42) {
+	  const t1 = p / 0.42;
+	  currentY = THREE.MathUtils.lerp(yMark1, yMark1Prime, t1);
+	  bulbScale = 1.0 + t1 * 0.035; // تمدد جدار الدورق الزجاجي في المرحلة الأولى
+	  } else {
+	  const t2 = (p - 0.42) / 0.58;
+	  currentY = THREE.MathUtils.lerp(yMark1Prime, yMark2, t2);
+	  bulbScale = 1.035;
+	  }
+
+	  this.flaskObjs.glassBulb.scale.set(bulbScale, bulbScale, bulbScale);
+	  const colHeight = Math.max(0.2, currentY - 4.2);
+	  this.flaskObjs.liquidColumn.scale.y = colHeight;
+	  this.flaskObjs.meniscusRing.position.y = currentY;
+	  this.flaskObjs.liquidMat.color.setHex(liquid.color);
+	  this.flaskObjs.burnerFlame.visible = (this.state.flaskDT > 0 && p > 0.01);
+	  },
+
+	  /**
+	  * تحديث الطور الثاني: الكرية الزجاجية الجوفاء وفراغ الخزان
+	  */
+	  updateSphereMode(res, liquid) {
+	  document.getElementById('val-void0').textContent = `${this.state.void0.toFixed(2)} cm³`;
+	  document.getElementById('val-vhg0').textContent = `${this.state.vHg0.toFixed(3)} cm³`;
+	  document.getElementById('val-sphere-dt').textContent = `${this.state.sphereDT.toFixed(0)} °C`;
+
+	  document.getElementById('out-vhg0').textContent = `${res.V_Hg0.toFixed(3)} cm³`;
+	  document.getElementById('out-vhg0-approx').textContent = `(بالتقريب الظاهري: ${res.V_Hg0_approx.toFixed(3)} cm³)`;
+
+	  document.getElementById('out-vhg-final').textContent = `${res.V_Hg_final.toFixed(3)} cm³`;
+	  document.getElementById('out-dvhg').textContent = `ΔV_L = +${res.dV_Hg.toFixed(4)} cm³`;
+
+	  document.getElementById('out-dv-void').textContent = `${res.dV_void >= 0 ? '+' : ''}${res.dV_void.toFixed(4)} cm³`;
+	  document.getElementById('out-dv-tank').textContent = `تمدد الكرية: +${res.dV_tank.toFixed(4)} cm³`;
+
+	  const clampedVoid = Math.max(0, res.V_void_final);
+	  const voidPct = (clampedVoid / res.V_void0) * 100;
+	  document.getElementById('out-void-rem').textContent = `${clampedVoid.toFixed(3)} cm³`;
+	  document.getElementById('out-void-pct').textContent = res.V_void_final > 0
+	  ? `نسبة الفراغ المتبقي: ${voidPct.toFixed(1)}%`
+	  : 'انعدم الفراغ — خطر انفجار الخزان!';
+
+	  const isOverflow = res.V_void_final <= 0;
+	  const banner = document.getElementById('status-banner');
+	  banner.className = isOverflow ? 'status-strip danger' : 'status-strip safe';
+	  document.getElementById('status-message').textContent = isOverflow
+	  ? 'تحذير خطير: امتلأ فراغ الأمان بالكامل (V_void ≤ 0) مما يؤدي لفيضان السائل وتصدع الخزان!'
+	  : `فراغ الأمان الحراري فعّال: نقص الفراغ من ${res.V_void0.toFixed(2)} cm³ إلى ${res.V_void_final.toFixed(3)} cm³ دون انفجار.`;
+
+	  document.getElementById('formula-box').innerHTML = `
+	  <div class="f-row">
+		  <span>ΔV_void = V_tank × γ_V × ΔT - V_Hg0 × γ_Hg × ΔT</span>
+		  <span class="f-accent">= ${res.dV_void.toFixed(4)} cm³</span>
+	  </div>
+	  <div class="f-row">
+		  <span>V_void(T₂) = V_void0 + ΔV_void = ${res.V_void0.toFixed(2)} + (${res.dV_void.toFixed(3)})</span>
+		  <span class="f-accent">= ${res.V_void_final.toFixed(3)} cm³</span>
+	  </div>
+	  <div class="f-row">
+		  <span>حل مسألة الدورة (عند نقص الفراغ 0.02 cm³):</span>
+		  <span class="f-accent">V_Hg0 = ${res.V_Hg0.toFixed(3)} cm³ | V_40°C = ${res.V_Hg_final.toFixed(3)} cm³</span>
+	  </div>
+	  `;
+
+	  // تحديث المشهد ثلاثي الأبعاد للكرية الجوفاء
+	  this.sphereObjs.liquidMat.color.setHex(liquid.color);
+	  const voidRatio = Math.max(0.02, Math.min(1.4, res.V_void_final / res.V_void0));
+	  this.sphereObjs.voidCap.scale.set(1, voidRatio, 1);
+	  this.sphereObjs.voidCap.visible = !isOverflow;
+	  this.sphereObjs.cracksLines.visible = isOverflow;
+
+	  this.sphereObjs.labelVoid.userData.setText(
+	  isOverflow ? 'انعدم الفراغ (V_void = 0) — تصدع الخزان!' : `فراغ الأمان: V_void = ${res.V_void_final.toFixed(3)} cm³`,
+	  isOverflow ? '#ef4444' : '#38bdf8'
+	  );
+	  this.sphereObjs.labelLiquid.userData.setText(
+	  `${liquid.name}: V = ${res.V_Hg_final.toFixed(3)} cm³`,
+	  '#f59e0b'
+	  );
+	  },
+
+	  /**
+	  * تحديث الطور الثالث: شذوذ تمدد الماء (0°C - 4°C) وتصدع البيتون بالصقيع
+	  */
+	  updateWaterMode(res) {
+	  const T = res.T_w;
+	  const T_kelvin = T + 273.15;
+
+	  document.getElementById('val-water-t').textContent = `${T.toFixed(1)} °C (${T_kelvin.toFixed(0)} K)`;
+	  document.getElementById('out-water-temp').textContent = `${T.toFixed(1)} °C (${T_kelvin.toFixed(1)} K)`;
+	  document.getElementById('out-water-rho').textContent = `${res.rho_w.toFixed(5)} g/cm³`;
+	  document.getElementById('out-water-vol').textContent = `${res.specificVol.toFixed(5)} cm³/g`;
+
+	  // تحديث الأزرار السريعة
+	  document.querySelectorAll('[data-water-jump]').forEach((pill) => {
+	  const targetT = parseFloat(pill.getAttribute('data-water-jump'));
+	  pill.classList.toggle('active', Math.abs(T - targetT) < 0.8);
+        });
+
+        const isAnomalous = (T < 4.0);
+        const isFrozen = (T <= 0.0);
+
+	  document.getElementById('out-water-phase').textContent = isFrozen
+	  ? 'جليد متبلور (تمدد حجمي تدميري)'
+	  : Math.abs(T - 4.0) < 0.3
+          ? 'الدرجة الحرجة 4°C (أعظم كثافة للماء)'
+          : isAnomalous
+          ? 'شذوذ الماء (0°C - 4°C): يتمدد بالتبريد!'
+          : 'ماء سائل عادي (يتمدد بالتسخين)';
+
+        document.getElementById('out-hex-rings').textContent = isAnomalous
+          ? 'تشكل حلقات بلورية سداسية ذات فراغات'
+          : 'جزيئات متقاربة بدون فراغات بلورية';
+
+        document.getElementById('out-frost-stress').textContent = `${res.frostStressMPa.toFixed(1)} MPa`;
+        document.getElementById('out-frost-state').textContent = res.frostStressMPa > 2.0
+          ? 'خطر: تصدع جدران البيتون بالصقيع!'
+          : 'آمن: لا يوجد ضغط صقيع على البيتون';
+
+        const banner = document.getElementById('status-banner');
+        banner.className = res.frostStressMPa > 2.0 ? 'status-strip danger' : 'status-strip info';
+        document.getElementById('status-message').textContent = isFrozen
+          ? 'عند 0°C وما دون: تصطف جزيئات H₂O في غرف بلورية سداسية مفرغة فيزداد الحجم ويتصدع البيتون!'
+          : Math.abs(T - 4.0) < 0.3
+          ? 'عند 4°C (277 K): يبلغ الماء أعظم كثافة له (ρ = 1.0000 g/cm³) وأصغر حجم نوعي.'
+          : isAnomalous
+          ? 'بين 4°C و 0°C (شذوذ الماء): رغم انخفاض الحرارة تبدأ الحلقات السداسية بالتشكل فيزداد الحجم وتنقص الكثافة!'
+          : 'فوق 4°C: يسلك الماء سلوك السوائل العادية (تزداد حركته الحرارية وحجمه مع رفع الحرارة).';
+
+        document.getElementById('formula-box').innerHTML = `
+          <div class="f-row">
+		  <span>T = ${T.toFixed(1)} °C = ${(T + 273.15).toFixed(2)} K</span>
+		  <span class="f-accent">ρ_max(4°C) = 1.00000 g/cm³</span>
+	  </div>
+	  <div class="f-row">
+		  <span>ρ(T) = ${res.rho_w.toFixed(5)} g/cm³</span>
+		  <span class="f-accent">V_specific = 1/ρ = ${res.specificVol.toFixed(5)} cm³/g</span>
+	  </div>
+	  <div class="f-row">
+		  <span>تفسير الكتاب (ص 40):</span>
+		  <span>تتشكل حلقات سداسية ذات فراغات داخلية كأحجار تُبنى منها غرف</span>
+	  </div>
+	  `;
+
+	  // تحديث المشهد ثلاثي الأبعاد للطور الثالث
+	  // 1. تباعد جزيئات H2O الستة لتشكيل حلقة سداسية منتظمة ذات فراغ واسع عند النزول نحو 0°C
+	  const hexFactor = T <= 4.0 ? Math.min(1, (4.0 - T) / 4.5) : 0;
+	  const baseRadius = 0.95 + hexFactor * 0.72; // اتساع الغرفة البلورية السداسية عند التبريد تحت 4°C
+	  const mols = this.waterObjs.moleculesGroup.userData.molecules;
+	  const hexPos = this.waterObjs.hexBondsLines.geometry.attributes.position.array;
+
+	  mols.forEach((mol, i) => {
+	  const ang = (i / 6) * Math.PI * 2;
+	  // فوق 4°C تتحرك الجزيئات بعشوائية طفيفة وتقترب من المركز، وتحت 4°C تصطف في سداسي منتظم
+	  const jitter = (1 - hexFactor) * 0.22 * Math.sin(i * 2.5 + T * 0.4);
+	  const r = baseRadius - jitter;
+	  const x = Math.cos(ang) * r;
+	  const y = Math.sin(ang) * r;
+	  mol.position.set(x, y, 0);
+	  mol.rotation.z = ang + Math.PI / 2;
+
+	  hexPos[i * 3]     = x;
+	  hexPos[i * 3 + 1] = y;
+	  hexPos[i * 3 + 2] = 0;
+	  });
+	  // إغلاق المضلع السداسي
+	  hexPos[18] = hexPos[0];
+	  hexPos[19] = hexPos[1];
+	  hexPos[20] = 0;
+	  this.waterObjs.hexBondsLines.geometry.attributes.position.needsUpdate = true;
+	  this.waterObjs.hexBondsLines.material.opacity = 0.25 + hexFactor * 0.75;
+
+	  // 2. تمدد جيب الماء داخل شق البيتون وظهور شقوق الصقيع الحمراء
+	  const expansionPush = hexFactor * 0.28 + (T < 0 ? 0.18 : 0);
+        this.waterObjs.waterPocket.scale.x = 1 + expansionPush * 1.4;
+        this.waterObjs.waterPocket.material.color.setHex(T <= 0 ? 0xe0f2fe : 0x38bdf8);
+
+	  this.waterObjs.concreteLeft.position.x = -5.6 - expansionPush * 0.45;
+	  this.waterObjs.concreteRight.position.x = -2.8 + expansionPush * 0.45;
+	  this.waterObjs.frostCracks.visible = (res.frostStressMPa > 2.0);
+
+	  this.waterObjs.labelDensity.userData.setText(
+	  `ρ(${T.toFixed(1)}°C) = ${res.rho_w.toFixed(4)} g/cm³`,
+	  res.frostStressMPa > 2.0 ? '#ef4444' : '#38bdf8'
+	  );
+	  this.waterObjs.labelCrystal.userData.setText(
+	  hexFactor > 0.4 ? 'اصطفاف بلوري سداسي ذو فراغ داخلي!' : 'جزيئات H₂O متراصة (بدون فراغ بلوري)',
+	  hexFactor > 0.4 ? '#ef4444' : '#fbbf24'
+	  );
+	  },
+
+	  /**
+	  * 4. دالة إعادة الضبط الإلزامية reset()
+	  */
+	  reset() {
+	  this.state.isPlaying = false;
+	  this.syncPlayButtonUI();
+	  this.applyExamPresetForCurrentMode();
+	  if (this.controls) {
+	  this.controls.target.set(0, 3.2, 0);
+	  this.camera.position.set(0, 6.2, 18.5);
+	  this.controls.update();
+	  }
+	  },
+
+	  /**
+	  * حلقة التحريك المستمرة (Animation Loop)
+	  */
+	  animate() {
+	  this.state.animId = requestAnimationFrame(() => this.animate());
+	  this.state.clock += 0.03;
+
+	  if (this.state.isPlaying) {
+	  if (this.state.mode === 'flask') {
+	  // تحريك بطيء للمرحلتين (1 -> 1' -> 2)
+	  this.state.stageProgress += 0.0045;
+	  if (this.state.stageProgress >= 1.0) {
+	  this.state.stageProgress = 1.0;
+	  this.state.isPlaying = false;
+	  this.syncPlayButtonUI();
+	  }
+	  document.getElementById('slider-stage').value = this.state.stageProgress;
+	  this.update();
+	  } else if (this.state.mode === 'sphere') {
+	  this.state.sphereDT += 0.35;
+	  if (this.state.sphereDT > 100) this.state.sphereDT = 0;
+	  document.getElementById('slider-sphere-dt').value = this.state.sphereDT;
+	  this.update();
+	  } else if (this.state.mode === 'water') {
+	  // تبريد تدريجي من 10°C نزولاً إلى -4°C لمشاهدة ذروة 4°C ثم التمدد الشاذ والتصدع
+	  this.state.waterT -= 0.04;
+	  if (this.state.waterT <= -4.0) {
+	  this.state.waterT = 10.0;
+	  }
+	  document.getElementById('slider-water-t').value = this.state.waterT;
+	  this.update();
+	  }
+	  }
+
+	  // تأثير ارتعاش اللهب الحراري في الطور الأول
+	  if (this.flaskObjs.burnerFlame && this.flaskObjs.burnerFlame.visible) {
+	  const s = 1 + 0.12 * Math.sin(this.state.clock * 8);
+	  this.flaskObjs.burnerFlame.scale.set(1, s, 1);
+	  }
+
+	  if (this.controls) this.controls.update();
+	  if (this.renderer && this.scene && this.camera) {
+	  this.renderer.render(this.scene, this.camera);
+	  }
+	  },
+
+	  /**
+	  * 5. دالة التنظيف الإلزامية destroy() لمنع تسريب ذاكرة كرت الشاشة (WebGL Memory Leaks)
+	  */
+	  destroy() {
+	  if (this.state.animId) {
+	  cancelAnimationFrame(this.state.animId);
+	  this.state.animId = null;
+	  }
+
+	  if (this.resizeHandler) {
+	  window.removeEventListener('resize', this.resizeHandler);
+	  this.resizeHandler = null;
+	  }
+
+	  if (this.controls) {
+	  this.controls.dispose();
+	  this.controls = null;
+	  }
+
+	  if (this.scene) {
+	  this.scene.traverse((obj) => {
+	  if (obj.geometry) {
+	  obj.geometry.dispose();
+	  }
+	  if (obj.material) {
+	  if (Array.isArray(obj.material)) {
+	  obj.material.forEach((m) => {
+	  if (m.map) m.map.dispose();
+	  m.dispose();
+	  });
+	  } else {
+	  if (obj.material.map) obj.material.map.dispose();
+	  obj.material.dispose();
+	  }
+	  }
+	  });
+	  this.scene.clear();
+	  this.scene = null;
+	  }
+
+	  if (this.renderer) {
+	  this.renderer.dispose();
+	  if (this.renderer.domElement && this.renderer.domElement.parentNode) {
+	  this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+	  }
+	  this.renderer = null;
+	  }
+	  }
+	  };
+
+	  // تشغيل المختبر الفيزيائي فور تحميل الصفحة
+	  window.addEventListener('DOMContentLoaded', () => {
+	  PhysicsExpLab.init('sim-canvas-container');
+	  });
+  </script>
+</body>
+</html>

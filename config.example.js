@@ -1,0 +1,3 @@
+const CONFIG = {
+    MASTER_PASSWORD: "YOUR_PASSWORD_HERE"
+};

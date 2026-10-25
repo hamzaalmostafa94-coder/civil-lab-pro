@@ -1,0 +1,2435 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>مختبر ميكانيك 1 التفاعلي | التوازن والمساند وجراح الإطارات</title>
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+				<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+					<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+					<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+					<style>
+						:root {
+						--bg-dark: #0f172a;
+						--bg-panel: rgba(15, 23, 42, 0.88);
+						--bg-card: rgba(30, 41, 59, 0.85);
+						--border-glass: rgba(148, 163, 184, 0.22);
+						--accent-blue: #38bdf8;
+						--accent-indigo: #6366f1;
+						--accent-emerald: #10b981;
+						--accent-amber: #f59e0b;
+						--accent-rose: #f43f5e;
+						--accent-purple: #a855f7;
+						--text-main: #f8fafc;
+						--text-muted: #94a3b8;
+						}
+
+						* {
+						box-sizing: border-box;
+						margin: 0;
+						padding: 0;
+						font-family: 'Tajawal', sans-serif;
+						user-select: none;
+						}
+
+						body, html {
+						width: 100%;
+						height: 100%;
+						background-color: var(--bg-dark);
+						color: var(--text-main);
+						overflow: hidden;
+						}
+
+						#app-wrapper {
+						position: relative;
+						width: 100vw;
+						height: 100vh;
+						display: grid;
+						grid-template-rows: 54px 1fr 158px;
+						grid-template-columns: 350px 1fr;
+						grid-template-areas:
+						"header header"
+						"sidebar viewport"
+						"bottom bottom";
+						background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+						}
+
+						/* Top Bar */
+						.top-bar {
+						grid-area: header;
+						background: rgba(15, 23, 42, 0.94);
+						border-bottom: 1px solid var(--border-glass);
+						display: flex;
+						align-items: center;
+						justify-content: space-between;
+						padding: 0 14px;
+						z-index: 30;
+						gap: 8px;
+						backdrop-filter: blur(12px);
+						}
+
+						.brand-group {
+						display: flex;
+						align-items: center;
+						gap: 10px;
+						}
+
+						.brand-badge {
+						background: linear-gradient(135deg, #6366f1, #38bdf8);
+						color: #fff;
+						font-weight: 800;
+						font-size: 0.85rem;
+						padding: 4px 10px;
+						border-radius: 8px;
+						box-shadow: 0 2px 10px rgba(99, 102, 241, 0.35);
+						white-space: nowrap;
+						}
+
+						.stage-tabs {
+						display: flex;
+						background: rgba(30, 41, 59, 0.9);
+						padding: 3px;
+						border-radius: 9px;
+						border: 1px solid var(--border-glass);
+						gap: 4px;
+						}
+
+						.stage-tab {
+						border: none;
+						background: transparent;
+						color: var(--text-muted);
+						font-weight: 700;
+						font-size: 0.82rem;
+						padding: 5px 12px;
+						border-radius: 6px;
+						cursor: pointer;
+						transition: all 0.2s ease;
+						white-space: nowrap;
+						}
+
+						.stage-tab.active {
+						background: var(--accent-blue);
+						color: #0f172a;
+						box-shadow: 0 2px 8px rgba(56, 189, 248, 0.35);
+						}
+
+						.top-stats {
+						display: flex;
+						align-items: center;
+						gap: 8px;
+						flex-wrap: nowrap;
+						}
+
+						.stat-pill {
+						background: rgba(30, 41, 59, 0.9);
+						border: 1px solid var(--border-glass);
+						border-radius: 8px;
+						padding: 4px 10px;
+						font-size: 0.8rem;
+						font-weight: 700;
+						display: flex;
+						align-items: center;
+						gap: 6px;
+						white-space: nowrap;
+						}
+
+						.stat-pill span.val {
+						color: var(--accent-amber);
+						font-weight: 800;
+						}
+
+						.select-difficulty {
+						background: rgba(30, 41, 59, 0.95);
+						color: var(--text-main);
+						border: 1px solid var(--border-glass);
+						border-radius: 8px;
+						padding: 4px 8px;
+						font-size: 0.8rem;
+						font-weight: 700;
+						cursor: pointer;
+						outline: none;
+						}
+
+						.btn-top {
+						border: 1px solid rgba(56, 189, 248, 0.4);
+						background: rgba(56, 189, 248, 0.14);
+						color: var(--accent-blue);
+						border-radius: 8px;
+						padding: 5px 10px;
+						font-size: 0.8rem;
+						font-weight: 700;
+						cursor: pointer;
+						transition: all 0.2s;
+						white-space: nowrap;
+						}
+
+						.btn-top:hover {
+						background: rgba(56, 189, 248, 0.28);
+						}
+
+						.btn-top.amber {
+						border-color: rgba(245, 158, 11, 0.45);
+						background: rgba(245, 158, 11, 0.15);
+						color: var(--accent-amber);
+						}
+
+						.btn-top.amber:hover {
+						background: rgba(245, 158, 11, 0.28);
+						}
+
+						/* Right Sidebar */
+						.sidebar {
+						grid-area: sidebar;
+						background: var(--bg-panel);
+						border-left: 1px solid var(--border-glass);
+						padding: 10px;
+						overflow-y: auto;
+						z-index: 20;
+						display: flex;
+						flex-direction: column;
+						gap: 10px;
+						backdrop-filter: blur(14px);
+						}
+
+						.sidebar::-webkit-scrollbar {
+						width: 6px;
+						}
+						.sidebar::-webkit-scrollbar-thumb {
+						background: rgba(148, 163, 184, 0.35);
+						border-radius: 4px;
+						}
+
+						.panel-card {
+						background: var(--bg-card);
+						border: 1px solid var(--border-glass);
+						border-radius: 10px;
+						padding: 10px;
+						display: flex;
+						flex-direction: column;
+						gap: 8px;
+						}
+
+						.card-title {
+						font-size: 0.85rem;
+						font-weight: 800;
+						color: var(--accent-blue);
+						display: flex;
+						align-items: center;
+						justify-content: space-between;
+						border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+						padding-bottom: 5px;
+						}
+
+						.control-row {
+						display: flex;
+						flex-direction: column;
+						gap: 4px;
+						}
+
+						.control-label {
+						display: flex;
+						justify-content: space-between;
+						font-size: 0.78rem;
+						color: #cbd5e1;
+						font-weight: 500;
+						}
+
+						.control-label .val-badge {
+						color: var(--accent-blue);
+						font-weight: 700;
+						direction: ltr;
+						}
+
+						input[type="range"] {
+						width: 100%;
+						accent-color: var(--accent-blue);
+						height: 6px;
+						border-radius: 4px;
+						cursor: pointer;
+						}
+
+						select.full-select {
+						width: 100%;
+						background: rgba(15, 23, 42, 0.9);
+						color: var(--text-main);
+						border: 1px solid var(--border-glass);
+						border-radius: 7px;
+						padding: 6px 8px;
+						font-size: 0.8rem;
+						font-weight: 600;
+						outline: none;
+						cursor: pointer;
+						}
+
+						.reaction-grid {
+						display: grid;
+						grid-template-columns: 1fr 1fr;
+						gap: 7px;
+						}
+
+						.reaction-box {
+						background: rgba(15, 23, 42, 0.75);
+						border: 1px solid rgba(148, 163, 184, 0.2);
+						border-radius: 8px;
+						padding: 6px 8px;
+						display: flex;
+						flex-direction: column;
+						gap: 4px;
+						}
+
+						.reaction-box label {
+						font-size: 0.74rem;
+						color: #cbd5e1;
+						display: flex;
+						justify-content: space-between;
+						align-items: center;
+						}
+
+						.reaction-input-group {
+						display: flex;
+						gap: 4px;
+						align-items: center;
+						}
+
+						.reaction-input-group input[type="number"] {
+						width: 100%;
+						background: #0f172a;
+						color: #fff;
+						border: 1px solid rgba(148, 163, 184, 0.35);
+						border-radius: 6px;
+						padding: 4px 6px;
+						font-size: 0.82rem;
+						font-weight: 700;
+						text-align: center;
+						direction: ltr;
+						}
+
+						.btn-flip {
+						background: rgba(168, 85, 247, 0.2);
+						border: 1px solid rgba(168, 85, 247, 0.5);
+						color: #d8b4fe;
+						border-radius: 6px;
+						padding: 4px 7px;
+						font-size: 0.72rem;
+						font-weight: 700;
+						cursor: pointer;
+						white-space: nowrap;
+						transition: all 0.15s;
+						}
+
+						.btn-flip:hover {
+						background: rgba(168, 85, 247, 0.38);
+						}
+
+						.neg-warning-banner {
+						display: none;
+						background: rgba(244, 63, 94, 0.18);
+						border: 1px solid var(--accent-rose);
+						border-radius: 8px;
+						padding: 7px;
+						font-size: 0.76rem;
+						color: #fecdd3;
+						flex-direction: column;
+						gap: 5px;
+						}
+
+						.neg-warning-banner.visible {
+						display: flex;
+						}
+
+						.btn-fix-neg {
+						background: var(--accent-rose);
+						color: #fff;
+						border: none;
+						border-radius: 6px;
+						padding: 5px 8px;
+						font-size: 0.75rem;
+						font-weight: 700;
+						cursor: pointer;
+						}
+
+						.Quick-error-btns {
+						display: flex;
+						flex-wrap: wrap;
+						gap: 5px;
+						}
+
+						.btn-chip {
+						flex: 1 1 46%;
+						background: rgba(30, 41, 59, 0.95);
+						border: 1px solid rgba(148, 163, 184, 0.3);
+						color: #e2e8f0;
+						border-radius: 6px;
+						padding: 5px 6px;
+						font-size: 0.72rem;
+						font-weight: 600;
+						cursor: pointer;
+						transition: all 0.15s;
+						text-align: center;
+						}
+
+						.btn-chip:hover {
+						border-color: var(--accent-blue);
+						color: var(--accent-blue);
+						}
+
+						.btn-chip.solve {
+						background: rgba(16, 185, 129, 0.16);
+						border-color: rgba(16, 185, 129, 0.5);
+						color: #6ee7b7;
+						flex: 1 1 100%;
+						}
+
+						/* 3D Viewport Area */
+						.viewport-area {
+						grid-area: viewport;
+						position: relative;
+						width: 100%;
+						height: 100%;
+						overflow: hidden;
+						}
+
+						#canvas-container {
+						width: 100%;
+						height: 100%;
+						position: relative;
+						}
+
+						#labels-overlay {
+						position: absolute;
+						inset: 0;
+						pointer-events: none;
+						overflow: hidden;
+						z-index: 10;
+						}
+
+						.label-3d {
+						position: absolute;
+						transform: translate(-50%, -50%);
+						background: rgba(15, 23, 42, 0.88);
+						border: 1px solid rgba(148, 163, 184, 0.4);
+						color: #f8fafc;
+						padding: 2px 7px;
+						border-radius: 6px;
+						font-size: 0.74rem;
+						font-weight: 700;
+						white-space: nowrap;
+						direction: ltr;
+						box-shadow: 0 2px 6px rgba(0,0,0,0.45);
+						}
+
+						/* Floating FBD Legend & Angle Triangle Widget */
+						.floating-legend {
+						position: absolute;
+						top: 12px;
+						left: 12px;
+						background: rgba(15, 23, 42, 0.86);
+						border: 1px solid var(--border-glass);
+						border-radius: 10px;
+						padding: 9px 12px;
+						z-index: 15;
+						backdrop-filter: blur(8px);
+						display: flex;
+						flex-direction: column;
+						gap: 5px;
+						min-width: 215px;
+						}
+
+						.legend-title {
+						font-size: 0.78rem;
+						font-weight: 800;
+						color: var(--accent-blue);
+						margin-bottom: 2px;
+						}
+
+						.legend-item {
+						display: flex;
+						align-items: center;
+						gap: 7px;
+						font-size: 0.74rem;
+						color: #e2e8f0;
+						}
+
+						.dot {
+						width: 10px;
+						height: 10px;
+						border-radius: 50%;
+						flex-shrink: 0;
+						}
+
+						.angle-widget {
+						position: absolute;
+						bottom: 12px;
+						left: 12px;
+						background: rgba(15, 23, 42, 0.9);
+						border: 1px solid var(--border-glass);
+						border-radius: 10px;
+						padding: 8px 10px;
+						z-index: 15;
+						display: flex;
+						align-items: center;
+						gap: 10px;
+						backdrop-filter: blur(8px);
+						}
+
+						.angle-info {
+						font-size: 0.74rem;
+						line-height: 1.45;
+						color: #cbd5e1;
+						}
+
+						.camera-controls-bar {
+						position: absolute;
+						top: 12px;
+						right: 12px;
+						display: flex;
+						gap: 6px;
+						z-index: 15;
+						}
+
+						.cam-btn {
+						background: rgba(15, 23, 42, 0.85);
+						border: 1px solid var(--border-glass);
+						color: #e2e8f0;
+						padding: 5px 9px;
+						border-radius: 7px;
+						font-size: 0.74rem;
+						font-weight: 700;
+						cursor: pointer;
+						}
+
+						.cam-btn:hover {
+						border-color: var(--accent-blue);
+						color: var(--accent-blue);
+						}
+
+						/* Bottom Readout & Simulation Bar */
+						.bottom-bar {
+						grid-area: bottom;
+						background: rgba(15, 23, 42, 0.95);
+						border-top: 1px solid var(--border-glass);
+						padding: 10px 14px;
+						display: grid;
+						grid-template-columns: 185px 1fr 290px;
+						gap: 12px;
+						align-items: stretch;
+						z-index: 25;
+						}
+
+						.action-buttons-col {
+						display: flex;
+						flex-direction: column;
+						gap: 6px;
+						justify-content: center;
+						}
+
+						.btn-sim-run {
+						background: linear-gradient(135deg, #10b981, #059669);
+						color: #fff;
+						border: none;
+						border-radius: 8px;
+						padding: 9px 10px;
+						font-size: 0.84rem;
+						font-weight: 800;
+						cursor: pointer;
+						box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+						transition: transform 0.15s;
+						}
+
+						.btn-sim-run:hover {
+						transform: translateY(-1px);
+						}
+
+						.sub-actions-row {
+						display: flex;
+						gap: 6px;
+						}
+
+						.btn-sub {
+						flex: 1;
+						background: rgba(30, 41, 59, 0.95);
+						border: 1px solid var(--border-glass);
+						color: #e2e8f0;
+						border-radius: 7px;
+						padding: 6px;
+						font-size: 0.76rem;
+						font-weight: 700;
+						cursor: pointer;
+						}
+
+						.btn-sub.amber {
+						border-color: rgba(245, 158, 11, 0.45);
+						color: var(--accent-amber);
+						}
+
+						.readouts-grid {
+						display: grid;
+						grid-template-columns: repeat(3, 1fr);
+						gap: 8px;
+						}
+
+						.readout-card {
+						background: rgba(30, 41, 59, 0.78);
+						border: 1px solid var(--border-glass);
+						border-radius: 9px;
+						padding: 8px 10px;
+						display: flex;
+						flex-direction: column;
+						justify-content: space-between;
+						}
+
+						.readout-header {
+						font-size: 0.74rem;
+						color: var(--text-muted);
+						font-weight: 700;
+						display: flex;
+						justify-content: space-between;
+						}
+
+						.readout-eq {
+						font-size: 0.8rem;
+						font-weight: 700;
+						color: var(--accent-blue);
+						direction: ltr;
+						text-align: left;
+						margin: 4px 0;
+						font-family: monospace, 'Tajawal';
+						}
+
+						.readout-sub {
+						font-size: 0.72rem;
+						color: #cbd5e1;
+						direction: ltr;
+						text-align: left;
+						}
+
+						.diagnostic-box {
+						background: rgba(30, 41, 59, 0.9);
+						border: 1px solid rgba(168, 85, 247, 0.45);
+						border-radius: 10px;
+						padding: 9px 12px;
+						display: flex;
+						flex-direction: column;
+						gap: 4px;
+						overflow-y: auto;
+						}
+
+						.diagnostic-box.status-ok {
+						border-color: var(--accent-emerald);
+						background: rgba(16, 185, 129, 0.12);
+						}
+
+						.diagnostic-box.status-err {
+						border-color: var(--accent-rose);
+						background: rgba(244, 63, 94, 0.14);
+						}
+
+						.diag-title {
+						font-size: 0.8rem;
+						font-weight: 800;
+						color: #e9d5ff;
+						display: flex;
+						align-items: center;
+						gap: 6px;
+						}
+
+						.diag-text {
+						font-size: 0.76rem;
+						color: #f1f5f9;
+						line-height: 1.45;
+						}
+
+						.hidden {
+						display: none !important;
+						}
+
+						@media (max-width: 960px) {
+						#app-wrapper {
+						grid-template-columns: 300px 1fr;
+						}
+						.bottom-bar {
+						grid-template-columns: 160px 1fr 220px;
+						}
+						}
+					</style>
+				</head>
+	<body>
+		<div id="app-wrapper">
+			<!-- Top Header Bar -->
+			<header class="top-bar">
+				<div class="brand-group">
+					<div class="brand-badge">ميكانيك 1 | 3D</div>
+					<div class="stage-tabs">
+						<button id="tab-stage-1" class="stage-tab active" type="button">المرحلة 1: مختبر التوازن والمساند</button>
+						<button id="tab-stage-2" class="stage-tab" type="button">المرحلة 2: جراح الإطارات والمفاصل</button>
+					</div>
+				</div>
+
+				<div class="top-stats">
+					<select id="select-difficulty" class="select-difficulty" aria-label="مستوى الصعوبة">
+						<option value="beginner">المستوى: مبتدئ (حمولات أساسية)</option>
+						<option value="intermediate">المستوى: متوسط (شبه منحرف ومائلة)</option>
+						<option value="exam">المستوى: امتحاني شامل (تكامل وإطارات)</option>
+					</select>
+					<div class="stat-pill">
+						النقاط: <span id="score-val" class="val">0</span>
+					</div>
+					<div class="stat-pill">
+						السلسلة: <span id="streak-val" class="val">0</span> 🔥
+					</div>
+					<button id="btn-timer-toggle" class="stat-pill" type="button" style="cursor:pointer;" title="تفعيل/إيقاف المؤقت">
+						⏱️ <span id="timer-val">00:00</span>
+					</button>
+					<button id="btn-random-problem" class="btn-top" type="button">🎲 مسألة عشوائية</button>
+					<button id="btn-smart-hint" class="btn-top amber" type="button">💡 تلميح ذكي</button>
+				</div>
+			</header>
+
+			<!-- Right Control Sidebar -->
+			<aside class="sidebar">
+				<!-- STAGE 1 CONTROLS -->
+				<div id="stage1-controls">
+					<div class="panel-card">
+						<div class="card-title">
+							<span>1. هندسة الجائز ونوع المساند</span>
+							<span style="font-size:0.72rem;color:#94a3b8;">I-Beam 3D</span>
+						</div>
+						<div class="control-row">
+							<div class="control-label">
+								<span>طول الجائز (L):</span>
+								<span id="lbl-beam-len" class="val-badge">6.0 m</span>
+							</div>
+							<input id="slider-beam-len" type="range" min="4" max="10" step="0.5" value="6" />
+						</div>
+						<div class="control-row">
+							<div class="control-label">
+								<span>تشكيلة المساند (Supports):</span>
+							</div>
+							<select id="select-support-type" class="full-select">
+								<option value="pin-roller">مسند ثنائي ثابت بـ A + أحادي متدحرج بـ B</option>
+								<option value="fixed-free">وثاقة تثبيت كاملة بـ A (ظفر Cantilever)</option>
+								<option value="roller-pin">مسند أحادي متدحرج بـ A + ثنائي ثابت بـ B</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="panel-card" style="margin-top:8px;">
+						<div class="card-title">
+							<span>2. نوع الحمولة المطبقة</span>
+							<span id="lbl-load-formula" style="font-size:0.72rem;color:#f59e0b;">R = ½·q·L</span>
+						</div>
+						<div class="control-row">
+							<select id="select-load-type" class="full-select">
+								<option value="triangular" selected="">حمولة موزعة مثلثية (L/3 مقابل 2L/3)</option>
+								<option value="uniform">حمولة موزعة مستطيلة منتظمة (L/2)</option>
+								<option value="trapezoidal">حمولة شبه منحرفة (مستطيل + مثلث)</option>
+								<option value="inclined">قوة مركزة مائلة بزاوية θ</option>
+								<option value="parabolic">حمولة منحنية بتابع رياضي q(x) بالتكامل</option>
+							</select>
+						</div>
+
+						<div class="control-row">
+							<div class="control-label">
+								<span id="lbl-q1-title">شدة الحمولة (q₁ أو P):</span>
+								<span id="lbl-q1-val" class="val-badge">18 kN/m</span>
+							</div>
+							<input id="slider-q1" type="range" min="4" max="40" step="1" value="18" />
+						</div>
+
+						<div id="row-q2" class="control-row hidden">
+							<div class="control-label">
+								<span id="lbl-q2-title">الشدة الكبرى لشبه المنحرف (q₂):</span>
+								<span id="lbl-q2-val" class="val-badge">30 kN/m</span>
+							</div>
+							<input id="slider-q2" type="range" min="6" max="50" step="1" value="30" />
+							<button id="btn-split-trap" class="btn-chip" type="button" style="margin-top:4px;">
+								✂️ تبديل تجزئة شبه المنحرف (مستطيل + مثلث)
+							</button>
+						</div>
+
+						<div id="row-angle" class="control-row hidden">
+							<div class="control-label">
+								<span>زاوية ميل القوة (θ مع الأفق):</span>
+								<span id="lbl-angle-val" class="val-badge">60°</span>
+							</div>
+							<input id="slider-angle" type="range" min="15" max="90" step="5" value="60" />
+						</div>
+
+						<div class="control-row">
+							<div class="control-label">
+								<span>
+									قوة أفقية محورية مرافقة (F<sub>H</sub> نحو اليسار):
+								</span>
+								<span id="lbl-fh-val" class="val-badge">12 kN</span>
+							</div>
+							<input id="slider-fh" type="range" min="0" max="30" step="2" value="12" />
+						</div>
+					</div>
+
+					<div class="panel-card" style="margin-top:8px;">
+						<div class="card-title">
+							<span>3. إجابات الطالب ومخطط الجسم الحر (FBD)</span>
+						</div>
+
+						<div class="control-row">
+							<div class="control-label">
+								<span>
+									موضع سهم المحصلة x<sub>R</sub> مقاساً من A:
+								</span>
+								<span id="lbl-xr-val" class="val-badge">4.00 m</span>
+							</div>
+							<input id="slider-xr" type="range" min="0.2" max="10" step="0.05" value="4.00" />
+						</div>
+
+						<div id="neg-warning-box" class="neg-warning-banner">
+							<span>⚠️ أدخلت إشارة سالبة! في الميكانيك الهندسي نعكس سهم الفرضية على FBD ونجعل القيمة موجبة:</span>
+							<button id="btn-fix-neg-arrow" class="btn-fix-neg" type="button">🔄 عكس اتجاه سهم الفرضية وتحويل القيمة لموجبة</button>
+						</div>
+
+						<div class="reaction-grid">
+							<div class="reaction-box">
+								<label>
+									<span>
+										رد الفعل V<sub>A</sub> (kN)
+									</span>
+									<span id="dir-va-lbl" style="color:#10b981;">↑ للأعلى</span>
+								</label>
+								<div class="reaction-input-group">
+									<input id="inp-va" type="number" step="0.5" value="18" />
+									<button id="btn-flip-va" class="btn-flip" type="button">↕ عكس</button>
+								</div>
+							</div>
+
+							<div class="reaction-box">
+								<label>
+									<span>
+										رد الفعل H<sub>A</sub> (kN)
+									</span>
+									<span id="dir-ha-lbl" style="color:#10b981;">→ لليمين</span>
+								</label>
+								<div class="reaction-input-group">
+									<input id="inp-ha" type="number" step="0.5" value="12" />
+									<button id="btn-flip-ha" class="btn-flip" type="button">↔ عكس</button>
+								</div>
+							</div>
+
+							<div id="box-vb" class="reaction-box">
+								<label>
+									<span>
+										رد الفعل V<sub>B</sub> (kN)
+									</span>
+									<span id="dir-vb-lbl" style="color:#10b981;">↑ للأعلى</span>
+								</label>
+								<div class="reaction-input-group">
+									<input id="inp-vb" type="number" step="0.5" value="36" />
+									<button id="btn-flip-vb" class="btn-flip" type="button">↕ عكس</button>
+								</div>
+							</div>
+
+							<div id="box-ma" class="reaction-box hidden">
+								<label>
+									<span>
+										عزم الوثاقة M<sub>A</sub> (kN·m)
+									</span>
+									<span id="dir-ma-lbl" style="color:#a855f7;">↺ عكس العقارب</span>
+								</label>
+								<div class="reaction-input-group">
+									<input id="inp-ma" type="number" step="1" value="0" />
+									<button id="btn-flip-ma" class="btn-flip" type="button">↻ عكس</button>
+								</div>
+							</div>
+
+							<div class="reaction-box">
+								<label>
+									<span>
+										محصلة المسند R<sub>A</sub>
+									</span>
+									<span id="lbl-ra-calc" style="color:#38bdf8;direction:ltr;">21.63 kN</span>
+								</label>
+								<div style="font-size:0.7rem;color:#94a3b8;direction:ltr;">
+									α = tan⁻¹(V/H) = <span id="lbl-alpha-calc" style="color:#f59e0b;font-weight:700;">56.3°</span>
+								</div>
+							</div>
+						</div>
+
+						<div class="Quick-error-btns" style="margin-top:4px;">
+							<button id="btn-err-triangle" class="btn-chip" type="button">⚠️ تجربة خطأ ذراع المثلث (L/3)</button>
+							<button id="btn-err-cantilever" class="btn-chip" type="button">
+								⚠️ تجربة نسيان عزم الوثاقة M<sub>A</sub>
+							</button>
+							<button id="btn-auto-solve-s1" class="btn-chip solve" type="button">✅ ضبط القيم النموذجية للتوازن</button>
+						</div>
+					</div>
+				</div>
+
+				<!-- STAGE 2 CONTROLS (FRAME SURGEON) -->
+				<div id="stage2-controls" class="hidden">
+					<div class="panel-card">
+						<div class="card-title">
+							<span>1. مشرط الفصل الهندسي (Frame Surgeon)</span>
+							<span style="font-size:0.72rem;color:#a855f7;">المفصل G</span>
+						</div>
+						<div class="control-row">
+							<div class="control-label">
+								<span>مقدار فصل الإطار عند المفصل الداخلي G:</span>
+								<span id="lbl-explode-val" class="val-badge">40%</span>
+							</div>
+							<input id="slider-explode" type="range" min="0" max="100" step="5" value="40" />
+						</div>
+
+						<div class="control-row">
+							<div class="control-label">
+								<span>زاوية ميل العنصر الأيمن (β مع الشاقول):</span>
+								<span id="lbl-frame-beta" class="val-badge">30°</span>
+							</div>
+							<input id="slider-frame-beta" type="range" min="0" max="45" step="5" value="30" />
+						</div>
+
+						<div class="control-row">
+							<div class="control-label">
+								<span>
+									حمولة الإطار الشاقولية (P<sub>frame</sub>):
+								</span>
+								<span id="lbl-frame-p" class="val-badge">24 kN</span>
+							</div>
+							<input id="slider-frame-p" type="range" min="10" max="60" step="2" value="24" />
+						</div>
+					</div>
+
+					<div class="panel-card" style="margin-top:8px;">
+						<div class="card-title">
+							<span>2. التقرير الستاتيكي وقوى المفصل G</span>
+						</div>
+						<div style="font-size:0.75rem;color:#cbd5e1;display:flex;justify-content:space-between;background:#0f172a;padding:6px 8px;border-radius:6px;">
+							<span>عدد الأقراص D = 2 | عناصر المفصل c = 2</span>
+							<span style="color:#10b981;font-weight:700;direction:ltr;">
+								r<sub>G</sub> = 2(c-1) = 2 | n = 0
+							</span>
+						</div>
+
+						<div class="control-row" style="margin-top:4px;">
+							<div class="control-label">
+								<span>
+									عكس قوى المفصل الداخلي (X<sub>G</sub>, Y<sub>G</sub>) بين الجزأين:
+								</span>
+							</div>
+							<button id="btn-toggle-hinge-law" class="btn-chip solve" type="button">
+								🔄 الحالة الحالية: متعاكستان بالاتجاه (صحيح فيزيائياً ✓)
+							</button>
+						</div>
+
+						<div class="reaction-grid" style="margin-top:4px;">
+							<div class="reaction-box">
+								<label>
+									<span>
+										القوة الأفقية بالمفصل X<sub>G</sub>
+									</span>
+								</label>
+								<div class="reaction-input-group">
+									<input id="inp-xg" type="number" step="0.5" value="8" />
+								</div>
+							</div>
+							<div class="reaction-box">
+								<label>
+									<span>
+										القوة الشاقولية بالمفصل Y<sub>G</sub>
+									</span>
+								</label>
+								<div class="reaction-input-group">
+									<input id="inp-yg" type="number" step="0.5" value="12" />
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="panel-card" style="margin-top:8px;">
+						<div class="card-title">
+							<span>3. عدسة المحور المائل (القوة المحورية N والقصية Q)</span>
+						</div>
+						<div class="control-row">
+							<button id="btn-toggle-local-axes" class="btn-chip" type="button" style="border-color:#38bdf8;color:#38bdf8;">
+								🔍 تفعيل/إخفاء عدسة المحور المائل (N موازية، Q عمودية)
+							</button>
+						</div>
+						<div class="reaction-grid" style="margin-top:4px;">
+							<div class="reaction-box">
+								<label>
+									<span>القوة المحورية N (kN)</span>
+								</label>
+								<div class="reaction-input-group">
+									<input id="inp-n-force" type="number" step="0.5" value="-14.4" />
+								</div>
+							</div>
+							<div class="reaction-box">
+								<label>
+									<span>القوة القصية Q (kN)</span>
+								</label>
+								<div class="reaction-input-group">
+									<input id="inp-q-force" type="number" step="0.5" value="3.1" />
+								</div>
+							</div>
+						</div>
+						<div class="Quick-error-btns" style="margin-top:4px;">
+							<button id="btn-err-hinge-dir" class="btn-chip" type="button">⚠️ خطأ عدم عكس قوى المفصل</button>
+							<button id="btn-err-rad-deg" class="btn-chip" type="button">⚠️ خطأ حساب الزاوية بالراديان</button>
+							<button id="btn-auto-solve-s2" class="btn-chip solve" type="button">✅ ضبط القيم النموذجية للإطار</button>
+						</div>
+					</div>
+				</div>
+			</aside>
+
+			<!-- 3D Scene Viewport -->
+			<main class="viewport-area">
+				<div id="canvas-container"></div>
+				<div id="labels-overlay"></div>
+
+				<!-- Legend -->
+				<div class="floating-legend">
+					<div class="legend-title">دليل مخطط الجسم الحر (FBD)</div>
+					<div class="legend-item">
+						<span class="dot" style="background:#f43f5e;"></span>
+						<span>الحمولات المطبقة (q, P)</span>
+					</div>
+					<div class="legend-item">
+						<span class="dot" style="background:#f59e0b;"></span>
+						<span>
+							المحصلة المكافئة (R<sub>load</sub>)
+						</span>
+					</div>
+					<div class="legend-item">
+						<span class="dot" style="background:#10b981;"></span>
+						<span>ردود أفعال المساند (V, H, M)</span>
+					</div>
+					<div class="legend-item">
+						<span class="dot" style="background:#a855f7;"></span>
+						<span>
+							قوى المفصل الداخلي (X<sub>G</sub>, Y<sub>G</sub>)
+						</span>
+					</div>
+					<div class="legend-item">
+						<span class="dot" style="background:#38bdf8;"></span>
+						<span>المحاور المحلية (N محورية، Q قصية)</span>
+					</div>
+				</div>
+
+				<!-- Camera Reset Controls -->
+				<div class="camera-controls-bar">
+					<button id="btn-cam-front" class="cam-btn" type="button">منظر أمامي 2D/3D</button>
+					<button id="btn-cam-iso" class="cam-btn" type="button">منظور هندسي 3D</button>
+				</div>
+
+				<!-- Right-Triangle Visual Widget for Support Angle alpha -->
+				<div class="angle-widget">
+					<svg id="angle-svg" width="68" height="54" viewBox="0 0 68 54">
+						<polygon points="10,46 56,46 56,10" fill="rgba(56,189,248,0.15)" stroke="#38bdf8" stroke-width="2" />
+						<rect x="48" y="38" width="8" height="8" fill="none" stroke="#94a3b8" stroke-width="1.2" />
+						<text x="28" y="53" fill="#10b981" font-size="9" font-weight="bold">H</text>
+						<text x="58" y="30" fill="#10b981" font-size="9" font-weight="bold">V</text>
+						<text x="22" y="24" fill="#f59e0b" font-size="9" font-weight="bold">R</text>
+					</svg>
+					<div class="angle-info">
+						<div style="font-weight:800;color:#38bdf8;">مثلث ميل محصلة المسند (α)</div>
+						<div>المقابل شاقولي (V) والمجاور أفقي (H)</div>
+						<div style="direction:ltr;color:#f59e0b;font-weight:700;">tan(α) = V / H | R = √(V² + H²)</div>
+					</div>
+				</div>
+			</main>
+
+			<!-- Bottom Digital Readouts & Simulation Bar -->
+			<footer class="bottom-bar">
+				<div class="action-buttons-col">
+					<button id="btn-run-sim" class="btn-sim-run" type="button">▶ تشغيل المحاكاة / اختبار التوازن</button>
+					<div class="sub-actions-row">
+						<button id="btn-pause-sim" class="btn-sub amber" type="button">⏸ إيقاف</button>
+						<button id="btn-reset-sim" class="btn-sub" type="button">🔄 إعادة تعيين</button>
+					</div>
+				</div>
+
+				<div class="readouts-grid">
+					<div class="readout-card">
+						<div class="readout-header">
+							<span>محصلة الحمولة ومركز الثقل</span>
+							<span>∫ q(x) dx</span>
+						</div>
+						<div id="readout-load-eq" class="readout-eq">R = 54.0 kN @ x_c = 4.00 m</div>
+						<div id="readout-load-sub" class="readout-sub">Student x_R = 4.00 m (Δx = 0.00 m)</div>
+					</div>
+
+					<div class="readout-card">
+						<div class="readout-header">
+							<span>
+								معادلة العزوم (∑M<sub>A</sub> = 0)
+							</span>
+							<span>Equilibrium</span>
+						</div>
+						<div id="readout-moment-eq" class="readout-eq">V_B × 6.0 - 54.0 × 4.00 = 0</div>
+						<div id="readout-moment-sub" class="readout-sub">Exact: V_B = 36.0 kN | M_A = 0.0 kN·m</div>
+					</div>
+
+					<div class="readout-card">
+						<div class="readout-header">
+							<span>
+								توازن القوى (∑F<sub>x</sub> = 0, ∑F<sub>y</sub> = 0)
+							</span>
+							<span>N &amp; Q</span>
+						</div>
+						<div id="readout-force-eq" class="readout-eq">V_A = 18.0 kN, H_A = 12.0 kN</div>
+						<div id="readout-force-sub" class="readout-sub">Status: Ready for simulation</div>
+					</div>
+				</div>
+
+				<div id="diagnostic-panel" class="diagnostic-box">
+					<div class="diag-title">🧠 المشخص الهندسي الذكي (Smart Error Detector)</div>
+					<div id="diag-message" class="diag-text">
+						مرحباً بك في مختبر ميكانيك 1 ثلاثي الأبعاد! اضبط موضع المحصلة وردود الأفعال ثم اضغط "تشغيل المحاكاة"، أو جرب أزرار الأخطاء الشائعة لرؤية سلوك المنشأ بصرياً.
+					</div>
+				</div>
+			</footer>
+		</div>
+
+		<script>
+			const PhysicsExpLab = {
+			scene: null,
+			camera: null,
+			renderer: null,
+			controls: null,
+			animId: null,
+			container: null,
+			labelsContainer: null,
+			stage1Group: null,
+			stage2Group: null,
+			beamPivotGroup: null,
+			frameLeftGroup: null,
+			frameRightGroup: null,
+			hingeSphere: null,
+			localAxesGroup: null,
+			laserLine: null,
+			labelItems: [],
+
+			state: {
+			stage: 1,
+			difficulty: 'beginner',
+			score: 0,
+			streak: 0,
+			timerSec: 0,
+			timerRunning: false,
+			timerInterval: null,
+			simRunning: false,
+			simTime: 0,
+			simOutcome: 'idle', // 'ok', 'tilt', 'cantilever_collapse', 'hinge_error'
+			tiltTarget: 0,
+
+			// Stage 1 parameters
+			L: 6.0,
+			supportType: 'pin-roller', // 'pin-roller', 'fixed-free', 'roller-pin'
+			loadType: 'triangular',    // 'triangular', 'uniform', 'trapezoidal', 'inclined', 'parabolic'
+			q1: 18,
+			q2: 30,
+			angleDeg: 60,
+			fH: 12,
+			splitTrapezoid: true,
+
+			// Student Stage 1 inputs
+			studentXr: 4.0,
+			studentVa: 18.0,
+			studentHa: 12.0,
+			studentVb: 36.0,
+			studentMa: 0.0,
+			dirVa: 1,
+			dirHa: 1,
+			dirVb: 1,
+			dirMa: 1,
+
+			// Exact Stage 1 solution
+			exactR: 54.0,
+			exactFy: 54.0,
+			exactFx: 12.0,
+			exactXc: 4.0,
+			exactVa: 18.0,
+			exactHa: 12.0,
+			exactVb: 36.0,
+			exactMa: 0.0,
+
+			// Stage 2 parameters (Frame Surgeon)
+			explodePct: 40,
+			frameBetaDeg: 30,
+			frameP: 24,
+			hingeOpposite: true,
+			showLocalAxes: true,
+			studentXg: 8.0,
+			studentYg: 12.0,
+			studentN: -14.4,
+			studentQ: 3.1,
+			exactXg: 8.0,
+			exactYg: 12.0,
+			exactN: -14.4,
+			exactQ: 3.1
+			},
+
+			useFallback2D: false,
+			fallbackCanvas: null,
+			fallbackCtx: null,
+			camYaw: -0.35,
+			camPitch: 0.25,
+			camZoom: 1.0,
+
+			init(containerId) {
+			this.container = document.getElementById(containerId);
+			this.labelsContainer = document.getElementById('labels-overlay');
+			if (!this.container) return;
+
+			// Always bind UI events and run initial static calculations first so UI never freezes
+			this.bindEvents();
+			this.calculate();
+
+			const w = this.container.clientWidth || 800;
+			const h = this.container.clientHeight || 500;
+
+			try {
+			if (typeof THREE === 'undefined') throw new Error('THREE CDN not loaded');
+			this.scene = new THREE.Scene();
+			this.scene.background = new THREE.Color(0x0f172a);
+
+			this.camera = new THREE.PerspectiveCamera(42, w / h, 0.1, 200);
+			this.camera.position.set(0, 3.8, 12.5);
+
+			this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+			this.renderer.setSize(w, h);
+			this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+			this.renderer.shadowMap.enabled = true;
+			this.container.innerHTML = '';
+			this.container.appendChild(this.renderer.domElement);
+
+			if (typeof THREE.OrbitControls === 'function') {
+			this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+			this.controls.enableDamping = true;
+			this.controls.dampingFactor = 0.08;
+			this.controls.target.set(0, 0.8, 0);
+			}
+
+			const ambient = new THREE.AmbientLight(0xffffff, 0.72);
+			this.scene.add(ambient);
+
+			const dirLight = new THREE.DirectionalLight(0xffffff, 0.95);
+			dirLight.position.set(8, 14, 10);
+			dirLight.castShadow = true;
+			this.scene.add(dirLight);
+
+			const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.35);
+			rimLight.position.set(-8, -5, -6);
+			this.scene.add(rimLight);
+
+			const grid = new THREE.GridHelper(24, 24, 0x334155, 0x1e293b);
+			grid.position.y = -1.2;
+			this.scene.add(grid);
+
+			this.stage1Group = new THREE.Group();
+			this.stage2Group = new THREE.Group();
+			this.scene.add(this.stage1Group);
+			this.scene.add(this.stage2Group);
+
+			this.rebuild3DScene();
+			} catch (err) {
+			// Automatic built-in 3D Isometric Canvas Engine if Offline / WebGL blocked
+			this.useFallback2D = true;
+			this.initFallbackCanvas(w, h);
+			}
+
+			this._onResize = () => {
+			if (!this.container) return;
+			const nw = this.container.clientWidth || 800;
+			const nh = this.container.clientHeight || 500;
+			if (!this.useFallback2D && this.renderer && this.camera) {
+			this.camera.aspect = nw / nh;
+			this.camera.updateProjectionMatrix();
+			this.renderer.setSize(nw, nh);
+			} else if (this.fallbackCanvas) {
+			this.fallbackCanvas.width = nw;
+			this.fallbackCanvas.height = nh;
+			}
+			};
+			window.addEventListener('resize', this._onResize);
+
+			const animate = () => {
+			this.animId = requestAnimationFrame(animate);
+			this.update();
+			if (!this.useFallback2D && this.renderer && this.scene && this.camera) {
+			if (this.controls) this.controls.update();
+			this.renderer.render(this.scene, this.camera);
+			this.updateLabelsOverlay();
+			} else if (this.useFallback2D) {
+			this.renderFallbackScene();
+			}
+			};
+			animate();
+			},
+
+			initFallbackCanvas(w, h) {
+			this.container.innerHTML = '';
+			const cvs = document.createElement('canvas');
+			cvs.width = w;
+			cvs.height = h;
+			cvs.style.width = '100%';
+			cvs.style.height = '100%';
+			cvs.style.cursor = 'grab';
+			this.container.appendChild(cvs);
+			this.fallbackCanvas = cvs;
+			this.fallbackCtx = cvs.getContext('2d');
+
+			let dragging = false, lx = 0, ly = 0;
+			cvs.addEventListener('mousedown', (e) => { dragging = true; lx = e.clientX; ly = e.clientY; cvs.style.cursor = 'grabbing'; });
+			window.addEventListener('mouseup', () => { dragging = false; cvs.style.cursor = 'grab'; });
+			window.addEventListener('mousemove', (e) => {
+			if (!dragging) return;
+			this.camYaw += (e.clientX - lx) * 0.007;
+			this.camPitch = Math.max(-0.6, Math.min(0.85, this.camPitch + (e.clientY - ly) * 0.006));
+			lx = e.clientX; ly = e.clientY;
+			});
+			cvs.addEventListener('wheel', (e) => {
+			e.preventDefault();
+			this.camZoom = Math.max(0.6, Math.min(1.8, this.camZoom - e.deltaY * 0.001));
+			}, { passive: false });
+			},
+
+			projectIso(x, y, z, cx, cy, scale) {
+			const cosY = Math.cos(this.camYaw), sinY = Math.sin(this.camYaw);
+			const cosP = Math.cos(this.camPitch), sinP = Math.sin(this.camPitch);
+			const rx = x * cosY - z * sinY;
+			const rz = x * sinY + z * cosY;
+			const ry = y * cosP - rz * sinP;
+			return { x: cx + rx * scale, y: cy - ry * scale };
+			},
+
+			drawFallbackArrow(ctx, x1, y1, x2, y2, color, label) {
+			ctx.save();
+			ctx.strokeStyle = color;
+			ctx.fillStyle = color;
+			ctx.lineWidth = 3;
+			ctx.beginPath();
+			ctx.moveTo(x1, y1);
+			ctx.lineTo(x2, y2);
+			ctx.stroke();
+			const ang = Math.atan2(y2 - y1, x2 - x1);
+			const head = 10;
+			ctx.beginPath();
+			ctx.moveTo(x2, y2);
+			ctx.lineTo(x2 - head * Math.cos(ang - 0.4), y2 - head * Math.sin(ang - 0.4));
+			ctx.lineTo(x2 - head * Math.cos(ang + 0.4), y2 - head * Math.sin(ang + 0.4));
+			ctx.closePath();
+			ctx.fill();
+			if (label) {
+			ctx.font = 'bold 12px Tajawal, sans-serif';
+			ctx.fillStyle = '#f8fafc';
+			ctx.fillText(label, (x1 + x2) / 2 + 8, (y1 + y2) / 2 - 6);
+			}
+			ctx.restore();
+			},
+
+			renderFallbackScene() {
+			const ctx = this.fallbackCtx;
+			const cvs = this.fallbackCanvas;
+			if (!ctx || !cvs) return;
+			const w = cvs.width, h = cvs.height;
+			ctx.clearRect(0, 0, w, h);
+
+			const s = this.state;
+			const cx = w * 0.52;
+			const cy = h * 0.56;
+			const scale = Math.min(w, h) * 0.085 * this.camZoom;
+
+			// Draw 3D Floor Grid
+			ctx.strokeStyle = 'rgba(51, 65, 85, 0.45)';
+			ctx.lineWidth = 1;
+			for (let g = -6; g <= 6; g += 1) {
+			const p1 = this.projectIso(g, -1.2, -4, cx, cy, scale);
+			const p2 = this.projectIso(g, -1.2, 4, cx, cy, scale);
+			ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+			const p3 = this.projectIso(-6, -1.2, g * 0.66, cx, cy, scale);
+			const p4 = this.projectIso(6, -1.2, g * 0.66, cx, cy, scale);
+			ctx.beginPath(); ctx.moveTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y); ctx.stroke();
+			}
+
+			if (s.stage === 1) {
+			const L = s.L;
+			const tilt = (s.simRunning && (s.simOutcome === 'tilt' || s.simOutcome === 'cantilever_collapse'))
+			? s.tiltTarget + Math.sin(s.simTime * 3.0) * 0.025
+			: 0;
+
+			const pA = this.projectIso(-L / 2, 0, 0, cx, cy, scale);
+			const pB = this.projectIso(L / 2, L * Math.sin(tilt), 0, cx, cy, scale);
+
+			// Draw 3D I-Beam body
+			ctx.save();
+			ctx.strokeStyle = s.simOutcome === 'ok' ? '#10b981' : '#64748b';
+			ctx.lineWidth = 18;
+			ctx.lineCap = 'butt';
+			ctx.beginPath(); ctx.moveTo(pA.x, pA.y); ctx.lineTo(pB.x, pB.y); ctx.stroke();
+			ctx.strokeStyle = '#94a3b8';
+			ctx.lineWidth = 3;
+			ctx.beginPath(); ctx.moveTo(pA.x, pA.y - 8); ctx.lineTo(pB.x, pB.y - 8); ctx.stroke();
+			ctx.beginPath(); ctx.moveTo(pA.x, pA.y + 8); ctx.lineTo(pB.x, pB.y + 8); ctx.stroke();
+			ctx.restore();
+
+			// Supports
+			ctx.fillStyle = '#0ea5e9';
+			if (s.supportType === 'fixed-free') {
+			ctx.fillStyle = '#334155';
+			ctx.fillRect(pA.x - 18, pA.y - 45, 18, 90);
+			} else {
+			ctx.beginPath(); ctx.moveTo(pA.x, pA.y + 10); ctx.lineTo(pA.x - 14, pA.y + 34); ctx.lineTo(pA.x + 14, pA.y + 34); ctx.closePath(); ctx.fill();
+			ctx.beginPath(); ctx.arc(pB.x, pB.y + 22, 11, 0, Math.PI * 2); ctx.fill();
+			}
+
+			// Load arrows
+			for (let i = 0; i <= 8; i++) {
+			const u = i / 8;
+			const lx = -L / 2 + u * L;
+			const ly = u * L * Math.sin(tilt);
+			const pt = this.projectIso(lx, ly, 0, cx, cy, scale);
+			const hArr = s.loadType === 'triangular' ? (15 + u * 55) : 45;
+			this.drawFallbackArrow(ctx, pt.x, pt.y - 12 - hArr, pt.x, pt.y - 12, '#f43f5e', i === 4 ? `q=${s.q1} kN/m` : '');
+			}
+
+			// Student resultant arrow x_R
+			const rxPos = -L / 2 + s.studentXr;
+			const ryPos = s.studentXr * Math.sin(tilt);
+			const pR = this.projectIso(rxPos, ryPos, 0.3, cx, cy, scale);
+			this.drawFallbackArrow(ctx, pR.x, pR.y - 95, pR.x, pR.y - 12, '#f59e0b', `R=${s.exactR.toFixed(1)}kN @ x_R=${s.studentXr.toFixed(2)}m`);
+
+			// Reaction arrows
+			this.drawFallbackArrow(ctx, pA.x, pA.y + 85 * s.dirVa, pA.x, pA.y + 15 * s.dirVa, '#10b981', `V_A=${s.studentVa}kN`);
+			if (s.supportType !== 'fixed-free') {
+			this.drawFallbackArrow(ctx, pB.x, pB.y + 85 * s.dirVb, pB.x, pB.y + 15 * s.dirVb, '#10b981', `V_B=${s.studentVb}kN`);
+			}
+			} else {
+			// Stage 2 Fallback Frame Surgeon
+			const sep = (s.explodePct / 100) * 1.4;
+			const p1 = this.projectIso(-2.5 - sep, -1, 0, cx, cy, scale);
+			const p2 = this.projectIso(-2.5 - sep, 2, 0, cx, cy, scale);
+			const pG1 = this.projectIso(-sep, 2, 0, cx, cy, scale);
+			const pG2 = this.projectIso(sep, 2, 0, cx, cy, scale);
+			const p3 = this.projectIso(1.5 + sep, 2, 0, cx, cy, scale);
+			const betaRad = (s.frameBetaDeg * Math.PI) / 180;
+			const p4 = this.projectIso(1.5 + sep + 3 * Math.sin(betaRad), 2 - 3 * Math.cos(betaRad), 0, cx, cy, scale);
+
+			ctx.strokeStyle = '#64748b';
+			ctx.lineWidth = 12;
+			ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.lineTo(pG1.x, pG1.y); ctx.stroke();
+			ctx.beginPath(); ctx.moveTo(pG2.x, pG2.y); ctx.lineTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y); ctx.stroke();
+
+			const pHinge = this.projectIso(0, 2, 0, cx, cy, scale);
+			ctx.fillStyle = s.hingeOpposite ? '#a855f7' : '#f43f5e';
+			ctx.beginPath(); ctx.arc(pHinge.x, pHinge.y, 10, 0, Math.PI * 2); ctx.fill();
+			this.drawFallbackArrow(ctx, pG1.x + 35, pG1.y, pG1.x + 5, pG1.y, '#a855f7', `X_G=${s.exactXg}kN`);
+			this.drawFallbackArrow(ctx, pG2.x - 35, pG2.y, pG2.x - 5, pG2.y, s.hingeOpposite ? '#a855f7' : '#f43f5e', `Y_G=${s.exactYg}kN`);
+			}
+			},
+
+			createArrow3D(origin, dirVec, length, colorHex, headLen = 0.32, headWidth = 0.22) {
+			const group = new THREE.Group();
+			const dir = dirVec.clone().normalize();
+			const safeLen = Math.max(0.45, length);
+			const shaftLen = Math.max(0.15, safeLen - headLen);
+
+			const mat = new THREE.MeshStandardMaterial({
+			color: colorHex,
+			roughness: 0.3,
+			metalness: 0.2,
+			emissive: colorHex,
+			emissiveIntensity: 0.18
+			});
+
+			const shaftGeo = new THREE.CylinderGeometry(0.055, 0.055, shaftLen, 12);
+			const shaft = new THREE.Mesh(shaftGeo, mat);
+			shaft.position.y = shaftLen / 2;
+			group.add(shaft);
+
+			const headGeo = new THREE.ConeGeometry(headWidth, headLen, 16);
+			const head = new THREE.Mesh(headGeo, mat);
+			head.position.y = shaftLen + headLen / 2;
+			group.add(head);
+
+			const up = new THREE.Vector3(0, 1, 0);
+			const quat = new THREE.Quaternion().setFromUnitVectors(up, dir);
+			group.quaternion.copy(quat);
+			group.position.copy(origin);
+			return group;
+			},
+
+			addLabel3D(worldPos, htmlText, borderColor = '#38bdf8') {
+			const el = document.createElement('div');
+			el.className = 'label-3d';
+			el.style.borderColor = borderColor;
+			el.innerHTML = htmlText;
+			this.labelsContainer.appendChild(el);
+			this.labelItems.push({ el, pos: worldPos.clone() });
+			},
+
+			clearLabels3D() {
+			if (this.labelsContainer) this.labelsContainer.innerHTML = '';
+			this.labelItems = [];
+			},
+
+			updateLabelsOverlay() {
+			if (!this.camera || !this.container) return;
+			const w = this.container.clientWidth;
+			const h = this.container.clientHeight;
+			for (let i = 0; i < this.labelItems.length; i++) {
+          const item = this.labelItems[i];
+          const v = item.pos.clone().project(this.camera);
+          if (v.z > 1) {
+            item.el.style.display = 'none';
+          } else {
+            item.el.style.display = 'block';
+            const x = (v.x * 0.5 + 0.5) * w;
+            const y = (-v.y * 0.5 + 0.5) * h;
+            item.el.style.left = `${x}px`;
+            item.el.style.top = `${y}px`;
+          }
+        }
+      },
+
+      calculate() {
+        const s = this.state;
+        const L = s.L;
+        document.getElementById('slider-xr').max = L.toFixed(1);
+        if (s.studentXr > L) s.studentXr = L;
+
+        let Fy = 0;
+        let Fx = s.fH;
+        let xc = L / 2;
+        let R_load = 0;
+        let formulaText = '';
+
+        if (s.loadType === 'uniform') {
+          Fy = s.q1 * L;
+          R_load = Fy;
+          xc = L / 2;
+          formulaText = 'R = q·L @ L/2';
+        } else if (s.loadType === 'triangular') {
+          Fy = 0.5 * s.q1 * L;
+          R_load = Fy;
+          xc = (2 * L) / 3; // 2L/3 from A (apex), L/3 from B (base)
+          formulaText = 'R = ½·q·L @ 2L/3';
+        } else if (s.loadType === 'trapezoidal') {
+          const qMin = Math.min(s.q1, s.q2);
+          const qMax = Math.max(s.q1, s.q2);
+          const R_rect = qMin * L;
+          const x_rect = L / 2;
+          const R_tri = 0.5 * (qMax - qMin) * L;
+          const x_tri = (2 * L) / 3;
+          Fy = R_rect + R_tri;
+          R_load = Fy;
+          xc = Fy > 0 ? (R_rect * x_rect + R_tri * x_tri) / Fy : L / 2;
+          formulaText = 'R = R_rect + R_tri';
+        } else if (s.loadType === 'inclined') {
+          const rad = (s.angleDeg * Math.PI) / 180;
+          R_load = s.q1;
+          Fy = s.q1 * Math.sin(rad);
+          Fx = s.fH + Math.abs(s.q1 * Math.cos(rad));
+          xc = L * 0.5;
+          formulaText = 'P_y = P·sin(θ), P_x = P·cos(θ)';
+        } else if (s.loadType === 'parabolic') {
+          // q(x) = 0.25*x^2 + 4 kN/m integrated numerically
+          const N = 100;
+          const dx = L / N;
+          let sumQ = 0;
+          let sumXQ = 0;
+          for (let i = 0; i < N; i++) {
+            const x = (i + 0.5) * dx;
+            const qx = 0.25 * x * x + (s.q1 * 0.4);
+            sumQ += qx * dx;
+            sumXQ += x * qx * dx;
+          }
+          Fy = sumQ;
+          R_load = Fy;
+          xc = sumXQ / sumQ;
+          formulaText = 'Q = ∫q(x)dx, x_c = ∫x·q(x)dx / Q';
+        }
+
+        s.exactR = R_load;
+        s.exactFy = Fy;
+        s.exactFx = Fx;
+        s.exactXc = xc;
+
+        if (s.supportType === 'pin-roller') {
+          s.exactVb = (Fy * xc) / L;
+          s.exactVa = Fy - s.exactVb;
+          s.exactHa = Fx;
+          s.exactMa = 0;
+        } else if (s.supportType === 'roller-pin') {
+          s.exactVb = (Fy * xc) / L;
+          s.exactVa = Fy - s.exactVb;
+          s.exactHa = Fx;
+          s.exactMa = 0;
+        } else if (s.supportType === 'fixed-free') {
+          s.exactVa = Fy;
+          s.exactVb = 0;
+          s.exactHa = Fx;
+          s.exactMa = Fy * xc;
+        }
+
+        // Stage 2 calculations (Frame Surgeon)
+        const betaRad = (s.frameBetaDeg * Math.PI) / 180;
+        s.exactYg = s.frameP * 0.5;
+        s.exactXg = +(s.frameP * 0.3333).toFixed(1);
+        // Axial N & Shear Q on inclined member with angle beta from vertical
+        const X = s.exactXg;
+        const Y = s.exactYg;
+        s.exactN = +(-X * Math.sin(betaRad) - Y * Math.cos(betaRad)).toFixed(1);
+        s.exactQ = +(X * Math.cos(betaRad) - Y * Math.sin(betaRad)).toFixed(1);
+
+        // Update UI readouts
+        document.getElementById('lbl-load-formula').textContent = formulaText;
+        const effVa = s.studentVa * s.dirVa;
+        const effHa = s.studentHa * s.dirHa;
+        const ra = Math.hypot(effVa, effHa);
+        const alpha = Math.abs(effHa) > 1e-4 ? (Math.atan2(Math.abs(effVa), Math.abs(effHa)) * 180) / Math.PI : 90;
+        document.getElementById('lbl-ra-calc').textContent = `${ra.toFixed(2)} kN`;
+        document.getElementById('lbl-alpha-calc').textContent = `${alpha.toFixed(1)}°`;
+
+        if (s.stage === 1) {
+          const dx = Math.abs(s.studentXr - s.exactXc);
+          document.getElementById('readout-load-eq').textContent = `R = ${s.exactR.toFixed(1)} kN @ x_c = ${s.exactXc.toFixed(2)} m`;
+          document.getElementById('readout-load-sub').textContent = `Student x_R = ${s.studentXr.toFixed(2)} m (Δx = ${dx.toFixed(2)} m)`;
+
+          if (s.supportType === 'fixed-free') {
+            document.getElementById('readout-moment-eq').textContent = `M_A - ${s.exactFy.toFixed(1)} × ${s.studentXr.toFixed(2)} = 0`;
+            document.getElementById('readout-moment-sub').textContent = `Exact M_A = ${s.exactMa.toFixed(1)} kN·m | V_A = ${s.exactVa.toFixed(1)} kN`;
+          } else {
+            document.getElementById('readout-moment-eq').textContent = `V_B × ${L.toFixed(1)} - ${s.exactFy.toFixed(1)} × ${s.studentXr.toFixed(2)} = 0`;
+            document.getElementById('readout-moment-sub').textContent = `Exact: V_A = ${s.exactVa.toFixed(1)} kN, V_B = ${s.exactVb.toFixed(1)} kN`;
+          }
+          document.getElementById('readout-force-eq').textContent = `V_A = ${effVa.toFixed(1)} kN, H_A = ${effHa.toFixed(1)} kN`;
+          document.getElementById('readout-force-sub').textContent = `Exact H_A = ${s.exactHa.toFixed(1)} kN | R_A = ${ra.toFixed(1)} kN`;
+        } else {
+          document.getElementById('readout-load-eq').textContent = `X_G = ${s.exactXg.toFixed(1)} kN, Y_G = ${s.exactYg.toFixed(1)} kN`;
+          document.getElementById('readout-load-sub').textContent = `Hinge G: r = 2(c-1) = 2 | Explode = ${s.explodePct}%`;
+          document.getElementById('readout-moment-eq').textContent = `N = -X·sin(β) - Y·cos(β) = ${s.exactN.toFixed(1)} kN`;
+          document.getElementById('readout-moment-sub').textContent = `Inclined Member Angle β = ${s.frameBetaDeg}° (Degrees)`;
+          document.getElementById('readout-force-eq').textContent = `Q = X·cos(β) - Y·sin(β) = ${s.exactQ.toFixed(1)} kN`;
+          document.getElementById('readout-force-sub').textContent = s.hingeOpposite ? 'Newton 3rd Law at G: Valid ✓' : '⚠️ Error: Hinge forces NOT opposite!';
+        }
+      },
+
+      rebuild3DScene() {
+        if (!this.scene) return;
+        this.clearLabels3D();
+
+        // Clear existing meshes in stage groups
+        const clearGroup = (grp) => {
+          while (grp.children.length > 0) {
+            const c = grp.children[0];
+            grp.remove(c);
+          }
+        };
+        clearGroup(this.stage1Group);
+        clearGroup(this.stage2Group);
+
+        const s = this.state;
+        if (s.stage === 1) {
+          this.stage1Group.visible = true;
+          this.stage2Group.visible = false;
+          this.buildStage1Scene();
+        } else {
+          this.stage1Group.visible = false;
+          this.stage2Group.visible = true;
+          this.buildStage2Scene();
+        }
+      },
+
+      buildStage1Scene() {
+        const s = this.state;
+        const L = s.L;
+        const startX = -L / 2;
+        const endX = L / 2;
+
+        this.beamPivotGroup = new THREE.Group();
+        this.beamPivotGroup.position.set(startX, 0, 0);
+        this.stage1Group.add(this.beamPivotGroup);
+
+        // Build Metallic 3D I-Beam inside beamPivotGroup (from x=0 to x=L)
+        const beamMat = new THREE.MeshStandardMaterial({
+          color: s.simOutcome === 'ok' ? 0x10b981 : 0x475569,
+          metalness: 0.65,
+          roughness: 0.3
+        });
+        const flangeMat = new THREE.MeshStandardMaterial({
+          color: s.simOutcome === 'ok' ? 0x34d399 : 0x64748b,
+          metalness: 0.7,
+          roughness: 0.25
+        });
+
+        const webMesh = new THREE.Mesh(new THREE.BoxGeometry(L, 0.36, 0.14), beamMat);
+        webMesh.position.set(L / 2, 0, 0);
+        this.beamPivotGroup.add(webMesh);
+
+        const topFlange = new THREE.Mesh(new THREE.BoxGeometry(L, 0.08, 0.48), flangeMat);
+        topFlange.position.set(L / 2, 0.22, 0);
+        this.beamPivotGroup.add(topFlange);
+
+        const botFlange = new THREE.Mesh(new THREE.BoxGeometry(L, 0.08, 0.48), flangeMat);
+        botFlange.position.set(L / 2, -0.22, 0);
+        this.beamPivotGroup.add(botFlange);
+
+        // Meter ruler ticks along beam
+        for (let m = 0; m <= Math.floor(L); m++) {
+			const tick = new THREE.Mesh(
+			new THREE.BoxGeometry(0.03, 0.12, 0.52),
+			new THREE.MeshBasicMaterial({ color: 0x94a3b8 })
+			);
+			tick.position.set(m, -0.22, 0);
+			this.beamPivotGroup.add(tick);
+			}
+
+			// Supports at A (startX) and B (endX)
+			const supMat = new THREE.MeshStandardMaterial({ color: 0x0ea5e9, roughness: 0.35, metalness: 0.3 });
+			if (s.supportType === 'fixed-free') {
+			const wall = new THREE.Mesh(
+			new THREE.BoxGeometry(0.45, 2.4, 1.4),
+			new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 })
+			);
+			wall.position.set(startX - 0.22, 0, 0);
+			this.stage1Group.add(wall);
+
+			// Curved moment arc at A
+			const torus = new THREE.Mesh(
+			new THREE.TorusGeometry(0.65, 0.055, 12, 32, Math.PI * 1.35),
+			new THREE.MeshBasicMaterial({ color: 0xa855f7 })
+			);
+			torus.position.set(startX, 0, 0.35);
+			this.stage1Group.add(torus);
+			this.addLabel3D(new THREE.Vector3(startX - 0.8, 0.85, 0.35), `M<sub>A</sub> = ${(s.studentMa * s.dirMa).toFixed(1)} kN·m`, '#a855f7');
+			} else {
+			// Support A
+			if (s.supportType === 'pin-roller') {
+			const coneA = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.65, 4), supMat);
+			coneA.rotation.y = Math.PI / 4;
+			coneA.position.set(startX, -0.58, 0);
+			this.stage1Group.add(coneA);
+			} else {
+			const cylA = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.5, 20), supMat);
+			cylA.rotation.x = Math.PI / 2;
+			cylA.position.set(startX, -0.54, 0);
+			this.stage1Group.add(cylA);
+			}
+
+			// Support B
+			if (s.supportType === 'pin-roller') {
+			const cylB = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.5, 20), supMat);
+			cylB.rotation.x = Math.PI / 2;
+			cylB.position.set(endX, -0.54, 0);
+			this.stage1Group.add(cylB);
+			} else {
+			const coneB = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.65, 4), supMat);
+			coneB.rotation.y = Math.PI / 4;
+			coneB.position.set(endX, -0.58, 0);
+			this.stage1Group.add(coneB);
+			}
+			}
+
+			// Reaction Arrows (Green)
+			const vaDir = new THREE.Vector3(0, s.dirVa, 0);
+			const vaOrigin = new THREE.Vector3(startX, s.dirVa > 0 ? -1.85 : 0.95, 0);
+			this.stage1Group.add(this.createArrow3D(vaOrigin, vaDir, 1.15, 0x10b981));
+			this.addLabel3D(new THREE.Vector3(startX, -2.05, 0), `V<sub>A</sub> = ${s.studentVa.toFixed(1)} kN`, '#10b981');
+
+			if (s.fH > 0 || Math.abs(s.studentHa) > 0) {
+			const haDir = new THREE.Vector3(s.dirHa, 0, 0);
+			const haOrigin = new THREE.Vector3(startX - s.dirHa * 1.35, -0.25, 0);
+			this.stage1Group.add(this.createArrow3D(haOrigin, haDir, 1.1, 0x10b981));
+			this.addLabel3D(new THREE.Vector3(startX - 1.15, -0.65, 0), `H<sub>A</sub> = ${s.studentHa.toFixed(1)} kN`, '#10b981');
+			}
+
+			if (s.supportType !== 'fixed-free') {
+			const vbDir = new THREE.Vector3(0, s.dirVb, 0);
+			const vbOrigin = new THREE.Vector3(endX, s.dirVb > 0 ? -1.85 : 0.95, 0);
+			this.stage1Group.add(this.createArrow3D(vbOrigin, vbDir, 1.15, 0x10b981));
+			this.addLabel3D(new THREE.Vector3(endX, -2.05, 0), `V<sub>B</sub> = ${s.studentVb.toFixed(1)} kN`, '#10b981');
+			}
+
+			// Horizontal Companion Force F_H at B
+			if (s.fH > 0) {
+			const fhOrigin = new THREE.Vector3(endX + 1.25, 0.1, 0);
+			this.beamPivotGroup.add(this.createArrow3D(new THREE.Vector3(L + 1.25, 0.1, 0), new THREE.Vector3(-1, 0, 0), 1.1, 0xf43f5e));
+			this.addLabel3D(new THREE.Vector3(endX + 1.15, 0.55, 0), `F<sub>H</sub> = ${s.fH} kN`, '#f43f5e');
+			}
+
+			// Distributed / Point Load Visualization on Beam
+			const numArrows = 9;
+			for (let i = 0; i <= numArrows; i++) {
+			const u = i / numArrows;
+			const xLocal = u * L;
+			let hArrow = 0;
+			let colorArrow = 0xf43f5e;
+
+			if (s.loadType === 'uniform') {
+			hArrow = 0.65 + (s.q1 / 40) * 1.1;
+			} else if (s.loadType === 'triangular') {
+			hArrow = u * (0.65 + (s.q1 / 40) * 1.35);
+			} else if (s.loadType === 'trapezoidal') {
+			const qMin = Math.min(s.q1, s.q2);
+			const qMax = Math.max(s.q1, s.q2);
+			const qHere = qMin + u * (qMax - qMin);
+			hArrow = 0.5 + (qHere / 50) * 1.4;
+			if (s.splitTrapezoid && i % 2 === 1) colorArrow = 0x38bdf8;
+			} else if (s.loadType === 'parabolic') {
+			const qHere = 0.25 * xLocal * xLocal + s.q1 * 0.4;
+			hArrow = 0.45 + (qHere / 35) * 1.3;
+			}
+
+			if (hArrow > 0.22 && s.loadType !== 'inclined') {
+			const arr = this.createArrow3D(
+			new THREE.Vector3(xLocal, 0.26 + hArrow, 0),
+			new THREE.Vector3(0, -1, 0),
+			hArrow,
+			colorArrow,
+			0.22,
+			0.14
+			);
+			this.beamPivotGroup.add(arr);
+			}
+			}
+
+			if (s.loadType === 'inclined') {
+			const rad = (s.angleDeg * Math.PI) / 180;
+			const dir = new THREE.Vector3(-Math.cos(rad), -Math.sin(rad), 0).normalize();
+			const origin = new THREE.Vector3(L / 2, 0.26, 0).sub(dir.clone().multiplyScalar(1.8));
+			this.beamPivotGroup.add(this.createArrow3D(origin, dir, 1.8, 0xf43f5e));
+			this.addLabel3D(new THREE.Vector3(0, 1.95, 0), `P = ${s.q1} kN (θ = ${s.angleDeg}°)`, '#f43f5e');
+			} else {
+			this.addLabel3D(new THREE.Vector3(0, 2.05, 0), `q = ${s.q1} kN/m`, '#f43f5e');
+			}
+
+			// Student's Equivalent Resultant Arrow (Amber) at x_R
+			const xrArrow = this.createArrow3D(
+			new THREE.Vector3(s.studentXr, 2.35, 0.38),
+			new THREE.Vector3(0, -1, 0),
+			2.05,
+			0xf59e0b,
+			0.36,
+			0.25
+			);
+			this.beamPivotGroup.add(xrArrow);
+			this.addLabel3D(
+			new THREE.Vector3(startX + s.studentXr, 2.55, 0.38),
+			`R = ${s.exactR.toFixed(1)} kN @ x<sub>R</sub>=${s.studentXr.toFixed(2)}m`,
+			'#f59e0b'
+			);
+
+			// Laser indicator when student's x_R differs from true x_c
+			if (Math.abs(s.studentXr - s.exactXc) > 0.12) {
+			const trueLineGeo = new THREE.BufferGeometry().setFromPoints([
+			new THREE.Vector3(s.exactXc, -0.8, 0.45),
+			new THREE.Vector3(s.exactXc, 2.2, 0.45)
+			]);
+			const trueLine = new THREE.Line(
+			trueLineGeo,
+			new THREE.LineBasicMaterial({ color: 0x38bdf8 })
+			);
+			this.beamPivotGroup.add(trueLine);
+			this.addLabel3D(
+			new THREE.Vector3(startX + s.exactXc, -1.05, 0.45),
+			`المركز الصحيح x<sub>c</sub> = ${s.exactXc.toFixed(2)}m`,
+			'#38bdf8'
+			);
+			}
+			},
+
+			buildStage2Scene() {
+			const s = this.state;
+			const sep = (s.explodePct / 100) * 1.65;
+			const betaRad = (s.frameBetaDeg * Math.PI) / 180;
+
+			this.frameLeftGroup = new THREE.Group();
+			this.frameRightGroup = new THREE.Group();
+			this.frameLeftGroup.position.x = -sep;
+			this.frameRightGroup.position.x = sep;
+			this.stage2Group.add(this.frameLeftGroup);
+			this.stage2Group.add(this.frameRightGroup);
+
+			const frameMat = new THREE.MeshStandardMaterial({
+			color: 0x64748b,
+			metalness: 0.6,
+			roughness: 0.3
+			});
+
+			// Left L-shaped frame part (Column at x=-2.5, y=-1..2, top beam from x=-2.5..0 at y=2)
+			const leftCol = new THREE.Mesh(new THREE.BoxGeometry(0.28, 3.0, 0.28), frameMat);
+			leftCol.position.set(-2.5, 0.5, 0);
+			this.frameLeftGroup.add(leftCol);
+
+			const leftBeam = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.28, 0.28), frameMat);
+			leftBeam.position.set(-1.25, 2.0, 0);
+			this.frameLeftGroup.add(leftBeam);
+
+			// Right inclined frame part (Top beam from x=0..1.5 at y=2, inclined leg from (1.5,2) down at angle beta)
+			const rightBeam = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.28, 0.28), frameMat);
+			rightBeam.position.set(0.75, 2.0, 0);
+			this.frameRightGroup.add(rightBeam);
+
+			const legLen = 3.2;
+			const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.28, legLen, 0.28), frameMat);
+			rightLeg.position.set(
+			1.5 + (legLen / 2) * Math.sin(betaRad),
+			2.0 - (legLen / 2) * Math.cos(betaRad),
+			0
+			);
+			rightLeg.rotation.z = betaRad;
+			this.frameRightGroup.add(rightLeg);
+
+			// Applied Vertical Load on Left Part
+			this.frameLeftGroup.add(
+			this.createArrow3D(new THREE.Vector3(-1.25, 3.4, 0), new THREE.Vector3(0, -1, 0), 1.25, 0xf43f5e)
+			);
+			this.addLabel3D(new THREE.Vector3(-1.25 - sep, 3.65, 0), `P = ${s.frameP} kN`, '#f43f5e');
+
+			// Central Internal Hinge Sphere G
+			const hingeColor = s.hingeOpposite ? 0xa855f7 : 0xf43f5e;
+			this.hingeSphere = new THREE.Mesh(
+			new THREE.SphereGeometry(0.24, 24, 24),
+			new THREE.MeshStandardMaterial({ color: hingeColor, emissive: hingeColor, emissiveIntensity: 0.45 })
+			);
+			this.hingeSphere.position.set(0, 2.0, 0);
+			this.stage2Group.add(this.hingeSphere);
+			this.addLabel3D(new THREE.Vector3(0, 2.55, 0), `المفصل الداخلي G (r = 2)`, '#a855f7');
+
+			// Internal Hinge Force Arrows when Exploded
+			if (s.explodePct > 5) {
+			// Left side of cut at G
+			this.frameLeftGroup.add(
+			this.createArrow3D(new THREE.Vector3(0.95, 2.0, 0), new THREE.Vector3(-1, 0, 0), 0.85, 0xa855f7)
+			);
+			this.frameLeftGroup.add(
+			this.createArrow3D(new THREE.Vector3(0, 1.05, 0), new THREE.Vector3(0, 1, 0), 0.85, 0xa855f7)
+			);
+
+			// Right side of cut at G (opposite if hingeOpposite is true, same if error!)
+			const sign = s.hingeOpposite ? 1 : -1;
+			this.frameRightGroup.add(
+			this.createArrow3D(
+			new THREE.Vector3(sign > 0 ? -0.95 : 0.95, 2.0, 0),
+			new THREE.Vector3(sign > 0 ? 1 : -1, 0, 0),
+			0.85,
+			s.hingeOpposite ? 0xa855f7 : 0xf43f5e
+			)
+			);
+			this.frameRightGroup.add(
+			this.createArrow3D(
+			new THREE.Vector3(0, sign > 0 ? 2.95 : 1.05, 0),
+			new THREE.Vector3(0, sign > 0 ? -1 : 1, 0),
+			0.85,
+			s.hingeOpposite ? 0xa855f7 : 0xf43f5e
+			)
+			);
+
+			this.addLabel3D(
+			new THREE.Vector3(-sep + 0.4, 1.3, 0),
+			`X<sub>G</sub>=${s.exactXg}kN, Y<sub>G</sub>=${s.exactYg}kN`,
+			'#a855f7'
+			);
+			}
+
+			// Local Inclined Axes Gizmo (N parallel to member, Q perpendicular)
+			if (s.showLocalAxes) {
+			const midX = 1.5 + (legLen * 0.5) * Math.sin(betaRad);
+			const midY = 2.0 - (legLen * 0.5) * Math.cos(betaRad);
+			const gizmo = new THREE.Group();
+			gizmo.position.set(midX, midY, 0.32);
+
+			const axisDirN = new THREE.Vector3(Math.sin(betaRad), -Math.cos(betaRad), 0);
+			const axisDirQ = new THREE.Vector3(Math.cos(betaRad), Math.sin(betaRad), 0);
+
+			gizmo.add(this.createArrow3D(new THREE.Vector3(0, 0, 0), axisDirN, 1.15, 0x38bdf8));
+			gizmo.add(this.createArrow3D(new THREE.Vector3(0, 0, 0), axisDirQ, 1.15, 0xf59e0b));
+			this.frameRightGroup.add(gizmo);
+
+			this.addLabel3D(
+			new THREE.Vector3(sep + midX + 0.9, midY - 0.5, 0.35),
+			`N = ${s.exactN} kN (محورية) | Q = ${s.exactQ} kN (قصية)`,
+			'#38bdf8'
+			);
+			}
+			},
+
+			evaluateSimulation() {
+			const s = this.state;
+			this.calculate();
+			const diagBox = document.getElementById('diagnostic-panel');
+			const diagMsg = document.getElementById('diag-message');
+			diagBox.classList.remove('status-ok', 'status-err');
+
+			if (s.stage === 1) {
+			const effVa = s.studentVa * s.dirVa;
+			const effHa = s.studentHa * s.dirHa;
+			const effVb = s.studentVb * s.dirVb;
+			const effMa = s.studentMa * s.dirMa;
+
+			const errXr = Math.abs(s.studentXr - s.exactXc);
+			const errVa = Math.abs(effVa - s.exactVa);
+			const errHa = Math.abs(effHa - s.exactHa);
+			const errVb = s.supportType === 'fixed-free' ? 0 : Math.abs(effVb - s.exactVb);
+			const errMa = s.supportType === 'fixed-free' ? Math.abs(effMa - s.exactMa) : 0;
+
+			if (s.supportType === 'fixed-free' && Math.abs(effMa) < 1.0) {
+            s.simOutcome = 'cantilever_collapse';
+            s.tiltTarget = -0.32;
+            s.streak = 0;
+            diagBox.classList.add('status-err');
+            diagMsg.innerHTML = `❌ <strong>انهيار دوراني للظفر (Cantilever)!</strong> لقد أغفلت عزم الوثاقة <code>
+				M<sub>A</sub> = ${s.exactMa.toFixed(1)} kN·m
+			</code> في المسند الثابت A، مما أدى لدوران الجائز حول نقطة التثبيت.`;
+			} else if (s.loadType === 'triangular' && Math.abs(s.studentXr - s.L / 3) < 0.25) {
+            s.simOutcome = 'tilt';
+            s.tiltTarget = 0.18;
+            s.streak = 0;
+            diagBox.classList.add('status-err');
+            diagMsg.innerHTML = `⚠️ <strong>خطأ شائع في مركز ثقل المثلث!</strong> وضعت المحصلة على بعد <code>L/3 = ${(s.L / 3).toFixed(2)}m</code> من الرأس A بدلاً من القاعدة الكبرى B. الصحيح من A هو <code>2L/3 = ${s.exactXc.toFixed(2)}m</code>.`;
+			} else if (errXr > 0.25) {
+			s.simOutcome = 'tilt';
+			s.tiltTarget = s.studentXr > s.exactXc ? -0.16 : 0.16;
+			s.streak = 0;
+			diagBox.classList.add('status-err');
+			diagMsg.innerHTML = `⚠️ <strong>ذراع العزم غير دقيق!</strong> موضع المحصلة المدخل <code>
+				x<sub>R</sub> = ${s.studentXr.toFixed(2)}m
+			</code> يختلف عن المركز الحقيقي <code>
+				x<sub>c</sub> = ${s.exactXc.toFixed(2)}m
+			</code>.`;
+			} else if (errVa > 1.5 || errVb > 1.5 || errHa > 1.5 || errMa > 2.5) {
+			s.simOutcome = 'tilt';
+			s.tiltTarget = -0.14;
+			s.streak = 0;
+			diagBox.classList.add('status-err');
+			diagMsg.innerHTML = `⚠️ <strong>اختلال في معادلات التوازن!</strong> القيم الصحيحة هي: <code>
+				V<sub>A</sub>=${s.exactVa.toFixed(1)}
+			</code>، <code>
+				H<sub>A</sub>=${s.exactHa.toFixed(1)}
+			</code>، ${s.supportType === 'fixed-free' ? `<code>
+				M<sub>A</sub>=${s.exactMa.toFixed(1)}
+			</code>` : `<code>
+				V<sub>B</sub>=${s.exactVb.toFixed(1)}
+			</code>`}.`;
+			} else {
+			s.simOutcome = 'ok';
+			s.tiltTarget = 0;
+			s.score += 25;
+			s.streak += 1;
+			diagBox.classList.add('status-ok');
+			diagMsg.innerHTML = `✅ <strong>
+				اتزان ستاتيكي متكامل (∑F<sub>x</sub>=0, ∑F<sub>y</sub>=0, ∑M=0)!
+			</strong> الجائز متزن تماماً وجميع ردود الأفعال وموضع المحصلة صحيحة.`;
+			}
+			} else {
+			// Stage 2 evaluation
+			if (!s.hingeOpposite) {
+			s.simOutcome = 'hinge_error';
+			s.streak = 0;
+			diagBox.classList.add('status-err');
+			diagMsg.innerHTML = `❌ <strong>خطأ في قوى المفصل الداخلي G!</strong> يجب أن تكون القوتان المفصليتان <code>
+				(X<sub>G</sub>, Y<sub>G</sub>)
+			</code> متساويتين بالمقدار ومتعاكستين تماماً بالاتجاه بين الجزأين الأيسر والأيمن لتحقيق توازن المفصل.`;
+			} else if (Math.abs(s.studentN - s.exactN) > 1.5 || Math.abs(s.studentQ - s.exactQ) > 1.5) {
+			s.simOutcome = 'hinge_error';
+			s.streak = 0;
+			diagBox.classList.add('status-err');
+			diagMsg.innerHTML = `⚠️ <strong>خطأ في مركبات العنصر المائل (N, Q)!</strong> تأكد من ضبط الآلة الحاسبة على نظام الدرجات (Degrees) وليس الراديان (Radians). القيم الصحيحة: <code>N = ${s.exactN} kN</code> و <code>Q = ${s.exactQ} kN</code>.`;
+			} else {
+			s.simOutcome = 'ok';
+			s.score += 30;
+			s.streak += 1;
+			diagBox.classList.add('status-ok');
+			diagMsg.innerHTML = `✅ <strong>جراحة إطار ناجحة!</strong> تم فصل المفصل G بعكس صحيح لردود الأفعال وحساب القوة المحورية N والقصية Q على المحور المائل بدقة.`;
+			}
+			}
+
+			document.getElementById('score-val').textContent = s.score;
+			document.getElementById('streak-val').textContent = s.streak;
+			s.simRunning = true;
+			this.rebuild3DScene();
+			},
+
+			update() {
+			const s = this.state;
+			s.simTime += 0.035;
+
+			if (s.stage === 1 && this.beamPivotGroup) {
+			if (s.simRunning && (s.simOutcome === 'tilt' || s.simOutcome === 'cantilever_collapse')) {
+			const osc = Math.sin(s.simTime * 3.0) * 0.03;
+			this.beamPivotGroup.rotation.z += ((s.tiltTarget + osc) - this.beamPivotGroup.rotation.z) * 0.08;
+			} else {
+			this.beamPivotGroup.rotation.z += (0 - this.beamPivotGroup.rotation.z) * 0.12;
+			}
+			}
+
+			if (s.stage === 2 && this.hingeSphere) {
+			if (s.simRunning && s.simOutcome === 'hinge_error') {
+			const pulse = 1 + Math.sin(s.simTime * 6) * 0.25;
+			this.hingeSphere.scale.set(pulse, pulse, pulse);
+			} else {
+			this.hingeSphere.scale.set(1, 1, 1);
+			}
+			}
+			},
+
+			reset() {
+			const s = this.state;
+			s.simRunning = false;
+			s.simOutcome = 'idle';
+			s.tiltTarget = 0;
+			if (this.beamPivotGroup) this.beamPivotGroup.rotation.z = 0;
+			const diagBox = document.getElementById('diagnostic-panel');
+			diagBox.classList.remove('status-ok', 'status-err');
+			document.getElementById('diag-message').textContent = 'تمت إعادة تعيين التجربة إلى الوضع الابتدائي. يمكنك تعديل المعطيات أو اختبار التوازن.';
+			this.calculate();
+			this.rebuild3DScene();
+			},
+
+			bindEvents() {
+			const s = this.state;
+
+			// Stage switching
+			document.getElementById('tab-stage-1').addEventListener('click', () => {
+			s.stage = 1;
+			document.getElementById('tab-stage-1').classList.add('active');
+			document.getElementById('tab-stage-2').classList.remove('active');
+			document.getElementById('stage1-controls').classList.remove('hidden');
+			document.getElementById('stage2-controls').classList.add('hidden');
+			this.reset();
+			});
+
+			document.getElementById('tab-stage-2').addEventListener('click', () => {
+			s.stage = 2;
+			document.getElementById('tab-stage-2').classList.add('active');
+			document.getElementById('tab-stage-1').classList.remove('active');
+			document.getElementById('stage2-controls').classList.remove('hidden');
+			document.getElementById('stage1-controls').classList.add('hidden');
+			this.reset();
+			});
+
+			// Difficulty selector
+			document.getElementById('select-difficulty').addEventListener('change', (e) => {
+			s.difficulty = e.target.value;
+			if (s.difficulty === 'beginner') {
+			document.getElementById('select-load-type').value = 'uniform';
+			} else if (s.difficulty === 'intermediate') {
+			document.getElementById('select-load-type').value = 'trapezoidal';
+			} else {
+			document.getElementById('select-load-type').value = 'parabolic';
+			}
+			document.getElementById('select-load-type').dispatchEvent(new Event('change'));
+			});
+
+			// Timer button
+			document.getElementById('btn-timer-toggle').addEventListener('click', () => {
+			s.timerRunning = !s.timerRunning;
+			if (s.timerRunning) {
+			if (s.timerInterval) clearInterval(s.timerInterval);
+			s.timerInterval = setInterval(() => {
+			s.timerSec++;
+			const mm = String(Math.floor(s.timerSec / 60)).padStart(2, '0');
+			const ss = String(s.timerSec % 60).padStart(2, '0');
+			document.getElementById('timer-val').textContent = `${mm}:${ss}`;
+			}, 1000);
+			} else if (s.timerInterval) {
+			clearInterval(s.timerInterval);
+			}
+			});
+
+			// Random Problem Generator
+			document.getElementById('btn-random-problem').addEventListener('click', () => {
+			const lengths = [4, 5, 6, 8, 9];
+			s.L = lengths[Math.floor(Math.random() * lengths.length)];
+			s.q1 = Math.floor(Math.random() * 14 + 6) * 2;
+			s.fH = Math.floor(Math.random() * 8 + 2) * 2;
+			document.getElementById('slider-beam-len').value = s.L;
+			document.getElementById('lbl-beam-len').textContent = `${s.L.toFixed(1)} m`;
+			document.getElementById('slider-q1').value = s.q1;
+			document.getElementById('lbl-q1-val').textContent = `${s.q1} kN/m`;
+			document.getElementById('slider-fh').value = s.fH;
+			document.getElementById('lbl-fh-val').textContent = `${s.fH} kN`;
+			this.calculate();
+			this.rebuild3DScene();
+			document.getElementById('diag-message').textContent = `🎲 تم توليد مسألة جديدة بطول جائز L=${s.L}m وحمولة q=${s.q1} kN/m. احسب ردود الأفعال واضغط تشغيل المحاكاة!`;
+			});
+
+			// Smart Hint
+			document.getElementById('btn-smart-hint').addEventListener('click', () => {
+			this.calculate();
+			if (s.stage === 1) {
+			document.getElementById('diag-message').innerHTML =
+			`💡 <strong>تلميح ذكي:</strong> محصلة الحمولة الكلية هي <code>R = ${s.exactR.toFixed(1)} kN</code> وتقع على بعد <code>
+				x<sub>c</sub> = ${s.exactXc.toFixed(2)} m
+			</code> من المسند A. خذ العزم حول A لإيجاد <code>
+				V<sub>B</sub> = ${s.exactVb.toFixed(1)} kN
+			</code>.`;
+			} else {
+			document.getElementById('diag-message').innerHTML =
+			`💡 <strong>تلميح ذكي (جراح الإطارات):</strong> افصل الإطار عند المفصل G (<code>r = 2(c-1) = 2</code>) واحرص على عكس اتجاه <code>
+				X<sub>G</sub>
+			</code> و <code>
+				Y<sub>G</sub>
+			</code> على الطرفين، ثم حلل القوى على العنصر المائل بزاوية <code>β = ${s.frameBetaDeg}°</code>.`;
+			}
+			});
+
+			// Stage 1 Sliders & Selects
+			document.getElementById('slider-beam-len').addEventListener('input', (e) => {
+			s.L = parseFloat(e.target.value);
+			document.getElementById('lbl-beam-len').textContent = `${s.L.toFixed(1)} m`;
+			this.calculate();
+			this.rebuild3DScene();
+			});
+
+			document.getElementById('select-support-type').addEventListener('change', (e) => {
+			s.supportType = e.target.value;
+			const isCantilever = s.supportType === 'fixed-free';
+			document.getElementById('box-vb').classList.toggle('hidden', isCantilever);
+			document.getElementById('box-ma').classList.toggle('hidden', !isCantilever);
+			this.calculate();
+			this.rebuild3DScene();
+			});
+
+			document.getElementById('select-load-type').addEventListener('change', (e) => {
+			s.loadType = e.target.value;
+			document.getElementById('row-q2').classList.toggle('hidden', s.loadType !== 'trapezoidal');
+			document.getElementById('row-angle').classList.toggle('hidden', s.loadType !== 'inclined');
+			this.calculate();
+			this.rebuild3DScene();
+			});
+
+			document.getElementById('slider-q1').addEventListener('input', (e) => {
+			s.q1 = parseFloat(e.target.value);
+			document.getElementById('lbl-q1-val').textContent = s.loadType === 'inclined' ? `${s.q1} kN` : `${s.q1} kN/m`;
+			this.calculate();
+			this.rebuild3DScene();
+			});
+
+			document.getElementById('slider-q2').addEventListener('input', (e) => {
+			s.q2 = parseFloat(e.target.value);
+			document.getElementById('lbl-q2-val').textContent = `${s.q2} kN/m`;
+			this.calculate();
+			this.rebuild3DScene();
+			});
+
+			document.getElementById('btn-split-trap').addEventListener('click', () => {
+			s.splitTrapezoid = !s.splitTrapezoid;
+			this.rebuild3DScene();
+			});
+
+			document.getElementById('slider-angle').addEventListener('input', (e) => {
+			s.angleDeg = parseFloat(e.target.value);
+			document.getElementById('lbl-angle-val').textContent = `${s.angleDeg}°`;
+			this.calculate();
+			this.rebuild3DScene();
+			});
+
+			document.getElementById('slider-fh').addEventListener('input', (e) => {
+			s.fH = parseFloat(e.target.value);
+			document.getElementById('lbl-fh-val').textContent = `${s.fH} kN`;
+			this.calculate();
+			this.rebuild3DScene();
+			});
+
+			document.getElementById('slider-xr').addEventListener('input', (e) => {
+			s.studentXr = parseFloat(e.target.value);
+			document.getElementById('lbl-xr-val').textContent = `${s.studentXr.toFixed(2)} m`;
+			this.calculate();
+			this.rebuild3DScene();
+			});
+
+			// Student reaction inputs & negative check
+			const checkNegativeInputs = () => {
+			const hasNeg = s.studentVa < 0 || s.studentHa < 0 || s.studentVb < 0 || s.studentMa < 0;
+          document.getElementById('neg-warning-box').classList.toggle('visible', hasNeg);
+        };
+
+        ['va', 'ha', 'vb', 'ma'].forEach((key) => {
+          const inp = document.getElementById(`inp-${key}`);
+          inp.addEventListener('input', () => {
+            const val = parseFloat(inp.value) || 0;
+            if (key === 'va') s.studentVa = val;
+            if (key === 'ha') s.studentHa = val;
+            if (key === 'vb') s.studentVb = val;
+            if (key === 'ma') s.studentMa = val;
+            checkNegativeInputs();
+            this.calculate();
+            this.rebuild3DScene();
+          });
+        });
+
+        document.getElementById('btn-fix-neg-arrow').addEventListener('click', () => {
+          if (s.studentVa < 0) { s.studentVa = Math.abs(s.studentVa); s.dirVa *= -1; document.getElementById('inp-va').value = s.studentVa; }
+          if (s.studentHa < 0) { s.studentHa = Math.abs(s.studentHa); s.dirHa *= -1; document.getElementById('inp-ha').value = s.studentHa; }
+          if (s.studentVb < 0) { s.studentVb = Math.abs(s.studentVb); s.dirVb *= -1; document.getElementById('inp-vb').value = s.studentVb; }
+          if (s.studentMa < 0) { s.studentMa = Math.abs(s.studentMa); s.dirMa *= -1; document.getElementById('inp-ma').value = s.studentMa; }
+          this.updateDirectionLabels();
+          checkNegativeInputs();
+          this.calculate();
+          this.rebuild3DScene();
+        });
+
+        document.getElementById('btn-flip-va').addEventListener('click', () => { s.dirVa *= -1; this.updateDirectionLabels(); this.calculate(); this.rebuild3DScene(); });
+        document.getElementById('btn-flip-ha').addEventListener('click', () => { s.dirHa *= -1; this.updateDirectionLabels(); this.calculate(); this.rebuild3DScene(); });
+        document.getElementById('btn-flip-vb').addEventListener('click', () => { s.dirVb *= -1; this.updateDirectionLabels(); this.calculate(); this.rebuild3DScene(); });
+        document.getElementById('btn-flip-ma').addEventListener('click', () => { s.dirMa *= -1; this.updateDirectionLabels(); this.calculate(); this.rebuild3DScene(); });
+
+        // Quick Error Demo & Auto-Solve Buttons (Stage 1)
+        document.getElementById('btn-err-triangle').addEventListener('click', () => {
+          document.getElementById('select-load-type').value = 'triangular';
+          s.loadType = 'triangular';
+          s.studentXr = +(s.L / 3).toFixed(2);
+          document.getElementById('slider-xr').value = s.studentXr;
+          document.getElementById('lbl-xr-val').textContent = `${s.studentXr.toFixed(2)} m`;
+          this.evaluateSimulation();
+        });
+
+        document.getElementById('btn-err-cantilever').addEventListener('click', () => {
+          document.getElementById('select-support-type').value = 'fixed-free';
+          document.getElementById('select-support-type').dispatchEvent(new Event('change'));
+          s.studentMa = 0;
+          document.getElementById('inp-ma').value = 0;
+          this.evaluateSimulation();
+        });
+
+        document.getElementById('btn-auto-solve-s1').addEventListener('click', () => {
+          this.calculate();
+          s.dirVa = 1; s.dirHa = 1; s.dirVb = 1; s.dirMa = 1;
+          s.studentXr = +s.exactXc.toFixed(2);
+          s.studentVa = +s.exactVa.toFixed(1);
+          s.studentHa = +s.exactHa.toFixed(1);
+          s.studentVb = +s.exactVb.toFixed(1);
+          s.studentMa = +s.exactMa.toFixed(1);
+          document.getElementById('slider-xr').value = s.studentXr;
+          document.getElementById('lbl-xr-val').textContent = `${s.studentXr.toFixed(2)} m`;
+          document.getElementById('inp-va').value = s.studentVa;
+          document.getElementById('inp-ha').value = s.studentHa;
+          document.getElementById('inp-vb').value = s.studentVb;
+          document.getElementById('inp-ma').value = s.studentMa;
+          this.updateDirectionLabels();
+          checkNegativeInputs();
+          this.evaluateSimulation();
+        });
+
+        // Stage 2 Controls
+        document.getElementById('slider-explode').addEventListener('input', (e) => {
+          s.explodePct = parseFloat(e.target.value);
+          document.getElementById('lbl-explode-val').textContent = `${s.explodePct}%`;
+          this.calculate();
+          this.rebuild3DScene();
+        });
+
+        document.getElementById('slider-frame-beta').addEventListener('input', (e) => {
+          s.frameBetaDeg = parseFloat(e.target.value);
+          document.getElementById('lbl-frame-beta').textContent = `${s.frameBetaDeg}°`;
+          this.calculate();
+          this.rebuild3DScene();
+        });
+
+        document.getElementById('slider-frame-p').addEventListener('input', (e) => {
+          s.frameP = parseFloat(e.target.value);
+          document.getElementById('lbl-frame-p').textContent = `${s.frameP} kN`;
+          this.calculate();
+          this.rebuild3DScene();
+        });
+
+        document.getElementById('btn-toggle-hinge-law').addEventListener('click', () => {
+          s.hingeOpposite = !s.hingeOpposite;
+          const btn = document.getElementById('btn-toggle-hinge-law');
+          btn.textContent = s.hingeOpposite
+            ? '🔄 الحالة الحالية: متعاكستان بالاتجاه (صحيح فيزيائياً ✓)'
+            : '⚠️ الحالة الحالية: بنفس الاتجاه (خطأ فيزيائي عند المفصل!)';
+          this.calculate();
+          this.rebuild3DScene();
+        });
+
+        document.getElementById('btn-toggle-local-axes').addEventListener('click', () => {
+          s.showLocalAxes = !s.showLocalAxes;
+          this.rebuild3DScene();
+        });
+
+        document.getElementById('inp-n-force').addEventListener('input', (e) => {
+          s.studentN = parseFloat(e.target.value) || 0;
+        });
+        document.getElementById('inp-q-force').addEventListener('input', (e) => {
+          s.studentQ = parseFloat(e.target.value) || 0;
+        });
+
+        document.getElementById('btn-err-hinge-dir').addEventListener('click', () => {
+          s.hingeOpposite = false;
+          document.getElementById('btn-toggle-hinge-law').textContent = '⚠️ الحالة الحالية: بنفس الاتجاه (خطأ فيزيائي عند المفصل!)';
+          this.evaluateSimulation();
+        });
+
+        document.getElementById('btn-err-rad-deg').addEventListener('click', () => {
+          // Simulate student using radians instead of degrees
+          s.hingeOpposite = true;
+          s.studentN = +(-s.exactXg * Math.sin(s.frameBetaDeg) - s.exactYg * Math.cos(s.frameBetaDeg)).toFixed(1);
+          document.getElementById('inp-n-force').value = s.studentN;
+          this.evaluateSimulation();
+        });
+
+        document.getElementById('btn-auto-solve-s2').addEventListener('click', () => {
+          this.calculate();
+          s.hingeOpposite = true;
+          document.getElementById('btn-toggle-hinge-law').textContent = '🔄 الحالة الحالية: متعاكستان بالاتجاه (صحيح فيزيائياً ✓)';
+          s.studentXg = s.exactXg;
+          s.studentYg = s.exactYg;
+          s.studentN = s.exactN;
+          s.studentQ = s.exactQ;
+          document.getElementById('inp-xg').value = s.studentXg;
+          document.getElementById('inp-yg').value = s.studentYg;
+          document.getElementById('inp-n-force').value = s.studentN;
+          document.getElementById('inp-q-force').value = s.studentQ;
+          this.evaluateSimulation();
+        });
+
+        // Camera Presets
+        document.getElementById('btn-cam-front').addEventListener('click', () => {
+          this.camYaw = 0; this.camPitch = 0;
+          if (this.camera) this.camera.position.set(0, 1.4, 13.0);
+          if (this.controls) this.controls.target.set(0, 0.8, 0);
+        });
+        document.getElementById('btn-cam-iso').addEventListener('click', () => {
+          this.camYaw = -0.45; this.camPitch = 0.32;
+          if (this.camera) this.camera.position.set(6.5, 5.2, 11.5);
+          if (this.controls) this.controls.target.set(0, 0.8, 0);
+        });
+
+        // Bottom Simulation Buttons
+        document.getElementById('btn-run-sim').addEventListener('click', () => this.evaluateSimulation());
+        document.getElementById('btn-pause-sim').addEventListener('click', () => { s.simRunning = false; });
+        document.getElementById('btn-reset-sim').addEventListener('click', () => this.reset());
+      },
+
+      updateDirectionLabels() {
+        const s = this.state;
+        document.getElementById('dir-va-lbl').textContent = s.dirVa > 0 ? '↑ للأعلى' : '↓ للأسفل';
+        document.getElementById('dir-ha-lbl').textContent = s.dirHa > 0 ? '→ لليمين' : '← لليسار';
+        document.getElementById('dir-vb-lbl').textContent = s.dirVb > 0 ? '↑ للأعلى' : '↓ للأسفل';
+        document.getElementById('dir-ma-lbl').textContent = s.dirMa > 0 ? '↺ عكس العقارب' : '↻ مع العقارب';
+      },
+
+      destroy() {
+        if (this.animId) cancelAnimationFrame(this.animId);
+        if (this.state.timerInterval) clearInterval(this.state.timerInterval);
+        if (this._onResize) window.removeEventListener('resize', this._onResize);
+        if (this.scene) {
+          this.scene.traverse((obj) => {
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) {
+              if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+              else obj.material.dispose();
+            }
+          });
+        }
+        if (this.renderer) this.renderer.dispose();
+      }
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      PhysicsExpLab.init('canvas-container');
+    });
+		</script>
+	</body>
+</html>

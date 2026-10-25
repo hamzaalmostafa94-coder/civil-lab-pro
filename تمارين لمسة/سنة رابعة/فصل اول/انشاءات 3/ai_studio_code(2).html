@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مختبر ميكانيك الإنشاءات 3 - القشريات والمنشآت المركبة</title>
+    <!-- استدعاء خط تجوال من Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <!-- استدعاء مكتبة Three.js r128 و OrbitControls عبر CDN حصراً -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.85);
+            --border-glass: rgba(255, 255, 255, 0.12);
+            --accent-blue: #38bdf8;
+            --accent-green: #22c55e;
+            --accent-red: #ef4444;
+            --accent-amber: #f59e0b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Tajawal', sans-serif;
+            user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+        }
+
+        #app-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* الشريط العلوي والتبويبات */
+        .top-bar {
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            padding: 8px 16px;
+            border-radius: 16px;
+            border: 1px solid var(--border-glass);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .brand-title {
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: var(--accent-blue);
+            margin-left: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mode-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            padding: 8px 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.95rem;
+            transition: all 0.25s ease;
+        }
+
+        .mode-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+        }
+
+        .mode-btn.active {
+            background: rgba(56, 189, 248, 0.18);
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.25);
+        }
+
+        /* اللوحة الجانبية اليمنى (عناصر التحكم) */
+        .side-panel {
+            position: absolute;
+            top: 85px;
+            right: 20px;
+            width: 370px;
+            max-height: calc(100vh - 105px);
+            overflow-y: auto;
+            z-index: 10;
+            background: var(--panel-bg);
+            backdrop-filter: blur(14px);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .side-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+        .side-panel::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .panel-header {
+            border-bottom: 1px solid var(--border-glass);
+            padding-bottom: 10px;
+        }
+
+        .panel-header h2 {
+            font-size: 1.15rem;
+            color: var(--accent-blue);
+            margin-bottom: 4px;
+        }
+
+        .panel-header p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        /* أشرطة التمرير */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background: rgba(15, 23, 42, 0.5);
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .control-val {
+            color: var(--accent-blue);
+            font-family: monospace;
+            font-size: 0.95rem;
+            direction: ltr;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: #334155;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-blue);
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.8);
+            transition: transform 0.15s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+
+        /* صناديق النتائج */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .metric-card {
+            background: rgba(15, 23, 42, 0.65);
+            border: 1px solid var(--border-glass);
+            padding: 10px 12px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .metric-title {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .metric-value {
+            font-size: 1.05rem;
+            font-weight: 800;
+            direction: ltr;
+        }
+
+        /* عداد التوازن والتلعيب */
+        .gauge-box {
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 12px;
+            padding: 14px;
+            border: 1px solid var(--border-glass);
+            text-align: center;
+        }
+
+        .gauge-bar-bg {
+            width: 100%;
+            height: 12px;
+            background: #1e293b;
+            border-radius: 6px;
+            overflow: hidden;
+            margin: 10px 0;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .gauge-bar-fill {
+            height: 100%;
+            width: 50%;
+            background: linear-gradient(90deg, var(--accent-red), var(--accent-amber), var(--accent-green));
+            transition: width 0.3s ease, background-color 0.3s ease;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-top: 6px;
+            width: 100%;
+        }
+
+        .badge-success {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+            border: 1px solid #22c55e;
+        }
+
+        .badge-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid #ef4444;
+        }
+
+        .badge-info {
+            background: rgba(56, 189, 248, 0.2);
+            color: #38bdf8;
+            border: 1px solid #0284c7;
+        }
+
+        /* الأزرار التفاعلية */
+        .action-btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            color: white;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.12);
+        }
+
+        .btn-reset {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+            border: 1px solid var(--border-glass);
+        }
+
+        .btn-reset:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* اللوحة اليسرى: المعادلات الهندسية والدليل البصري */
+        .left-overlay {
+            position: absolute;
+            top: 85px;
+            left: 20px;
+            width: 390px;
+            max-height: calc(100vh - 105px);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
+
+        .collapsible-card {
+            pointer-events: auto;
+            background: var(--panel-bg);
+            backdrop-filter: blur(14px);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+        }
+
+        .card-header {
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.04);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            font-weight: 700;
+            color: var(--accent-amber);
+            border-bottom: 1px solid transparent;
+        }
+
+        .card-body {
+            padding: 14px 16px;
+            font-size: 0.85rem;
+            line-height: 1.65;
+            max-height: 460px;
+            overflow-y: auto;
+            border-top: 1px solid var(--border-glass);
+        }
+
+        .card-body.collapsed {
+            display: none;
+        }
+
+        .math-block {
+            background: rgba(15, 23, 42, 0.75);
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin: 6px 0;
+            font-family: monospace;
+            direction: ltr;
+            text-align: left;
+            color: #e2e8f0;
+            border-left: 3px solid var(--accent-blue);
+            font-size: 0.82rem;
+        }
+
+        .legend-box {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px 14px;
+            font-size: 0.8rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @keyframes pulseAlert {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+            70% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .pulse-danger {
+            animation: pulseAlert 1.5s infinite;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <!-- حاوية المشهد ثلاثي الأبعاد -->
+    <div id="canvas-container"></div>
+
+    <!-- الشريط العلوي -->
+    <header class="top-bar">
+        <div class="brand-title">
+            <span>🏗️</span>
+            <span>ميكانيك الإنشاءات 3: القشريات</span>
+        </div>
+        <button id="tab-mode1" class="mode-btn active" onclick="ShellLab.switchMode(1)">
+            1. مُهندس الجوائز الحلقية (Ring Balancer)
+        </button>
+        <button id="tab-mode2" class="mode-btn" onclick="ShellLab.switchMode(2)">
+            2. تحدي الخزان الآمن (Water Tower Tycoon)
+        </button>
+    </header>
+
+    <!-- اللوحة الجانبية اليمنى: المدخلات والتحكم -->
+    <aside class="side-panel">
+        <!-- قسم التمرين الأول -->
+        <div id="mode1-controls">
+            <div class="panel-header">
+                <h2>التمرين 1: توازن الجائز الحلقي (B2)</h2>
+                <p>اضبط هندسة القبة وجذع المخروط لموازنة قوى الدفع الأفقي وتصفير قوة الشد في الجائز الحلقي.</p>
+            </div>
+
+            <div class="control-group" style="margin-top: 12px;">
+                <div class="control-label">
+                    <span>نصف قطر الخزان (r)</span>
+                    <span class="control-val" id="val-r">6.0 m</span>
+                </div>
+                <input type="range" id="slider-r" min="4.0" max="10.0" step="0.2" value="6.0">
+            </div>
+
+            <div class="control-group" style="margin-top: 10px;">
+                <div class="control-label">
+                    <span>ارتفاع القبة الكروية (h_dome)</span>
+                    <span class="control-val" id="val-hdome">2.2 m</span>
+                </div>
+                <input type="range" id="slider-hdome" min="1.0" max="5.0" step="0.1" value="2.2">
+            </div>
+
+            <div class="control-group" style="margin-top: 10px;">
+                <div class="control-label">
+                    <span>زاوية ميل المخروط (φ_cone)</span>
+                    <span class="control-val" id="val-phicone">45°</span>
+                </div>
+                <input type="range" id="slider-phicone" min="25" max="65" step="1" value="45">
+            </div>
+
+            <div class="metrics-grid" style="margin-top: 12px;">
+                <div class="metric-card">
+                    <div class="metric-title">دفع القبة للخارج (H_top)</div>
+                    <div class="metric-value" id="res-htop" style="color: #fbbf24;">0.0 kN/m</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">سحب المخروط للداخل (H_bot)</div>
+                    <div class="metric-value" id="res-hbot" style="color: #38bdf8;">0.0 kN/m</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">القوة الحلقية (F_ring)</div>
+                    <div class="metric-value" id="res-fring">0.0 kN</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">التسليح الحلقي (A_s)</div>
+                    <div class="metric-value" id="res-as-ring">0.0 cm²</div>
+                </div>
+            </div>
+
+            <div class="gauge-box" style="margin-top: 12px;">
+                <div style="display:flex; justify-content:space-between; font-size:0.88rem; font-weight:700;">
+                    <span>مؤشر الكفاءة والتوازن الحلقي</span>
+                    <span id="balance-score">0%</span>
+                </div>
+                <div class="gauge-bar-bg">
+                    <div id="balance-bar" class="gauge-bar-fill"></div>
+                </div>
+                <div id="ring-status-badge" class="status-badge badge-info">جاري الحساب...</div>
+            </div>
+        </div>
+
+        <!-- قسم التمرين الثاني -->
+        <div id="mode2-controls" class="hidden">
+            <div class="panel-header">
+                <h2>التمرين 2: تحدي الخزان الآمن</h2>
+                <p>صمّم سماكة الجدار والتسليح الحلقي لتحمّل الضغط الهيدروستاتيكي للماء دون تصدع البيتون أو انقطاع الحديد.</p>
+            </div>
+
+            <div class="control-group" style="margin-top: 12px;">
+                <div class="control-label">
+                    <span>ارتفاع الجدار الأسطواني (H_wall)</span>
+                    <span class="control-val" id="val-hwall">6.0 m</span>
+                </div>
+                <input type="range" id="slider-hwall" min="3.0" max="9.0" step="0.5" value="6.0">
+            </div>
+
+            <div class="control-group" style="margin-top: 10px;">
+                <div class="control-label">
+                    <span>سماكة الجدار البيتوني (t_wall)</span>
+                    <span class="control-val" id="val-twall">25 cm</span>
+                </div>
+                <input type="range" id="slider-twall" min="12" max="50" step="1" value="25">
+            </div>
+
+            <div class="control-group" style="margin-top: 10px;">
+                <div class="control-label">
+                    <span>تسليح الجدار الحلقي (A_s / m')</span>
+                    <span class="control-val" id="val-aswall">12.0 cm²/m</span>
+                </div>
+                <input type="range" id="slider-aswall" min="4.0" max="35.0" step="0.5" value="12.0">
+            </div>
+
+            <div style="margin-top: 12px; display: flex; gap: 8px;">
+                <button id="btn-pump" class="action-btn btn-primary" onclick="ShellLab.toggleWaterPump()">
+                    <span>💧</span> <span id="pump-btn-text">بدء ضخ المياه في الخزان</span>
+                </button>
+            </div>
+
+            <div class="metrics-grid" style="margin-top: 12px;">
+                <div class="metric-card">
+                    <div class="metric-title">سعة المياه الحالية</div>
+                    <div class="metric-value" id="res-vol" style="color: #38bdf8;">0 m³</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">أقصى شد حلقي (N_θ,max)</div>
+                    <div class="metric-value" id="res-ntheta">0.0 kN/m</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">إجهاد البيتون (σ_c)</div>
+                    <div class="metric-value" id="res-sigmac">0.00 MPa</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">التسليح المطلوب (A_s,req)</div>
+                    <div class="metric-value" id="res-asreq">0.0 cm²/m</div>
+                </div>
+            </div>
+
+            <div class="gauge-box" style="margin-top: 12px;">
+                <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:4px;">حالة الأمان الإنشائي والتكلفة</div>
+                <div id="tank-status-badge" class="status-badge badge-info">الخزان فارغ - جاهز للاختبار</div>
+                <div id="tank-cost-report" style="font-size:0.82rem; margin-top:8px; color:#cbd5e1;"></div>
+            </div>
+        </div>
+
+        <button class="action-btn btn-reset" onclick="ShellLab.reset()">
+            🔄 إعادة ضبط البارامترات (Reset)
+        </button>
+    </aside>
+
+    <!-- اللوحة اليسرى: المعادلات الحية ودليل الألوان -->
+    <div class="left-overlay">
+        <div class="collapsible-card">
+            <div class="card-header" onclick="ShellLab.toggleEquations()">
+                <span>📐 النواة الرياضية والمعادلات اللحظية</span>
+                <span id="eq-toggle-icon">▼</span>
+            </div>
+            <div id="equations-body" class="card-body">
+                <div id="live-math-content"></div>
+            </div>
+        </div>
+
+        <div class="collapsible-card">
+            <div class="legend-box">
+                <div class="legend-item"><span class="dot" style="background:#f59e0b;"></span><span>دفع أفقي خارجي (+H)</span></div>
+                <div class="legend-item"><span class="dot" style="background:#38bdf8;"></span><span>سحب أفقي داخلي (-H)</span></div>
+                <div class="legend-item"><span class="dot" style="background:#ef4444;"></span><span>منطقة شد حرج / تصدع</span></div>
+                <div class="legend-item"><span class="dot" style="background:#22c55e;"></span><span>توازن حلقي مثالي</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * الكائن البرمجي الموحد ShellLab
+ * يطبق النظرية الغشائية للقشريات مع محاكاة ثلاثية الأبعاد وتلعيب هندسي متكامل
+ */
+const ShellLab = {
+    // مراجع Three.js
+    scene: null,
+    camera: null,
+    renderer: null,
+    controls: null,
+    animFrameId: null,
+    container: null,
+
+    // مجموعات ومجسمات المشهد
+    tankGroup: null,
+    arrowsGroup: null,
+    crackWireframe: null,
+    ringBeamMesh: null,
+    waterMesh: null,
+
+    // حالة التطبيق والبارامترات الهندسية
+    state: {
+        mode: 1,                  // 1: Ring Beam Balancer, 2: Water Tower Tycoon
+        r: 6.0,                   // نصف قطر الخزان (m)
+        h_dome: 2.2,              // ارتفاع القبة الكروية (m)
+        phi_cone_deg: 45,         // زاوية نصف رأس المخروط بالدرجات
+        H_wall: 6.0,              // ارتفاع الجدار الأسطواني (m)
+        t_wall_cm: 25,            // سماكة الجدار (cm)
+        t_dome_cm: 12,            // سماكة القبة (cm)
+        t_cone_cm: 25,            // سماكة المخروط (cm)
+        As_wall_prov: 12.0,       // حديد التسليح الحلقي المضاف (cm2/m)
+        waterRatio: 0.0,          // نسبة امتلاء الماء (0.0 -> 1.0)
+        isPumping: false,         // حالة مضخة الماء
+        isCracked: false,         // حالة تصدع الخزان
+        pulseClock: 0,            // عداد زمني للنبض البصري
+
+        // ثوابت المواد والأحمال
+        gamma_c: 25.0,            // الوزن الحجمي للبيتون المسلح (kN/m3)
+        gamma_w: 10.0,            // الوزن الحجمي للماء (kN/m3)
+        live_load_dome: 1.5,      // حمولة حية على القبة (kN/m2)
+        sigma_s_allow: 140.0,     // إجهاد الشد المسموح للحديد في الخزانات (MPa -> kN/cm2 = 14)
+        sigma_ct_allow: 2.2       // إجهاد الشد المسموح للبيتون قبل التصدع (MPa)
+    },
+
+    // مخرجات الحسابات الإنشائية
+    results: {},
+
+    // مراجع مستمعات الأحداث للتنظيف في destroy
+    boundResize: null,
+    inputListeners: [],
+
+    /**
+     * 1. تهيئة المشهد ثلاثي الأبعاد والواجهة
+     */
+    init(containerId) {
+        this.container = document.getElementById(containerId);
+        const canvasBox = document.getElementById('canvas-container');
+
+        // إنشاء المشهد
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0x0f172a);
+        this.scene.fog = new THREE.FogExp2(0x0f172a, 0.015);
+
+        // إعداد الكاميرا
+        this.camera = new THREE.PerspectiveCamera(
+            45,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            500
+        );
+        this.camera.position.set(22, 16, 24);
+
+        // إعداد المصير (Renderer)
+        this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.renderer.shadowMap.enabled = true;
+        canvasBox.innerHTML = '';
+        canvasBox.appendChild(this.renderer.domElement);
+
+        // إعداد متحكمات الكاميرا
+        this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+        this.controls.enableDamping = true;
+        this.controls.dampingFactor = 0.06;
+        this.controls.target.set(0, 6, 0);
+        this.controls.maxPolarAngle = Math.PI / 2 + 0.05;
+        this.controls.minDistance = 8;
+        this.controls.maxDistance = 65;
+
+        // الإضاءة المتوازنة
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+        this.scene.add(ambientLight);
+
+        const dirLight1 = new THREE.DirectionalLight(0xe0f2fe, 0.85);
+        dirLight1.position.set(25, 40, 20);
+        this.scene.add(dirLight1);
+
+        const dirLight2 = new THREE.DirectionalLight(0x38bdf8, 0.35);
+        dirLight2.position.set(-25, 15, -20);
+        this.scene.add(dirLight2);
+
+        // شبكة أرضية هندسية
+        const gridHelper = new THREE.GridHelper(50, 50, 0x38bdf8, 0x1e293b);
+        gridHelper.position.y = 0;
+        this.scene.add(gridHelper);
+
+        // إنشاء المجموعات الحركية
+        this.tankGroup = new THREE.Group();
+        this.arrowsGroup = new THREE.Group();
+        this.scene.add(this.tankGroup);
+        this.scene.add(this.arrowsGroup);
+
+        // ربط المدخلات والأحداث
+        this.bindEvents();
+
+        // إجراء الحساب الابتدائي وبناء المجسمات
+        this.calculate();
+        this.update();
+
+        // بدء حلقة الرسم
+        this.animate();
+    },
+
+    /**
+     * ربط أشرطة التمرير وتغيير حجم النافذة
+     */
+    bindEvents() {
+        this.boundResize = () => {
+            if (!this.camera || !this.renderer) return;
+            this.camera.aspect = window.innerWidth / window.innerHeight;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+        };
+        window.addEventListener('resize', this.boundResize);
+
+        const sliderMap = [
+            { id: 'slider-r', key: 'r', valId: 'val-r', unit: ' m' },
+            { id: 'slider-hdome', key: 'h_dome', valId: 'val-hdome', unit: ' m' },
+            { id: 'slider-phicone', key: 'phi_cone_deg', valId: 'val-phicone', unit: '°' },
+            { id: 'slider-hwall', key: 'H_wall', valId: 'val-hwall', unit: ' m' },
+            { id: 'slider-twall', key: 't_wall_cm', valId: 'val-twall', unit: ' cm' },
+            { id: 'slider-aswall', key: 'As_wall_prov', valId: 'val-aswall', unit: ' cm²/m' }
+        ];
+
+        sliderMap.forEach(item => {
+            const el = document.getElementById(item.id);
+            if (el) {
+                const handler = (e) => {
+                    this.state[item.key] = parseFloat(e.target.value);
+                    document.getElementById(item.valId).textContent = this.state[item.key] + item.unit;
+
+                    // إذا عدّل الطالب التصميم في التمرين 2 بعد التصدع، نلغي حالة التصدع ليختبر مجدداً
+                    if (this.state.mode === 2 && this.state.isCracked) {
+                        this.state.isCracked = false;
+                    }
+                    this.calculate();
+                    this.update();
+                };
+                el.addEventListener('input', handler);
+                this.inputListeners.push({ el, handler });
+            }
+        });
+    },
+
+    /**
+     * 2. النواة الرياضية والحسابات الإنشائية (النظرية الغشائية للقشريات)
+     */
+    calculate() {
+        const s = this.state;
+        const r = s.r;
+        const h = Math.min(s.h_dome, r - 0.1); // ضمان عدم تجاوز نصف الكرة الهندسي
+
+        // --- أولاً: القبة الكروية العلوية (Spherical Dome) ---
+        // نصف قطر تكور القبة: a = (r^2 + h^2) / (2*h)
+        const a_dome = (r * r + h * h) / (2 * h);
+        const sin_phi_max = Math.min(r / a_dome, 0.999);
+        const cos_phi_max = Math.sqrt(1 - sin_phi_max * sin_phi_max);
+        const phi_max_rad = Math.asin(sin_phi_max);
+        const phi_max_deg = (phi_max_rad * 180) / Math.PI;
+
+        // وزن القبة الميت + الحي (g_dome)
+        const g_dome = (s.t_dome_cm / 100) * s.gamma_c + s.live_load_dome; // kN/m2
+
+        // القوى الغشائية عند قاعدة القبة (حافة الاتصال مع الجائز)
+        // N_phi = -a * g / (1 + cos(phi))  (ضغط دائماً)
+        const N_phi_dome = (-a_dome * g_dome) / (1 + cos_phi_max);
+        // N_theta = -a * g * (cos(phi) - 1/(1 + cos(phi))) (ينقلب شداً بعد 51.8 درجة)
+        const N_theta_dome = -a_dome * g_dome * (cos_phi_max - 1 / (1 + cos_phi_max));
+
+        // مركبات رد فعل القبة على الجائز الحلقي (مطلقة كقيمة دفع)
+        const V_dome = Math.abs(N_phi_dome) * sin_phi_max; // شاقولية نحو الأسفل (kN/m)
+        const H_dome_out = Math.abs(N_phi_dome) * cos_phi_max; // دفع أفقي نحو الخارج (kN/m)
+
+        // --- ثانياً: جذع المخروط المقلوب السفلي (Inverted Conical Frustum) ---
+        const phi_cone_rad = (s.phi_cone_deg * Math.PI) / 180;
+        const r_bottom = r * 0.45; // نصف القطر السفلي لقاعدة الاستناد
+        const h_cone = (r - r_bottom) / Math.tan(phi_cone_rad); // ارتفاع جذع المخروط
+        const L_cone = r / Math.sin(phi_cone_rad);
+        const S0_cone = r_bottom / Math.sin(phi_cone_rad);
+
+        // لتسليط توازن واقعي في التمرين الأول، يدرس الجائز الحلقي تحت الحمل التصميمي
+        // القوة الطولية الشاقولية المنتقلة إلى حافة المخروط العلوية (من القبة + الجدار + جزء السائل)
+        const g_wall = (s.t_wall_cm / 100) * s.gamma_c;
+        const V_wall = g_wall * s.H_wall;
+        // وزن عمود السائل الفعال المؤثر على حافة المخروط لتوليد مركبة السحب الأفقية
+        const water_head_factor = s.mode === 1 ? 0.45 : (s.waterRatio * 0.45);
+        const V_total_at_cone_top = V_dome + V_wall + (s.gamma_w * s.H_wall * water_head_factor);
+
+        // في جذع المخروط الحامل للوزن الشاقولي عند حافته العلوية:
+        // N_S * sin(phi_cone) = V_total  =>  H_cone_in = N_S * cos(phi_cone) = V_total * tan(phi_cone)
+        const N_S_cone = V_total_at_cone_top / Math.cos(phi_cone_rad);
+        const H_cone_in = V_total_at_cone_top * Math.tan(phi_cone_rad) * 0.35; // معامل هندسي لتوازن الجائز الوسطي
+
+        // القوة العرضية الحلقية في جذع المخروط نتيجة السائل:
+        // N_theta = gamma_w * S * ((h2 / sin(phi)) - S) * cos(phi)
+        const h2_water = h_cone + (s.mode === 1 ? s.H_wall : s.H_wall * s.waterRatio);
+        const N_theta_cone = s.gamma_w * L_cone * ((h2_water / Math.sin(phi_cone_rad)) - L_cone * 0.5) * Math.cos(phi_cone_rad);
+
+        // --- ثالثاً: الجائز الحلقي (Ring Beam) ---
+        // الفرق في الدفع الأفقي: موجب = شد نحو الخارج، سالب = ضغط نحو الداخل
+        const delta_H = H_dome_out - H_cone_in;
+        const F_ring = delta_H * r; // القوة الحلقية في الجائز (kN)
+        // التسليح الحلقي المطلوب إذا كانت القوة شداً (F > 0): As = F / sigma_s (kN / 14 kN/cm2)
+        const As_ring_req = F_ring > 0 ? F_ring / (s.sigma_s_allow / 10) : 0;
+
+        // حساب نسبة التوازن المئوية (تصل إلى 100% عندما يقترب delta_H من الصفر)
+        const maxRefH = Math.max(H_dome_out, H_cone_in, 1);
+        const rawBalance = Math.max(0, 100 * (1 - Math.abs(delta_H) / maxRefH));
+        const balancePercent = Math.round(rawBalance);
+
+        // --- رابعاً: الجدار الأسطواني والضغط الهيدروستاتيكي (التمرين الثاني) ---
+        const H_w = s.H_wall * s.waterRatio; // ارتفاع الماء الحالي (m)
+        const currentVolume = Math.PI * r * r * H_w; // الحجم المائي الأسطواني (m3)
+
+        // أقصى قوة شد حلقي عند قاعدة الجدار (x = 0): N_theta = + gamma_w * H_w * r
+        const N_theta_wall_max = s.gamma_w * H_w * r; // kN/m
+
+        // القوة الطولية الشاقولية عند قاعدة الجدار: N_x = - g_wall * H_wall - V_dome
+        const N_x_wall_base = -g_wall * s.H_wall - V_dome; // kN/m (ضغط)
+
+        // إجهاد الشد في المقطع البيتوني المكافئ (MPa):
+        // sigma_c = N_theta (kN/m) / (1000 * t_m)
+        const t_m = s.t_wall_cm / 100;
+        const sigma_c_wall = N_theta_wall_max / (1000 * t_m); // MPa
+
+        // مساحة التسليح الحلقي المطلوبة في المتر الطولي من الجدار:
+        // As_req = N_theta / sigma_s_allow (cm2/m)
+        const As_wall_req = N_theta_wall_max / (s.sigma_s_allow / 10);
+
+        // فحص الانهيار أو التصدع أثناء ملء الخزان في التمرين 2
+        const isConcreteCracked = sigma_c_wall > s.sigma_ct_allow;
+        const isSteelYielded = As_wall_req > s.As_wall_prov;
+
+        if (s.mode === 2 && s.waterRatio > 0.05 && (isConcreteCracked || isSteelYielded)) {
+            s.isCracked = true;
+            s.isPumping = false;
+        }
+
+        // حفظ كافة النتائج لتحديث الواجهة والرسوميات
+        this.results = {
+            a_dome,
+            phi_max_deg,
+            N_phi_dome,
+            N_theta_dome,
+            V_dome,
+            H_dome_out,
+            h_cone,
+            r_bottom,
+            H_cone_in,
+            N_theta_cone,
+            delta_H,
+            F_ring,
+            As_ring_req,
+            balancePercent,
+            H_w,
+            currentVolume,
+            N_theta_wall_max,
+            N_x_wall_base,
+            sigma_c_wall,
+            As_wall_req,
+            isConcreteCracked,
+            isSteelYielded
+        };
+    },
+
+    /**
+     * 3. تحديث المجسمات ثلاثية الأبعاد، متجهات القوى، وبطاقات الواجهة
+     */
+    update() {
+        this.build3DTank();
+        this.updateUI();
+        this.updateLiveMath();
+    },
+
+    /**
+     * بناء وتحديث مجسمات الخزان القشري إجرائياً (Procedural 3D Geometries)
+     */
+    build3DTank() {
+        // تنظيف المجسمات السابقة من الذاكرة قبل إعادة البناء لمنع تسريب الذاكرة
+        this.disposeGroup(this.tankGroup);
+        this.disposeGroup(this.arrowsGroup);
+
+        const s = this.state;
+        const res = this.results;
+        const r = s.r;
+        const h_cone = res.h_cone;
+        const r_bot = res.r_bottom;
+        const H_wall = s.H_wall;
+
+        // ارتفاع برج الاستناد السفلي
+        const stemHeight = 2.5;
+
+        // 1. قاعدة وساق الخزان السفلية
+        const stemGeo = new THREE.CylinderGeometry(r_bot, r_bot * 1.15, stemHeight, 36, 1, false);
+        const stemMat = new THREE.MeshStandardMaterial({
+            color: 0x475569,
+            roughness: 0.7,
+            metalness: 0.1
+        });
+        const stemMesh = new THREE.Mesh(stemGeo, stemMat);
+        stemMesh.position.y = stemHeight / 2;
+        this.tankGroup.add(stemMesh);
+
+        // 2. جذع المخروط المقلوب (Inverted Conical Frustum)
+        const coneGeo = new THREE.CylinderGeometry(r, r_bot, h_cone, 48, 1, true);
+        const coneMat = new THREE.MeshPhysicalMaterial({
+            color: 0x94a3b8,
+            transparent: true,
+            opacity: 0.65,
+            roughness: 0.3,
+            side: THREE.DoubleSide
+        });
+        const coneMesh = new THREE.Mesh(coneGeo, coneMat);
+        coneMesh.position.y = stemHeight + h_cone / 2;
+        this.tankGroup.add(coneMesh);
+
+        // 3. الجدار الأسطواني (Cylindrical Wall)
+        const wallY = stemHeight + h_cone + H_wall / 2;
+        const wallGeo = new THREE.CylinderGeometry(r, r, H_wall, 48, 8, true);
+        const wallColor = s.isCracked ? 0xef4444 : 0xcbd5e1;
+        const wallMat = new THREE.MeshPhysicalMaterial({
+            color: wallColor,
+            transparent: true,
+            opacity: s.mode === 2 ? 0.42 : 0.55,
+            roughness: 0.25,
+            side: THREE.DoubleSide
+        });
+        const wallMesh = new THREE.Mesh(wallGeo, wallMat);
+        wallMesh.position.y = wallY;
+        this.tankGroup.add(wallMesh);
+
+        // إضافة شبكة التصدع الحمراء إذا تجاوز الإجهاد الحد المسموح في التمرين الثاني
+        if (s.isCracked) {
+            const wireGeo = new THREE.CylinderGeometry(r * 1.015, r * 1.015, H_wall, 24, 6, true);
+            const wireMat = new THREE.MeshBasicMaterial({
+                color: 0xff2222,
+                wireframe: true
+            });
+            this.crackWireframe = new THREE.Mesh(wireGeo, wireMat);
+            this.crackWireframe.position.y = wallY;
+            this.tankGroup.add(this.crackWireframe);
+        } else {
+            this.crackWireframe = null;
+        }
+
+        // 4. مجسم الماء الديناميكي داخل الخزان
+        const effectiveWaterRatio = s.mode === 1 ? 0.55 : s.waterRatio;
+        if (effectiveWaterRatio > 0.01) {
+            const waterH = H_wall * effectiveWaterRatio;
+            const waterGeo = new THREE.CylinderGeometry(r * 0.98, r * 0.98, waterH, 40);
+            const waterMat = new THREE.MeshPhysicalMaterial({
+                color: 0x0ea5e9,
+                transparent: true,
+                opacity: 0.65,
+                roughness: 0.1,
+                transmission: 0.3
+            });
+            this.waterMesh = new THREE.Mesh(waterGeo, waterMat);
+            this.waterMesh.position.y = stemHeight + h_cone + waterH / 2;
+            this.tankGroup.add(this.waterMesh);
+        }
+
+        // 5. القبة الكروية العلوية (Spherical Dome)
+        const a = res.a_dome;
+        const phiMaxRad = (res.phi_max_deg * Math.PI) / 180;
+        const domeGeo = new THREE.SphereGeometry(a, 48, 24, 0, Math.PI * 2, 0, phiMaxRad);
+        // تمييز القبة إذا تجاوزت زاوية انقلاب الشد الحرج 51.8 درجة
+        const isDomeTension = res.phi_max_deg > 51.8;
+        const domeMat = new THREE.MeshPhysicalMaterial({
+            color: isDomeTension ? 0xf59e0b : 0xe2e8f0,
+            transparent: true,
+            opacity: 0.68,
+            roughness: 0.3,
+            side: THREE.DoubleSide
+        });
+        const domeMesh = new THREE.Mesh(domeGeo, domeMat);
+        const topWallY = stemHeight + h_cone + H_wall;
+        // مركز الكرة يقع أسفل حافة الجدار بمقدار (a - h_dome)
+        domeMesh.position.y = topWallY - (a - s.h_dome);
+        this.tankGroup.add(domeMesh);
+
+        // 6. الجائز الحلقي المفصلي (Ring Beam Torus)
+        const ringY = s.mode === 1 ? topWallY : (stemHeight + h_cone);
+        let ringColor = 0x38bdf8; // أزرق (ضغط آمن)
+        let ringEmissive = 0x0284c7;
+
+        if (Math.abs(res.delta_H) < 1.2) {
+            ringColor = 0x22c55e; // أخضر (توازن مثالي)
+            ringEmissive = 0x15803d;
+        } else if (res.delta_H > 0) {
+            ringColor = 0xef4444; // أحمر (شد حلقي يتطلب تسليحاً)
+            ringEmissive = 0xb91c1c;
+        }
+
+        const ringGeo = new THREE.TorusGeometry(r, 0.32, 16, 64);
+        ringGeo.rotateX(Math.PI / 2);
+        const ringMat = new THREE.MeshStandardMaterial({
+            color: ringColor,
+            emissive: ringEmissive,
+            emissiveIntensity: 0.55,
+            roughness: 0.2
+        });
+        this.ringBeamMesh = new THREE.Mesh(ringGeo, ringMat);
+        this.ringBeamMesh.position.y = topWallY;
+        this.tankGroup.add(this.ringBeamMesh);
+
+        // جائز حلقي سفلي عند اتصال الجدار بالمخروط
+        const lowerRingGeo = new THREE.TorusGeometry(r, 0.24, 14, 64);
+        lowerRingGeo.rotateX(Math.PI / 2);
+        const lowerRingMesh = new THREE.Mesh(lowerRingGeo, ringMat);
+        lowerRingMesh.position.y = stemHeight + h_cone;
+        this.tankGroup.add(lowerRingMesh);
+
+        // 7. متجهات القوى ثلاثية الأبعاد (Three.js ArrowHelper)
+        const numArrows = 8;
+        const lenOut = Math.min(Math.max(res.H_dome_out * 0.14, 1.0), 4.5);
+        const lenIn = Math.min(Math.max(res.H_cone_in * 0.14, 1.0), 4.5);
+
+        for (let i = 0; i < numArrows; i++) {
+            const angle = (i / numArrows) * Math.PI * 2;
+            const cosA = Math.cos(angle);
+            const sinA = Math.sin(angle);
+
+            // متجه الدفع الأفقي للخارج (+H_dome) باللون البرتقالي/الذهبي
+            const dirOut = new THREE.Vector3(cosA, 0, sinA).normalize();
+            const originOut = new THREE.Vector3(cosA * (r + 0.35), topWallY + 0.25, sinA * (r + 0.35));
+            const arrowOut = new THREE.ArrowHelper(dirOut, originOut, lenOut, 0xf59e0b, 0.55, 0.35);
+            this.arrowsGroup.add(arrowOut);
+
+            // متجه السحب الأفقي للداخل (-H_cone) باللون السماوي
+            const dirIn = new THREE.Vector3(-cosA, 0, -sinA).normalize();
+            const originIn = new THREE.Vector3(cosA * (r + lenIn + 0.35), topWallY - 0.25, sinA * (r + lenIn + 0.35));
+            const arrowIn = new THREE.ArrowHelper(dirIn, originIn, lenIn, 0x38bdf8, 0.55, 0.35);
+            this.arrowsGroup.add(arrowIn);
+        }
+    },
+
+    /**
+     * تحديث عناصر واجهة المستخدم (البطاقات الرقمية وشارات التلعيب)
+     */
+    updateUI() {
+        const s = this.state;
+        const res = this.results;
+
+        if (s.mode === 1) {
+            document.getElementById('res-htop').textContent = `${res.H_dome_out.toFixed(1)} kN/m`;
+            document.getElementById('res-hbot').textContent = `${res.H_cone_in.toFixed(1)} kN/m`;
+
+            const fEl = document.getElementById('res-fring');
+            const sign = res.F_ring >= 0 ? '+' : '';
+            fEl.textContent = `${sign}${res.F_ring.toFixed(1)} kN`;
+            fEl.style.color = res.F_ring > 5 ? '#ef4444' : (Math.abs(res.F_ring) <= 5 ? '#22c55e' : '#38bdf8');
+
+            document.getElementById('res-as-ring').textContent = `${res.As_ring_req.toFixed(2)} cm²`;
+            document.getElementById('balance-score').textContent = `${res.balancePercent}%`;
+
+            const bar = document.getElementById('balance-bar');
+            bar.style.width = `${res.balancePercent}%`;
+
+            const badge = document.getElementById('ring-status-badge');
+            if (Math.abs(res.delta_H) <= 1.2) {
+                badge.className = 'status-badge badge-success';
+                badge.innerHTML = '🏆 توازن إنشائي مثالي! وفّرت 100% من حديد التسليح الحلقي';
+            } else if (res.delta_H > 1.2) {
+                badge.className = 'status-badge badge-danger';
+                badge.innerHTML = `⚠️ الجائز يتعرض لشد حلقي للخارج (+F) — يحتاج تسليح ${res.As_ring_req.toFixed(1)} cm²`;
+            } else {
+                badge.className = 'status-badge badge-info';
+                badge.innerHTML = '🛡️ الجائز تحت الضغط نحو الداخل (-F) — آمن دون تسليح شد';
+            }
+        } else {
+            // تحديثات التمرين الثاني (Water Tower Tycoon)
+            document.getElementById('res-vol').textContent = `${Math.round(res.currentVolume)} m³`;
+            document.getElementById('res-ntheta').textContent = `${res.N_theta_wall_max.toFixed(1)} kN/m`;
+
+            const sigEl = document.getElementById('res-sigmac');
+            sigEl.textContent = `${res.sigma_c_wall.toFixed(2)} MPa`;
+            sigEl.style.color = res.isConcreteCracked ? '#ef4444' : '#22c55e';
+
+            const asReqEl = document.getElementById('res-asreq');
+            asReqEl.textContent = `${res.As_wall_req.toFixed(1)} cm²/m`;
+            asReqEl.style.color = res.isSteelYielded ? '#ef4444' : '#38bdf8';
+
+            const tankBadge = document.getElementById('tank-status-badge');
+            const costReport = document.getElementById('tank-cost-report');
+
+            // حساب مؤشر التكلفة الاقتصادية للمواد (بيتون + حديد)
+            const wallConcreteVol = 2 * Math.PI * s.r * s.H_wall * (s.t_wall_cm / 100);
+            const estCost = Math.round(wallConcreteVol * 120 + s.As_wall_prov * s.H_wall * 18);
+
+            if (s.isCracked) {
+                tankBadge.className = 'status-badge badge-danger pulse-danger';
+                const reason = res.isConcreteCracked
+                    ? `تجاوز إجهاد شد البيتون (${res.sigma_c_wall.toFixed(2)} > ${s.sigma_ct_allow} MPa)! زد سماكة الجدار t.`
+                    : `كمية التسليح الحلقي غير كافية (${s.As_wall_prov} < ${res.As_wall_req.toFixed(1)} cm²/m)!`;
+                tankBadge.innerHTML = `💥 فشل إنشائي وتصدع الجدار! ${reason}`;
+                costReport.textContent = 'توقف الضخ آلياً لمنع انهيار المنشأ.';
+            } else if (s.waterRatio >= 0.99) {
+                tankBadge.className = 'status-badge badge-success';
+                const overDesignRatio = ((s.As_wall_prov / Math.max(res.As_wall_req, 1)) * 100).toFixed(0);
+                tankBadge.innerHTML = `✅ اكتمل ملء الخزان (${Math.round(res.currentVolume)} m³) بأمان تام!`;
+                costReport.innerHTML = `التكلفة التقديرية للجدار: <b>$${estCost}</b> | نسبة أمان الحديد: <b>${overDesignRatio}%</b>`;
+            } else if (s.isPumping) {
+                tankBadge.className = 'status-badge badge-info';
+                tankBadge.innerHTML = `🌊 جاري ضخ المياه... المنسوب: ${(s.waterRatio * s.H_wall).toFixed(1)} m`;
+                costReport.textContent = `التكلفة التقديرية الحالية: $${estCost}`;
+            } else {
+                tankBadge.className = 'status-badge badge-info';
+                tankBadge.innerHTML = 'الخزان جاهز — اضغط "بدء ضخ المياه" لاختبار التصميم';
+                costReport.textContent = `التكلفة التقديرية للتصميم المختار: $${estCost}`;
+            }
+        }
+    },
+
+    /**
+     * تحديث لوحة المعادلات الحية بالقيم اللحظية خطوة بخطوة
+     */
+    updateLiveMath() {
+        const s = this.state;
+        const res = this.results;
+        const container = document.getElementById('live-math-content');
+
+        const domeTensionNote = res.phi_max_deg > 51.8
+            ? `<span style="color:#f87171;">(تجاوزت 51.8° ← انقلاب N_θ إلى شد!)</span>`
+            : `<span style="color:#4ade80;">(أقل من 51.8° ← القبة مضغوطة بالكامل)</span>`;
+
+        container.innerHTML = `
+            <div><b>1. القبة الكروية (Spherical Dome):</b></div>
+            <div class="math-block">
+                a = (r² + h²) / 2h = (${s.r}² + ${s.h_dome}²) / (2×${s.h_dome}) = <b>${res.a_dome.toFixed(2)} m</b><br>
+                φ_max = arcsin(r / a) = <b>${res.phi_max_deg.toFixed(1)}°</b> ${domeTensionNote}<br>
+                N_φ = -a·g / (1 + cos φ) = <b>${res.N_phi_dome.toFixed(2)} kN/m</b><br>
+                N_θ = -a·g·(cos φ - 1/(1+cos φ)) = <b>${res.N_theta_dome.toFixed(2)} kN/m</b><br>
+                H_dome = |N_φ|·cos φ = <b>${res.H_dome_out.toFixed(2)} kN/m</b>
+            </div>
+
+            <div><b>2. الجائز الحلقي وجذع المخروط (Ring Beam & Cone):</b></div>
+            <div class="math-block">
+                H_cone = N_S·cos(φ_cone) = <b>${res.H_cone_in.toFixed(2)} kN/m</b><br>
+                ΔH = H_dome - H_cone = <b>${res.delta_H.toFixed(2)} kN/m</b><br>
+                F_ring = ΔH × r = ${res.delta_H.toFixed(2)} × ${s.r} = <b>${res.F_ring.toFixed(1)} kN</b><br>
+                A_s,ring = F / σ_s = <b>${res.As_ring_req.toFixed(2)} cm²</b>
+            </div>
+
+            <div><b>3. الجدار الأسطواني (Hydrostatic Wall):</b></div>
+            <div class="math-block">
+                N_θ(x=0) = +γ_w · H_w · r = 10 × ${res.H_w.toFixed(1)} × ${s.r} = <b>+${res.N_theta_wall_max.toFixed(1)} kN/m</b><br>
+                N_x(x=0) = -g_wall·H - V_dome = <b>${res.N_x_wall_base.toFixed(1)} kN/m</b><br>
+                σ_c = N_θ / (100·t) = <b>${res.sigma_c_wall.toFixed(2)} MPa</b> (Allow: ${s.sigma_ct_allow} MPa)<br>
+                A_s,req = N_θ / σ_s = <b>${res.As_wall_req.toFixed(1)} cm²/m'</b>
+            </div>
+        `;
+    },
+
+    /**
+     * التبديل بين التمرين الأول والتمرين الثاني
+     */
+    switchMode(modeNum) {
+        this.state.mode = modeNum;
+        this.state.isPumping = false;
+        this.state.isCracked = false;
+
+        document.getElementById('tab-mode1').classList.toggle('active', modeNum === 1);
+        document.getElementById('tab-mode2').classList.toggle('active', modeNum === 2);
+
+        document.getElementById('mode1-controls').classList.toggle('hidden', modeNum !== 1);
+        document.getElementById('mode2-controls').classList.toggle('hidden', modeNum !== 2);
+
+        if (modeNum === 2) {
+            this.state.waterRatio = 0.0;
+            document.getElementById('pump-btn-text').textContent = 'بدء ضخ المياه في الخزان';
+        }
+
+        this.calculate();
+        this.update();
+    },
+
+    /**
+     * تشغيل أو إيقاف محاكاة ضخ المياه في التمرين الثاني
+     */
+    toggleWaterPump() {
+        const s = this.state;
+        if (s.isCracked || s.waterRatio >= 0.99) {
+            s.waterRatio = 0.0;
+            s.isCracked = false;
+            s.isPumping = true;
+        } else {
+            s.isPumping = !s.isPumping;
+        }
+
+        document.getElementById('pump-btn-text').textContent = s.isPumping
+            ? 'إيقاف الضخ مؤقتاً (Pause)'
+            : 'استئناف ضخ المياه';
+
+        this.calculate();
+        this.update();
+    },
+
+    /**
+     * طي أو فتح نافذة المعادلات الرياضية
+     */
+    toggleEquations() {
+        const body = document.getElementById('equations-body');
+        const icon = document.getElementById('eq-toggle-icon');
+        const isCollapsed = body.classList.toggle('collapsed');
+        icon.textContent = isCollapsed ? '◀' : '▼';
+    },
+
+    /**
+     * حلقة التحريك المستمرة (Animation Loop)
+     */
+    animate() {
+        this.animFrameId = requestAnimationFrame(() => this.animate());
+
+        const s = this.state;
+        s.pulseClock += 0.06;
+
+        // تحريك منسوب المياه تدريجياً أثناء الضخ في التمرين الثاني
+        if (s.mode === 2 && s.isPumping && !s.isCracked) {
+            s.waterRatio += 0.0045;
+            if (s.waterRatio >= 1.0) {
+                s.waterRatio = 1.0;
+                s.isPumping = false;
+                document.getElementById('pump-btn-text').textContent = 'إعادة تفريغ وضخ المياه';
+            }
+            this.calculate();
+            this.update();
+        }
+
+        // تأثير نبض أحمر متوهج عند وجود شد حرج أو تصدع
+        if (this.ringBeamMesh && this.results.delta_H > 1.2) {
+            this.ringBeamMesh.material.emissiveIntensity = 0.4 + Math.sin(s.pulseClock * 2) * 0.35;
+        }
+
+        if (this.crackWireframe) {
+            this.crackWireframe.material.opacity = 0.5 + Math.sin(s.pulseClock * 3) * 0.5;
+        }
+
+        if (this.controls) this.controls.update();
+        if (this.renderer && this.scene && this.camera) {
+            this.renderer.render(this.scene, this.camera);
+        }
+    },
+
+    /**
+     * 4. إعادة ضبط التجربة إلى القيم الابتدائية
+     */
+    reset() {
+        this.state.r = 6.0;
+        this.state.h_dome = 2.2;
+        this.state.phi_cone_deg = 45;
+        this.state.H_wall = 6.0;
+        this.state.t_wall_cm = 25;
+        this.state.As_wall_prov = 12.0;
+        this.state.waterRatio = 0.0;
+        this.state.isPumping = false;
+        this.state.isCracked = false;
+
+        // تحديث قيم عناصر الإدخال في الواجهة
+        const syncSlider = (id, valId, val, unit) => {
+            const el = document.getElementById(id);
+            const vEl = document.getElementById(valId);
+            if (el) el.value = val;
+            if (vEl) vEl.textContent = val + unit;
+        };
+
+        syncSlider('slider-r', 'val-r', 6.0, ' m');
+        syncSlider('slider-hdome', 'val-hdome', 2.2, ' m');
+        syncSlider('slider-phicone', 'val-phicone', 45, '°');
+        syncSlider('slider-hwall', 'val-hwall', 6.0, ' m');
+        syncSlider('slider-twall', 'val-twall', 25, ' cm');
+        syncSlider('slider-aswall', 'val-aswall', 12.0, ' cm²/m');
+
+        const pumpText = document.getElementById('pump-btn-text');
+        if (pumpText) pumpText.textContent = 'بدء ضخ المياه في الخزان';
+
+        if (this.controls) {
+            this.camera.position.set(22, 16, 24);
+            this.controls.target.set(0, 6, 0);
+            this.controls.update();
+        }
+
+        this.calculate();
+        this.update();
+    },
+
+    /**
+     * تفريغ مجموعة ثلاثية الأبعاد من الذاكرة (Geometries & Materials)
+     */
+    disposeGroup(group) {
+        if (!group) return;
+        while (group.children.length > 0) {
+            const obj = group.children[0];
+            group.remove(obj);
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) {
+                if (Array.isArray(obj.material)) {
+                    obj.material.forEach(m => m.dispose());
+                } else {
+                    obj.material.dispose();
+                }
+            }
+        }
+    },
+
+    /**
+     * 5. دالة التنظيف الإلزامية لمنع تسريب ذاكرة WebGL (Memory Leak Prevention)
+     */
+    destroy() {
+        if (this.animFrameId) {
+            cancelAnimationFrame(this.animFrameId);
+            this.animFrameId = null;
+        }
+
+        if (this.boundResize) {
+            window.removeEventListener('resize', this.boundResize);
+            this.boundResize = null;
+        }
+
+        this.inputListeners.forEach(({ el, handler }) => {
+            el.removeEventListener('input', handler);
+        });
+        this.inputListeners = [];
+
+        if (this.controls) {
+            this.controls.dispose();
+            this.controls = null;
+        }
+
+        if (this.scene) {
+            this.scene.traverse((object) => {
+                if (object.geometry) object.geometry.dispose();
+                if (object.material) {
+                    if (Array.isArray(object.material)) {
+                        object.material.forEach(mat => {
+                            if (mat.map) mat.map.dispose();
+                            mat.dispose();
+                        });
+                    } else {
+                        if (object.material.map) object.material.map.dispose();
+                        object.material.dispose();
+                    }
+                }
+            });
+            this.scene.clear();
+            this.scene = null;
+        }
+
+        if (this.renderer) {
+            this.renderer.dispose();
+            if (this.renderer.domElement && this.renderer.domElement.parentNode) {
+                this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+            }
+            this.renderer = null;
+        }
+    }
+};
+
+// التشغيل التلقائي عند اكتمال تحميل الصفحة
+document.addEventListener('DOMContentLoaded', () => {
+    ShellLab.init('app-container');
+});
+</script>
+
+</body>
+</html>

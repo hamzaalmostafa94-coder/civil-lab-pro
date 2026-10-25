@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة لمسة الهندسية | مختبر ضبط الجودة والتحقيق الإنشائي الجنائي</title>
+    <!-- خط تجوال العربي -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <!-- مكتبة Three.js r128 و OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --panel-bg: rgba(15, 23, 42, 0.80);
+            --card-bg: rgba(30, 41, 59, 0.78);
+            --border-glass: rgba(148, 163, 184, 0.22);
+            --accent-blue: #38bdf8;
+            --accent-amber: #f59e0b;
+            --accent-emerald: #10b981;
+            --accent-rose: #f43f5e;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Tajawal', sans-serif;
+            user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* شريط الملاحة العلوي */
+        .top-navbar {
+            position: fixed;
+            top: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid var(--border-glass);
+            padding: 8px 16px;
+            border-radius: 16px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+        }
+
+        .brand-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-left: 12px;
+            border-left: 1px solid var(--border-glass);
+            font-weight: 800;
+            font-size: 1.02rem;
+            color: var(--accent-blue);
+            white-space: nowrap;
+        }
+
+        .mode-btn {
+            background: rgba(51, 65, 85, 0.45);
+            color: var(--text-muted);
+            border: 1px solid transparent;
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            white-space: nowrap;
+        }
+
+        .mode-btn:hover {
+            color: var(--text-main);
+            background: rgba(51, 65, 85, 0.8);
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            color: #fff;
+            border-color: rgba(125, 211, 252, 0.4);
+            box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4);
+        }
+
+        .util-btn {
+            background: rgba(244, 63, 94, 0.15);
+            color: #fda4af;
+            border: 1px solid rgba(244, 63, 94, 0.35);
+            padding: 7px 12px;
+            border-radius: 9px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+
+        .util-btn:hover {
+            background: rgba(244, 63, 94, 0.3);
+        }
+
+        /* اللوحة الجانبية اليمنى (المدخلات والتحكم) */
+        .side-panel {
+            position: fixed;
+            top: 80px;
+            right: 18px;
+            bottom: 18px;
+            width: 390px;
+            z-index: 15;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glass);
+            border-radius: 18px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            overflow-y: auto;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        /* اللوحة اليسرى (النتائج والبطاقات الرقمية) */
+        .stats-panel {
+            position: fixed;
+            top: 80px;
+            left: 18px;
+            bottom: 18px;
+            width: 390px;
+            z-index: 15;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glass);
+            border-radius: 18px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .side-panel::-webkit-scrollbar,
+        .stats-panel::-webkit-scrollbar {
+            width: 5px;
+        }
+        .side-panel::-webkit-scrollbar-thumb,
+        .stats-panel::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.3);
+            border-radius: 4px;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-glass);
+            padding-bottom: 10px;
+        }
+
+        .panel-title {
+            font-size: 1.02rem;
+            font-weight: 800;
+            color: var(--accent-blue);
+        }
+
+        .panel-subtitle {
+            font-size: 0.76rem;
+            color: var(--text-muted);
+            background: rgba(15, 23, 42, 0.7);
+            padding: 3px 9px;
+            border-radius: 6px;
+            border: 1px solid var(--border-glass);
+        }
+
+        .control-group {
+            background: var(--card-bg);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.87rem;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+
+        .control-val {
+            color: var(--accent-amber);
+            font-weight: 800;
+            font-family: monospace;
+            font-size: 0.95rem;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: #334155;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent-blue);
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.8);
+        }
+
+        select {
+            width: 100%;
+            background: #0f172a;
+            color: #fff;
+            border: 1px solid var(--border-glass);
+            padding: 9px 12px;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .btn-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .btn-row-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 7px;
+        }
+
+        .action-btn {
+            padding: 10px 12px;
+            border-radius: 9px;
+            border: 1px solid rgba(255,255,255,0.12);
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+        }
+        .btn-primary:hover {
+            filter: brightness(1.15);
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #059669, #047857);
+        }
+        .btn-success:hover {
+            filter: brightness(1.15);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e11d48, #be123c);
+        }
+        .btn-danger:hover {
+            filter: brightness(1.15);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #d97706, #b45309);
+        }
+        .btn-warning:hover {
+            filter: brightness(1.15);
+        }
+
+        .btn-secondary {
+            background: #334155;
+            color: #e2e8f0;
+        }
+        .btn-secondary:hover {
+            background: #475569;
+        }
+
+        /* البطاقات الإحصائية */
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .metric-box {
+            background: rgba(15, 23, 42, 0.65);
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            padding: 8px 10px;
+            border-radius: 8px;
+        }
+
+        .metric-label {
+            font-size: 0.74rem;
+            color: var(--text-muted);
+        }
+
+        .metric-value {
+            font-size: 1.02rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-top: 2px;
+            direction: ltr;
+            text-align: right;
+        }
+
+        .formula-badge {
+            background: rgba(2, 132, 199, 0.15);
+            border-right: 3px solid var(--accent-blue);
+            padding: 8px 10px;
+            font-size: 0.8rem;
+            color: #bae6fd;
+            border-radius: 4px;
+            line-height: 1.5;
+        }
+
+        .status-pill {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            text-align: center;
+        }
+
+        .pass {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+
+        .fail {
+            background: rgba(244, 63, 94, 0.2);
+            color: #fb7185;
+            border: 1px solid rgba(244, 63, 94, 0.4);
+        }
+
+        .warn {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+        }
+
+        .decision-feedback {
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 0.84rem;
+            line-height: 1.55;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid var(--border-glass);
+        }
+
+        /* شاشة العداد الرقمي في منتصف أسفل الشاشة للمكبس */
+        .hud-gauge {
+            position: fixed;
+            bottom: 22px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 12;
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-glass);
+            border-radius: 14px;
+            padding: 10px 24px;
+            display: flex;
+            align-items: center;
+            gap: 22px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        }
+
+        .gauge-readout {
+            font-family: monospace;
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: #38bdf8;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- حاوية المشهد ثلاثي الأبعاد -->
+    <div id="canvas-container"></div>
+
+    <!-- شريط الملاحة العلوي -->
+    <nav class="top-navbar">
+        <div class="brand-badge">
+            <span>🏗️ مختبر لمسة الهندسي</span>
+        </div>
+        <button id="btn-mode-qaqc" class="mode-btn active" onclick="CivilLabEngine.switchMode('qaqc')">
+            الطور 1: مهندس ضبط الجودة بالموقع (QA/QC)
+        </button>
+        <button id="btn-mode-forensic" class="mode-btn" onclick="CivilLabEngine.switchMode('forensic')">
+            الطور 2: المحقق الإنشائي وعيوب المواد
+        </button>
+        <button class="util-btn" onclick="CivilLabEngine.reset()">إعادة ضبط ↺</button>
+    </nav>
+
+    <!-- اللوحة الجانبية اليمنى: المدخلات وأدوات التحكم -->
+    <aside class="side-panel">
+        <!-- محتوى الطور الأول: مهندس ضبط الجودة -->
+        <div id="controls-qaqc">
+            <div class="panel-header">
+                <span class="panel-title">معطيات دفعة الخرسانة (28 يوماً)</span>
+                <span class="panel-subtitle">الكود العربي السوري</span>
+            </div>
+
+            <div class="control-group" style="margin-top:12px;">
+                <div class="control-label">
+                    <span>المقاومة الأسطوانية التصميمية المطلوبة (f<sub>n</sub>)</span>
+                    <span class="control-val" id="val-fn">210 kg/cm²</span>
+                </div>
+                <select id="select-fn" onchange="CivilLabEngine.onInputChanged()">
+                    <option value="180">180 kg/cm² (خرسانة ثانوية)</option>
+                    <option value="210" selected>210 kg/cm² (مباني سكنية تقليدية)</option>
+                    <option value="250">250 kg/cm² (عناصر إنشائية رئيسية)</option>
+                    <option value="300">300 kg/cm² (منشآت عالية الإجهاد)</option>
+                </select>
+                <div style="font-size:0.77rem; color:var(--text-muted);">
+                    أبعاد المكعب القياسي: 15×15×15 سم (مساحة السطح A = 225 cm²)
+                </div>
+            </div>
+
+            <div class="control-group" style="margin-top:10px;">
+                <div class="control-label">
+                    <span>حمل الكسر للمكعب الأول (P<sub>1</sub>)</span>
+                    <span class="control-val" id="val-p1">64.5 Ton</span>
+                </div>
+                <input type="range" id="slider-p1" min="35" max="100" step="0.5" value="64.5" oninput="CivilLabEngine.onInputChanged()">
+
+                <div class="control-label">
+                    <span>حمل الكسر للمكعب الثاني (P<sub>2</sub>)</span>
+                    <span class="control-val" id="val-p2">61.0 Ton</span>
+                </div>
+                <input type="range" id="slider-p2" min="35" max="100" step="0.5" value="61.0" oninput="CivilLabEngine.onInputChanged()">
+
+                <div class="control-label">
+                    <span>حمل الكسر للمكعب الثالث (P<sub>3</sub>)</span>
+                    <span class="control-val" id="val-p3">49.5 Ton</span>
+                </div>
+                <input type="range" id="slider-p3" min="35" max="100" step="0.5" value="49.5" oninput="CivilLabEngine.onInputChanged()">
+            </div>
+
+            <div class="control-group" style="margin-top:10px;">
+                <div class="control-label"><span>تشغيل المكبس الهيدروليكي ثلاثي الأبعاد</span></div>
+                <div class="btn-row">
+                    <button class="action-btn btn-primary" onclick="CivilLabEngine.startCompressionTest()">
+                        ▶ بدء اختبار الكسر
+                    </button>
+                    <button class="action-btn btn-secondary" onclick="CivilLabEngine.loadPresetScenario()">
+                        🎲 سيناريو حرج
+                    </button>
+                </div>
+            </div>
+
+            <div class="control-group" style="margin-top:10px;">
+                <div class="control-label"><span>قرار مهندس ضبط الجودة الاستشاري:</span></div>
+                <div class="btn-row-3">
+                    <button class="action-btn btn-success" onclick="CivilLabEngine.makeQADecision('accept')">
+                        ✔ قبول الدفعة
+                    </button>
+                    <button class="action-btn btn-warning" onclick="CivilLabEngine.makeQADecision('ndt')">
+                        🔍 طلب NDT
+                    </button>
+                    <button class="action-btn btn-danger" onclick="CivilLabEngine.makeQADecision('reject')">
+                        ✖ رفض وإزالة
+                    </button>
+                </div>
+                <div id="qa-decision-box" class="decision-feedback" style="margin-top:6px;">
+                    قم بتحليل نتائج الكسر في اللوحة اليسرى ثم اتخذ قرارك الهندسي...
+                </div>
+            </div>
+        </div>
+
+        <!-- محتوى الطور الثاني: المحقق الإنشائي الجنائي -->
+        <div id="controls-forensic" class="hidden">
+            <div class="panel-header">
+                <span class="panel-title">ملف التحقيق الجنائي الإنشائي</span>
+                <span class="panel-subtitle">تشخيص وإصلاح</span>
+            </div>
+
+            <div class="control-group" style="margin-top:12px;">
+                <div class="control-label"><span>اختر القضية الدراسية للمعاينة:</span></div>
+                <select id="select-forensic-case" onchange="CivilLabEngine.switchForensicCase(this.value)">
+                    <option value="asphalt">1. عيوب الرصف الإسفلتي (التخدد Rutting والفوران)</option>
+                    <option value="concrete">2. تآكل حديد التسليح وتقشر العمود الخرساني</option>
+                    <option value="timber">3. تدهور العناصر الخشبية الإنشائية ومعامل الجودة</option>
+                </select>
+            </div>
+
+            <!-- متحكمات قضية الإسفلت -->
+            <div id="forensic-ctrl-asphalt" class="control-group" style="margin-top:10px;">
+                <div class="control-label">
+                    <span>نسبة الفراغات الهوائية بالخلطة (V<sub>a</sub>)</span>
+                    <span class="control-val" id="val-va">2.1 %</span>
+                </div>
+                <input type="range" id="slider-va" min="1.0" max="8.0" step="0.1" value="2.1" oninput="CivilLabEngine.onInputChanged()">
+
+                <div class="control-label">
+                    <span>درجة حرارة الرصف صيفاً (T)</span>
+                    <span class="control-val" id="val-temp">58 °C</span>
+                </div>
+                <input type="range" id="slider-temp" min="25" max="70" step="1" value="58" oninput="CivilLabEngine.onInputChanged()">
+            </div>
+
+            <!-- متحكمات قضية الخرسانة المسلحة -->
+            <div id="forensic-ctrl-concrete" class="control-group hidden" style="margin-top:10px;">
+                <div class="control-label">
+                    <span>نسبة الماء إلى الإسمنت الفعلية (W/C)</span>
+                    <span class="control-val" id="val-wc">0.68</span>
+                </div>
+                <input type="range" id="slider-wc" min="0.35" max="0.75" step="0.01" value="0.68" oninput="CivilLabEngine.onInputChanged()">
+
+                <div class="control-label">
+                    <span>نسبة إضافة غبار السيليكا (Silica Fume)</span>
+                    <span class="control-val" id="val-silica">0 %</span>
+                </div>
+                <input type="range" id="slider-silica" min="0" max="12" step="1" value="0" oninput="CivilLabEngine.onInputChanged()">
+            </div>
+
+            <!-- متحكمات قضية الخشب -->
+            <div id="forensic-ctrl-timber" class="control-group hidden" style="margin-top:10px;">
+                <div class="control-label">
+                    <span>نسبة رطوبة الخشب الحالية (W%)</span>
+                    <span class="control-val" id="val-wood-w">22 %</span>
+                </div>
+                <input type="range" id="slider-wood-w" min="8" max="28" step="1" value="22" oninput="CivilLabEngine.onInputChanged()">
+
+                <div class="control-label">
+                    <span>مقاومة الضغط المقاسة R<sub>c(w)</sub></span>
+                    <span class="control-val" id="val-wood-rc">340 kg/cm²</span>
+                </div>
+                <input type="range" id="slider-wood-rc" min="220" max="550" step="10" value="340" oninput="CivilLabEngine.onInputChanged()">
+
+                <div class="control-label">
+                    <span>الكثافة المقاسة γ<sub>w</sub></span>
+                    <span class="control-val" id="val-wood-gamma">540 kg/m³</span>
+                </div>
+                <input type="range" id="slider-wood-gamma" min="400" max="750" step="10" value="540" oninput="CivilLabEngine.onInputChanged()">
+            </div>
+
+            <!-- أدوات الفحص والأشعة والإصلاح -->
+            <div class="control-group" style="margin-top:10px;">
+                <div class="control-label"><span>أدوات الفحص المجهري والأشعة السينية (3D X-Ray):</span></div>
+                <div class="btn-row">
+                    <button id="btn-xray" class="action-btn btn-primary" onclick="CivilLabEngine.toggleXRay()">
+                        🩻 تفعيل فحص الأشعة
+                    </button>
+                    <button class="action-btn btn-success" onclick="CivilLabEngine.applyForensicRepair()">
+                        🛠️ تنفيذ بروتوكول الإصلاح
+                    </button>
+                </div>
+            </div>
+
+            <div class="control-group" style="margin-top:10px;">
+                <div class="control-label"><span>اختر بروتوكول المعالجة الهندسي المناسب:</span></div>
+                <select id="select-repair-protocol">
+                    <option value="p1">بروتوكول أ: كشط السطح + بيتومين غرز (40/50) معدل بالبوليمر وطبقة مستحلب مشرجب</option>
+                    <option value="p2">بروتوكول ب: حقن الشروخ بالإيبوكسي + طلاء حديد التسليح بمثبط صدأ وملاط بوليمري بغبار السيليكا</option>
+                    <option value="p3">بروتوكول ج: تجفيف الخشب لـ 15% + عزل بيتوميني/مبيد فطري وتدعيم مناطق العقد</option>
+                </select>
+                <div id="forensic-feedback-box" class="decision-feedback" style="margin-top:6px;">
+                    افحص المجسم ثلاثي الأبعاد وفعّل الأشعة لرؤية العيوب الداخلية ثم نفذ الإصلاح.
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- اللوحة الجانبية اليسرى: الحسابات الفورية ومطابقة الكود -->
+    <aside class="stats-panel">
+        <!-- إحصائيات الطور الأول: QA/QC -->
+        <div id="stats-qaqc">
+            <div class="panel-header">
+                <span class="panel-title">البطاقة الحسابية ومطابقة الكود</span>
+                <span id="qa-overall-badge" class="status-pill fail">غير مطابق</span>
+            </div>
+
+            <div class="formula-badge" style="margin-top:10px;">
+                <strong>قوانين الكود العربي السوري:</strong><br>
+                • مقاومة المكعب: σ<sub>cube</sub> = P / 225 (kg/cm²)<br>
+                • التحويل للأسطوانة: f<sub>i</sub> = 0.80 × σ<sub>cube</sub><br>
+                <span style="font-size:0.73rem; color:#93c5fd;">(السبب: تلاشي قيد احتكاك فكي المكبس في الأسطوانة القياسية ذات النسبة H/D = 2)</span>
+            </div>
+
+            <div class="stat-card" style="margin-top:10px;">
+                <div class="control-label"><span>نتائج العينات الفردية (f<sub>i</sub>):</span></div>
+                <div class="stat-grid">
+                    <div class="metric-box">
+                        <div class="metric-label">العينة 1 (σ<sub>1</sub> ← f<sub>1</sub>)</div>
+                        <div class="metric-value" id="stat-f1">286.7 ← 229.3</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">العينة 2 (σ<sub>2</sub> ← f<sub>2</sub>)</div>
+                        <div class="metric-value" id="stat-f2">271.1 ← 216.9</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">العينة 3 (σ<sub>3</sub> ← f<sub>3</sub>)</div>
+                        <div class="metric-value" id="stat-f3">220.0 ← 176.0</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">المتوسط الحسابي f<sub>cim</sub></div>
+                        <div class="metric-value" id="stat-fcim" style="color:var(--accent-blue);">207.4 kg/cm²</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card" style="margin-top:10px;">
+                <div class="control-label"><span>التحقق من الشرطين الحاسمين للكود:</span></div>
+                <div class="metric-box" style="margin-bottom:6px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="metric-label">الشرط 1: أصغر عينة Min(f<sub>i</sub>) ≥ 0.85 f<sub>n</sub></span>
+                        <span id="badge-cond1" class="status-pill fail">راسب</span>
+                    </div>
+                    <div class="metric-value" id="stat-cond1" style="font-size:0.92rem;">176.0 &lt; 178.5 kg/cm²</div>
+                </div>
+
+                <div class="metric-box">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="metric-label">الشرط 2: المتوسط f<sub>cim</sub> ≥ f<sub>n</sub> + 10</span>
+                        <span id="badge-cond2" class="status-pill fail">راسب</span>
+                    </div>
+                    <div class="metric-value" id="stat-cond2" style="font-size:0.92rem;">207.4 &lt; 220.0 kg/cm²</div>
+                </div>
+            </div>
+
+            <div class="stat-card" style="margin-top:10px;">
+                <div class="control-label"><span>التحليل الإحصائي لضبط الجودة:</span></div>
+                <div class="stat-grid">
+                    <div class="metric-box">
+                        <div class="metric-label">الانحراف المعياري (S)</div>
+                        <div class="metric-value" id="stat-std">27.8 kg/cm²</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">المقاومة المميزة f<sub>c</sub></div>
+                        <div class="metric-value" id="stat-fc">161.8 kg/cm²</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- إحصائيات الطور الثاني: المحقق الإنشائي -->
+        <div id="stats-forensic" class="hidden">
+            <div class="panel-header">
+                <span class="panel-title">التقرير الفني للمحقق الجنائي</span>
+                <span id="forensic-status-badge" class="status-pill warn">تحت الفحص</span>
+            </div>
+
+            <div id="forensic-formula-box" class="formula-badge" style="margin-top:10px;"></div>
+
+            <div class="stat-card" style="margin-top:10px;">
+                <div class="control-label"><span>المؤشرات الفيزيائية والميكانيكية:</span></div>
+                <div class="stat-grid">
+                    <div class="metric-box">
+                        <div class="metric-label" id="f-label-1">المؤشر 1</div>
+                        <div class="metric-value" id="f-val-1">--</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label" id="f-label-2">المؤشر 2</div>
+                        <div class="metric-value" id="f-val-2">--</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label" id="f-label-3">المؤشر 3</div>
+                        <div class="metric-value" id="f-val-3">--</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label" id="f-label-4">التصنيف الهندسي</div>
+                        <div class="metric-value" id="f-val-4" style="color:var(--accent-amber);">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card" style="margin-top:10px;">
+                <div class="control-label"><span>التشخيص الجنائي لآلية التدهور:</span></div>
+                <div id="forensic-diagnosis-text" style="font-size:0.84rem; color:#cbd5e1; line-height:1.6;"></div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- شاشة قراءة المكبس الهيدروليكي السفلية -->
+    <div id="hud-press" class="hud-gauge">
+        <div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">قراءة المكبس الهيدروليكي اللحظية</div>
+            <div class="gauge-readout" id="live-load-readout">0.0 Ton (0 kg/cm²)</div>
+        </div>
+        <div style="border-right:1px solid var(--border-glass); padding-right:16px;">
+            <div style="font-size:0.75rem; color:var(--text-muted);">حالة العينة المختبرة</div>
+            <div id="live-specimen-state" style="font-weight:700; color:#34d399;">جاهزة للاختبار</div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * الكائن البرمجي الموحد لمختبر الهندسة المدنية (CivilLabEngine)
+         * يحقق كبسلة كاملة للمشهد ثلاثي الأبعاد والحسابات الهندسية وحماية ذاكرة WebGL
+         */
+        const CivilLabEngine = {
+            container: null,
+            scene: null,
+            camera: null,
+            renderer: null,
+            controls: null,
+            animationFrameId: null,
+            sceneGroup: null,
+
+            currentMode: 'qaqc', // 'qaqc' | 'forensic'
+            forensicCase: 'asphalt', // 'asphalt' | 'concrete' | 'timber'
+            isXRayActive: false,
+            isRepaired: false,
+
+            pressState: {
+                isRunning: false,
+                currentLoad: 0,
+                targetLoad: 64.5,
+                cubeMesh: null,
+                upperPlaten: null,
+                crackLines: null
+            },
+
+            forensicMeshes: {
+                asphaltSurface: null,
+                bleedingSpots: null,
+                concreteOuter: null,
+                rebarGroup: null,
+                timberBeam: null,
+                knotGroup: null
+            },
+
+            calcResults: {},
+
+            /**
+             * 1. تهيئة المشهد، الكاميرا، الإضاءة، الشبكة الأرضية، والمتحكمات
+             */
+            init(containerId) {
+                this.container = document.getElementById(containerId);
+
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x0f172a);
+                this.scene.fog = new THREE.FogExp2(0x0f172a, 0.025);
+
+                this.camera = new THREE.PerspectiveCamera(
+                    45,
+                    window.innerWidth / window.innerHeight,
+                    0.1,
+                    200
+                );
+                this.camera.position.set(6.5, 5.2, 8.5);
+
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                this.container.appendChild(this.renderer.domElement);
+
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.06;
+                this.controls.maxPolarAngle = Math.PI / 2 - 0.02;
+                this.controls.minDistance = 3;
+                this.controls.maxDistance = 24;
+                this.controls.target.set(0, 1.6, 0);
+
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
+                this.scene.add(ambientLight);
+
+                const dirLight1 = new THREE.DirectionalLight(0xf8fafc, 0.9);
+                dirLight1.position.set(8, 14, 10);
+                dirLight1.castShadow = true;
+                dirLight1.shadow.mapSize.width = 1024;
+                dirLight1.shadow.mapSize.height = 1024;
+                this.scene.add(dirLight1);
+
+                const dirLight2 = new THREE.DirectionalLight(0x38bdf8, 0.35);
+                dirLight2.position.set(-8, 6, -6);
+                this.scene.add(dirLight2);
+
+                const gridHelper = new THREE.GridHelper(28, 28, 0x38bdf8, 0x1e293b);
+                gridHelper.position.y = 0;
+                this.scene.add(gridHelper);
+
+                this.sceneGroup = new THREE.Group();
+                this.scene.add(this.sceneGroup);
+
+                this._boundResize = this._onWindowResize.bind(this);
+                window.addEventListener('resize', this._boundResize);
+
+                this.buildQAQCScene();
+                this.calculate();
+                this.update();
+            },
+
+            /**
+             * 2. التبديل السلس بين طور "مهندس الجودة" وطور "المحقق الإنشائي"
+             */
+            switchMode(modeName) {
+                this.currentMode = modeName;
+                this.isXRayActive = false;
+                this.isRepaired = false;
+
+                document.getElementById('btn-mode-qaqc').classList.toggle('active', modeName === 'qaqc');
+                document.getElementById('btn-mode-forensic').classList.toggle('active', modeName === 'forensic');
+
+                document.getElementById('controls-qaqc').classList.toggle('hidden', modeName !== 'qaqc');
+                document.getElementById('stats-qaqc').classList.toggle('hidden', modeName !== 'qaqc');
+                document.getElementById('hud-press').classList.toggle('hidden', modeName !== 'qaqc');
+
+                document.getElementById('controls-forensic').classList.toggle('hidden', modeName !== 'forensic');
+                document.getElementById('stats-forensic').classList.toggle('hidden', modeName !== 'forensic');
+
+                this._clearSceneGroup();
+
+                if (modeName === 'qaqc') {
+                    this.camera.position.set(6.5, 5.2, 8.5);
+                    this.controls.target.set(0, 1.8, 0);
+                    this.buildQAQCScene();
+                } else {
+                    this.camera.position.set(6.0, 4.5, 6.5);
+                    this.controls.target.set(0, 1.2, 0);
+                    this.buildForensicScene(this.forensicCase);
+                }
+
+                this.calculate();
+            },
+
+            /**
+             * التبديل الفرعي بين القضايا الدراسية الثلاث في طور المحقق الإنشائي
+             */
+            switchForensicCase(caseName) {
+                this.forensicCase = caseName;
+                this.isXRayActive = false;
+                this.isRepaired = false;
+                document.getElementById('btn-xray').innerText = '🩻 تفعيل فحص الأشعة';
+
+                document.getElementById('forensic-ctrl-asphalt').classList.toggle('hidden', caseName !== 'asphalt');
+                document.getElementById('forensic-ctrl-concrete').classList.toggle('hidden', caseName !== 'concrete');
+                document.getElementById('forensic-ctrl-timber').classList.toggle('hidden', caseName !== 'timber');
+
+                const protoSelect = document.getElementById('select-repair-protocol');
+                if (caseName === 'asphalt') protoSelect.value = 'p1';
+                if (caseName === 'concrete') protoSelect.value = 'p2';
+                if (caseName === 'timber') protoSelect.value = 'p3';
+
+                this._clearSceneGroup();
+                this.buildForensicScene(caseName);
+                this.calculate();
+            },
+
+            /**
+             * بناء مشهد المكبس الهيدروليكي ومكعب الخرسانة (الطور الأول)
+             */
+            buildQAQCScene() {
+                this.pressState.isRunning = false;
+                this.pressState.currentLoad = 0;
+
+                const baseGeo = new THREE.BoxGeometry(3.8, 0.5, 3.2);
+                const steelMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.75, roughness: 0.3 });
+                const baseMesh = new THREE.Mesh(baseGeo, steelMat);
+                baseMesh.position.y = 0.25;
+                baseMesh.receiveShadow = true;
+                this.sceneGroup.add(baseMesh);
+
+                const colGeo = new THREE.CylinderGeometry(0.14, 0.14, 4.4, 20);
+                const chromeMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.15 });
+                const positions = [[-1.4, -1.1], [1.4, -1.1], [-1.4, 1.1], [1.4, 1.1]];
+                positions.forEach(([x, z]) => {
+                    const col = new THREE.Mesh(colGeo, chromeMat);
+                    col.position.set(x, 2.45, z);
+                    col.castShadow = true;
+                    this.sceneGroup.add(col);
+                });
+
+                const topHead = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.6, 3.2), steelMat);
+                topHead.position.y = 4.65;
+                topHead.castShadow = true;
+                this.sceneGroup.add(topHead);
+
+                const lowerPlaten = new THREE.Mesh(
+                    new THREE.CylinderGeometry(1.1, 1.2, 0.4, 32),
+                    new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.25 })
+                );
+                lowerPlaten.position.y = 0.7;
+                this.sceneGroup.add(lowerPlaten);
+
+                const cubeGeo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+                const concreteMat = new THREE.MeshStandardMaterial({
+                    color: 0x9ca3af,
+                    roughness: 0.85,
+                    metalness: 0.05
+                });
+                this.pressState.cubeMesh = new THREE.Mesh(cubeGeo, concreteMat);
+                this.pressState.cubeMesh.position.y = 1.65;
+                this.pressState.cubeMesh.castShadow = true;
+                this.sceneGroup.add(this.pressState.cubeMesh);
+
+                const crackGeo = new THREE.EdgesGeometry(new THREE.DodecahedronGeometry(0.86, 1));
+                const crackMat = new THREE.LineBasicMaterial({ color: 0x111827, transparent: true, opacity: 0.0 });
+                this.pressState.crackLines = new THREE.LineSegments(crackGeo, crackMat);
+                this.pressState.cubeMesh.add(this.pressState.crackLines);
+
+                const upperGroup = new THREE.Group();
+                const pistonRod = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 1.4, 24), chromeMat);
+                pistonRod.position.y = 0.85;
+                const upperDisc = new THREE.Mesh(
+                    new THREE.CylinderGeometry(1.1, 1.1, 0.35, 32),
+                    new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.65, roughness: 0.3 })
+                );
+                upperGroup.add(pistonRod);
+                upperGroup.add(upperDisc);
+                upperGroup.position.y = 2.65;
+                this.pressState.upperPlaten = upperGroup;
+                this.sceneGroup.add(upperGroup);
+            },
+
+            /**
+             * بناء مجسمات طور المحقق الإنشائي (الإسفلت / الخرسانة / الخشب)
+             */
+            buildForensicScene(caseName) {
+                this.forensicMeshes = {
+                    asphaltSurface: null,
+                    bleedingSpots: null,
+                    concreteOuter: null,
+                    rebarGroup: null,
+                    timberBeam: null,
+                    knotGroup: null
+                };
+
+                if (caseName === 'asphalt') {
+                    const subbase = new THREE.Mesh(
+                        new THREE.BoxGeometry(5.2, 0.5, 4.0),
+                        new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.9 })
+                    );
+                    subbase.position.y = 0.25;
+                    this.sceneGroup.add(subbase);
+
+                    const baseCourse = new THREE.Mesh(
+                        new THREE.BoxGeometry(5.2, 0.5, 4.0),
+                        new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.85 })
+                    );
+                    baseCourse.position.y = 0.75;
+                    this.sceneGroup.add(baseCourse);
+
+                    const surfGeo = new THREE.PlaneGeometry(5.2, 4.0, 40, 20);
+                    surfGeo.rotateX(-Math.PI / 2);
+                    const surfMat = new THREE.MeshStandardMaterial({
+                        color: 0x1e293b,
+                        roughness: 0.7,
+                        metalness: 0.1,
+                        side: THREE.DoubleSide
+                    });
+                    const surfMesh = new THREE.Mesh(surfGeo, surfMat);
+                    surfMesh.position.y = 1.15;
+                    this.forensicMeshes.asphaltSurface = surfMesh;
+                    this.sceneGroup.add(surfMesh);
+
+                    const bleedGeo = new THREE.PlaneGeometry(4.8, 0.85);
+                    bleedGeo.rotateX(-Math.PI / 2);
+                    const bleedMat = new THREE.MeshStandardMaterial({
+                        color: 0x090d16,
+                        roughness: 0.05,
+                        metalness: 0.85,
+                        transparent: true,
+                        opacity: 0.85
+                    });
+                    const bleedGroup = new THREE.Group();
+                    const strip1 = new THREE.Mesh(bleedGeo, bleedMat);
+                    strip1.position.set(0, 1.12, -0.95);
+                    const strip2 = new THREE.Mesh(bleedGeo, bleedMat);
+                    strip2.position.set(0, 1.12, 0.95);
+                    bleedGroup.add(strip1, strip2);
+                    this.forensicMeshes.bleedingSpots = bleedGroup;
+                    this.sceneGroup.add(bleedGroup);
+
+                    this._updateAsphaltDeformation();
+
+                } else if (caseName === 'concrete') {
+                    const rebarGroup = new THREE.Group();
+                    const rustedMat = new THREE.MeshStandardMaterial({
+                        color: 0xb45309,
+                        roughness: 0.75,
+                        metalness: 0.35
+                    });
+
+                    const barOffsets = [[-0.55, -0.55], [0.55, -0.55], [-0.55, 0.55], [0.55, 0.55]];
+                    barOffsets.forEach(([x, z]) => {
+                        const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.8, 16), rustedMat);
+                        bar.position.set(x, 1.9, z);
+                        rebarGroup.add(bar);
+                    });
+
+                    for (let y = 0.4; y <= 3.5; y += 0.5) {
+                        const tie = new THREE.Mesh(new THREE.BoxGeometry(1.18, 0.035, 1.18), rustedMat);
+                        tie.position.y = y;
+                        rebarGroup.add(tie);
+                    }
+                    this.forensicMeshes.rebarGroup = rebarGroup;
+                    this.sceneGroup.add(rebarGroup);
+
+                    const colGeo = new THREE.BoxGeometry(1.6, 3.8, 1.6);
+                    const colMat = new THREE.MeshStandardMaterial({
+                        color: 0x94a3b8,
+                        roughness: 0.85,
+                        transparent: true,
+                        opacity: 0.92
+                    });
+                    const colMesh = new THREE.Mesh(colGeo, colMat);
+                    colMesh.position.y = 1.9;
+                    this.forensicMeshes.concreteOuter = colMesh;
+                    this.sceneGroup.add(colMesh);
+
+                } else if (caseName === 'timber') {
+                    const beamGeo = new THREE.BoxGeometry(5.2, 0.95, 0.65);
+                    const woodMat = new THREE.MeshStandardMaterial({
+                        color: 0x92400e,
+                        roughness: 0.8,
+                        transparent: true,
+                        opacity: 1.0
+                    });
+                    const beamMesh = new THREE.Mesh(beamGeo, woodMat);
+                    beamMesh.position.y = 1.6;
+                    this.forensicMeshes.timberBeam = beamMesh;
+                    this.sceneGroup.add(beamMesh);
+
+                    const supMat = new THREE.MeshStandardMaterial({ color: 0x475569 });
+                    const sup1 = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.1, 0.9), supMat);
+                    sup1.position.set(-2.2, 0.55, 0);
+                    const sup2 = sup1.clone();
+                    sup2.position.set(2.2, 0.55, 0);
+                    this.sceneGroup.add(sup1, sup2);
+
+                    const knotGroup = new THREE.Group();
+                    const knotMat = new THREE.MeshStandardMaterial({ color: 0x27272a, roughness: 0.95 });
+                    const rotMat = new THREE.MeshStandardMaterial({ color: 0x365314, roughness: 0.9 });
+
+                    const knot1 = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), knotMat);
+                    knot1.position.set(-0.6, 1.55, 0.22);
+                    const knot2 = new THREE.Mesh(new THREE.SphereGeometry(0.20, 16, 16), knotMat);
+                    knot2.position.set(0.85, 1.68, -0.2);
+                    const rotZone = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.4, 0.68), rotMat);
+                    rotZone.position.set(-1.5, 1.35, 0);
+
+                    knotGroup.add(knot1, knot2, rotZone);
+                    this.forensicMeshes.knotGroup = knotGroup;
+                    this.sceneGroup.add(knotGroup);
+                }
+            },
+
+            /**
+             * تحديث تشوه سطح الإسفلت (التخدد Rutting والفوران) ديناميكياً
+             */
+            _updateAsphaltDeformation() {
+                if (!this.forensicMeshes.asphaltSurface) return;
+                const va = parseFloat(document.getElementById('slider-va').value);
+                const temp = parseFloat(document.getElementById('slider-temp').value);
+
+                const rutDepth = this.isRepaired ? 0 : Math.max(0.02, ((8.5 - va) / 7.5) * ((temp - 20) / 50) * 0.28);
+
+                const posAttr = this.forensicMeshes.asphaltSurface.geometry.attributes.position;
+                for (let i = 0; i < posAttr.count; i++) {
+                    const z = posAttr.getZ(i);
+                    const wheel1 = Math.exp(-Math.pow(z + 0.95, 2) / 0.18);
+                    const wheel2 = Math.exp(-Math.pow(z - 0.95, 2) / 0.18);
+                    const yOffset = -(wheel1 + wheel2) * rutDepth;
+                    posAttr.setY(i, yOffset);
+                }
+                posAttr.needsUpdate = true;
+                this.forensicMeshes.asphaltSurface.geometry.computeVertexNormals();
+
+                if (this.forensicMeshes.bleedingSpots) {
+                    this.forensicMeshes.bleedingSpots.visible = (!this.isRepaired && va < 3.0);
+                }
+            },
+
+            /**
+             * تفعيل أو إيقاف فحص الأشعة السينية (3D X-Ray) لكشف البنية الداخلية
+             */
+            toggleXRay() {
+                this.isXRayActive = !this.isXRayActive;
+                document.getElementById('btn-xray').innerText = this.isXRayActive ? '👁️ إيقاف فحص الأشعة' : '🩻 تفعيل فحص الأشعة';
+
+                if (this.forensicCase === 'asphalt' && this.forensicMeshes.asphaltSurface) {
+                    this.forensicMeshes.asphaltSurface.material.wireframe = this.isXRayActive;
+                } else if (this.forensicCase === 'concrete' && this.forensicMeshes.concreteOuter) {
+                    this.forensicMeshes.concreteOuter.material.opacity = this.isXRayActive ? 0.22 : 0.92;
+                    this.forensicMeshes.concreteOuter.material.wireframe = this.isXRayActive;
+                } else if (this.forensicCase === 'timber' && this.forensicMeshes.timberBeam) {
+                    this.forensicMeshes.timberBeam.material.opacity = this.isXRayActive ? 0.28 : 1.0;
+                    this.forensicMeshes.timberBeam.material.wireframe = this.isXRayActive;
+                }
+            },
+
+            /**
+             * تنفيذ بروتوكول الإصلاح ثلاثي الأبعاد والتحقق من صحة اختيار الطالب
+             */
+            applyForensicRepair() {
+                const selectedProto = document.getElementById('select-repair-protocol').value;
+                const feedbackBox = document.getElementById('forensic-feedback-box');
+                const statusBadge = document.getElementById('forensic-status-badge');
+
+                const isCorrect =
+                    (this.forensicCase === 'asphalt' && selectedProto === 'p1') ||
+                    (this.forensicCase === 'concrete' && selectedProto === 'p2') ||
+                    (this.forensicCase === 'timber' && selectedProto === 'p3');
+
+                if (!isCorrect) {
+                    statusBadge.className = 'status-pill fail';
+                    statusBadge.innerText = 'بروتوكول خاطئ';
+                    feedbackBox.innerHTML = `<span style="color:#fb7185; font-weight:700;">❌ خطأ في اختيار بروتوكول الإصلاح:</span> البروتوكول المختار لا يعالج المسبب الجذري لهذا العنصر الإنشائي. راجع التشخيص الجنائي في اللوحة اليسرى واختر المعالجة المطابقة.`;
+                    return;
+                }
+
+                this.isRepaired = true;
+                this.isXRayActive = false;
+                document.getElementById('btn-xray').innerText = '🩻 تفعيل فحص الأشعة';
+
+                statusBadge.className = 'status-pill pass';
+                statusBadge.innerText = 'تم الإصلاح بنجاح';
+
+                if (this.forensicCase === 'asphalt') {
+                    this._updateAsphaltDeformation();
+                    this.forensicMeshes.asphaltSurface.material.wireframe = false;
+                    this.forensicMeshes.asphaltSurface.material.color.setHex(0x0f172a);
+                    feedbackBox.innerHTML = `<span style="color:#34d399; font-weight:700;">✔ تمت المعالجة بنجاح:</span> تم كشط الطبقة المتخددة وإعادة الرصف ببيتومين قاسي (غرز 40/50) معدل بالبوليمر مع ضبط نسبة الفراغات الهوائية (V<sub>a</sub> = 4%) وفرش مستحلب مشرجب لمنع الانزلاق.`;
+                } else if (this.forensicCase === 'concrete') {
+                    this.forensicMeshes.concreteOuter.material.wireframe = false;
+                    this.forensicMeshes.concreteOuter.material.opacity = 0.95;
+                    this.forensicMeshes.concreteOuter.material.color.setHex(0x38bdf8);
+                    this.forensicMeshes.rebarGroup.children.forEach(m => m.material.color.setHex(0x10b981));
+                    feedbackBox.innerHTML = `<span style="color:#34d399; font-weight:700;">✔ تمت المعالجة بنجاح:</span> تم تنظيف الفولاذ الصدئ وطلاؤه بمثبط صدأ إيبوكسي، وحقن الشروخ وبناء قميص ملاط بوليمري غني بغبار السيليكا لمنع نفاذية الكلوريدات.`;
+                } else if (this.forensicCase === 'timber') {
+                    this.forensicMeshes.timberBeam.material.wireframe = false;
+                    this.forensicMeshes.timberBeam.material.opacity = 1.0;
+                    this.forensicMeshes.timberBeam.material.color.setHex(0xb45309);
+                    if (this.forensicMeshes.knotGroup) this.forensicMeshes.knotGroup.visible = false;
+                    feedbackBox.innerHTML = `<span style="color:#34d399; font-weight:700;">✔ تمت المعالجة بنجاح:</span> تم تجفيف العنصر الخشبي للرطوبة القياسية (15%)، تطهير الفطريات وطلاؤه بمادة عازلة للرطوبة مع تدعيم منطقة العقد بألواح فولاذية جانبية.`;
+                }
+            },
+
+            onInputChanged() {
+                this.isRepaired = false;
+                this.calculate();
+                if (this.currentMode === 'forensic' && this.forensicCase === 'asphalt') {
+                    this._updateAsphaltDeformation();
+                }
+            },
+
+            /**
+             * 3. إجراء الحسابات الهندسية ومطابقة الكود العربي السوري وتحديث البطاقات الرقمية فورياً
+             */
+            calculate() {
+                if (this.currentMode === 'qaqc') {
+                    const fn = parseFloat(document.getElementById('select-fn').value);
+                    const p1 = parseFloat(document.getElementById('slider-p1').value);
+                    const p2 = parseFloat(document.getElementById('slider-p2').value);
+                    const p3 = parseFloat(document.getElementById('slider-p3').value);
+
+                    document.getElementById('val-fn').innerText = `${fn} kg/cm²`;
+                    document.getElementById('val-p1').innerText = `${p1.toFixed(1)} Ton`;
+                    document.getElementById('val-p2').innerText = `${p2.toFixed(1)} Ton`;
+                    document.getElementById('val-p3').innerText = `${p3.toFixed(1)} Ton`;
+
+                    // 1) المقاومة المكعبية: σ_cube = (P_ton * 1000) / 225
+                    const s1 = (p1 * 1000) / 225;
+                    const s2 = (p2 * 1000) / 225;
+                    const s3 = (p3 * 1000) / 225;
+
+                    // 2) المقاومة الأسطوانية المكافئة: f_i = 0.8 * σ_cube
+                    const f1 = 0.8 * s1;
+                    const f2 = 0.8 * s2;
+                    const f3 = 0.8 * s3;
+
+                    // 3) المتوسط الحسابي للعينات الثلاث
+                    const fcim = (f1 + f2 + f3) / 3;
+                    const minFi = Math.min(f1, f2, f3);
+
+                    // 4) الشرطان الحاسمان للكود العربي السوري
+                    const limitCond1 = 0.85 * fn;
+                    const limitCond2 = fn + 10;
+
+                    const passCond1 = minFi >= limitCond1;
+                    const passCond2 = fcim >= limitCond2;
+                    const overallPass = passCond1 && passCond2;
+
+                    // 5) الانحراف المعياري والمقاومة المميزة fc
+                    const variance = (Math.pow(f1 - fcim, 2) + Math.pow(f2 - fcim, 2) + Math.pow(f3 - fcim, 2)) / 2;
+                    const stdDev = Math.sqrt(variance);
+                    const fc = fcim - 1.64 * stdDev;
+
+                    this.calcResults = { fn, p1, p2, p3, f1, f2, f3, fcim, minFi, passCond1, passCond2, overallPass };
+
+                    document.getElementById('stat-f1').innerText = `${s1.toFixed(1)} ← ${f1.toFixed(1)}`;
+                    document.getElementById('stat-f2').innerText = `${s2.toFixed(1)} ← ${f2.toFixed(1)}`;
+                    document.getElementById('stat-f3').innerText = `${s3.toFixed(1)} ← ${f3.toFixed(1)}`;
+                    document.getElementById('stat-fcim').innerText = `${fcim.toFixed(1)} kg/cm²`;
+
+                    document.getElementById('stat-cond1').innerText = `${minFi.toFixed(1)} ${passCond1 ? '≥' : '<'} ${limitCond1.toFixed(1)} kg/cm²`;
+                    const b1 = document.getElementById('badge-cond1');
+                    b1.className = `status-pill ${passCond1 ? 'pass' : 'fail'}`;
+                    b1.innerText = passCond1 ? 'محقق' : 'راسب';
+
+                    document.getElementById('stat-cond2').innerText = `${fcim.toFixed(1)} ${passCond2 ? '≥' : '<'} ${limitCond2.toFixed(1)} kg/cm²`;
+                    const b2 = document.getElementById('badge-cond2');
+                    b2.className = `status-pill ${passCond2 ? 'pass' : 'fail'}`;
+                    b2.innerText = passCond2 ? 'محقق' : 'راسب';
+
+                    const overallBadge = document.getElementById('qa-overall-badge');
+                    overallBadge.className = `status-pill ${overallPass ? 'pass' : 'fail'}`;
+                    overallBadge.innerText = overallPass ? 'مطابق للكود' : 'غير مطابق';
+
+                    document.getElementById('stat-std').innerText = `${stdDev.toFixed(1)} kg/cm²`;
+                    document.getElementById('stat-fc').innerText = `${Math.max(0, fc).toFixed(1)} kg/cm²`;
+
+                } else {
+                    const formulaBox = document.getElementById('forensic-formula-box');
+                    const diagText = document.getElementById('forensic-diagnosis-text');
+                    const badge = document.getElementById('forensic-status-badge');
+
+                    if (this.forensicCase === 'asphalt') {
+                        const va = parseFloat(document.getElementById('slider-va').value);
+                        const temp = parseFloat(document.getElementById('slider-temp').value);
+                        document.getElementById('val-va').innerText = `${va.toFixed(1)} %`;
+                        document.getElementById('val-temp').innerText = `${temp} °C`;
+
+                        formulaBox.innerHTML = `<strong>معايير الخلطة الإسفلتية الساخنة:</strong><br>• المجال التصميمي للفراغات الهوائية: V<sub>a</sub> = 3% ~ 5%<br>• V<sub>a</sub> &lt; 3%: فوران (Bleeding) وتخدد لدن صيفاً.<br>• V<sub>a</sub> &gt; 5%: نفاذية عالية وأكسدة وشيخوخة مبكرة.`;
+
+                        document.getElementById('f-label-1').innerText = 'نسبة الفراغات Va';
+                        document.getElementById('f-val-1').innerText = `${va.toFixed(1)} %`;
+                        document.getElementById('f-label-2').innerText = 'درجة الغرز المقترحة';
+                        document.getElementById('f-val-2').innerText = temp > 45 ? '40 / 50 (قاسي)' : '60 / 70';
+                        document.getElementById('f-label-3').innerText = 'عمق التخدد المتوقع';
+                        const ruttingMm = Math.max(2, ((8.5 - va) * (temp / 30) * 3.2)).toFixed(1);
+                        document.getElementById('f-val-3').innerText = `${ruttingMm} mm`;
+                        document.getElementById('f-label-4').innerText = 'حالة السطح';
+
+                        if (va < 3.0) {
+                            document.getElementById('f-val-4').innerText = 'فوران وتخدد حرج';
+                            badge.className = 'status-pill fail';
+                            badge.innerText = 'فوران وتخدد';
+                            diagText.innerHTML = `بسبب انخفاض الفراغات الهوائية (<strong>V<sub>a</sub> = ${va}% &lt; 3%</strong>) مع حرارة الصيف (${temp}°C)، يتمدد البيتومين ولا يجد فراغات يستوعبها فيطفو للسطح مسبباً <strong>الفوران (Bleeding)</strong> والانزلاق وتشوه المسارات (<strong>Rutting</strong>).`;
+                        } else if (va > 5.0) {
+                            document.getElementById('f-val-4').innerText = 'تطاير وشيخوخة';
+                            badge.className = 'status-pill warn';
+                            badge.innerText = 'نفاذية مفرطة';
+                            diagText.innerHTML = `ارتفاع الفراغات الهوائية (<strong>V<sub>a</sub> = ${va}% &gt; 5%</strong>) يسمح بتغلغل الهواء والماء داخل الرصف، مما يسرع تأكسد البيتومين وفقدان الالتصاق وتطاير البحص.`;
+                        } else {
+                            document.getElementById('f-val-4').innerText = 'ضمن الحدود (3-5%)';
+                            badge.className = 'status-pill pass';
+                            badge.innerText = 'متوازن';
+                            diagText.innerHTML = `نسبة الفراغات الهوائية مثالية (3% ~ 5%)، مما يوازن بين استيعاب تمدد البيتومين صيفاً ومنع نفاذية الماء والهواء شتاءً.`;
+                        }
+
+                    } else if (this.forensicCase === 'concrete') {
+                        const wc = parseFloat(document.getElementById('slider-wc').value);
+                        const silica = parseFloat(document.getElementById('slider-silica').value);
+                        document.getElementById('val-wc').innerText = wc.toFixed(2);
+                        document.getElementById('val-silica').innerText = `${silica} %`;
+
+                        formulaBox.innerHTML = `<strong>ديمومة الخرسانة المسلحة وحماية الفولاذ:</strong><br>• ارتفاع W/C يزيد المسامية الشعرية وتغلغل الكلوريدات وCO<sub>2</sub>.<br>• غبار السيليكا (Silica Fume) يتفاعل مع Ca(OH)<sub>2</sub> الحر ويسد المسامات الشعرية.`;
+
+                        const permeabilityIndex = Math.max(5, (wc - 0.3) * 180 - silica * 4.5).toFixed(0);
+                        document.getElementById('f-label-1').innerText = 'مؤشر النفاذية الشعرية';
+                        document.getElementById('f-val-1').innerText = `${permeabilityIndex} %`;
+                        document.getElementById('f-label-2').innerText = 'عمق الكربنة والكلوريد';
+                        document.getElementById('f-val-2').innerText = `${(permeabilityIndex * 0.45).toFixed(1)} mm`;
+                        document.getElementById('f-label-3').innerText = 'حالة قضبان التسليح';
+                        document.getElementById('f-val-3').innerText = wc > 0.52 && silica < 5 ? 'صدأ نشط وتقشر' : 'محمية القلوية';
+                        document.getElementById('f-label-4').innerText = 'تقييم الديمومة';
+
+                        if (wc > 0.52 && silica < 5) {
+                            document.getElementById('f-val-4').innerText = 'تآكل حرج للحديد';
+                            badge.className = 'status-pill fail';
+                            badge.innerText = 'صدأ التسليح';
+                            diagText.innerHTML = `ارتفاع نسبة الماء للإسمنت (<strong>W/C = ${wc}</strong>) مع غياب غبار السيليكا أدى لنفاذية عالية وتغلغل الكلوريدات والكربنة؛ فتحطمت الطبقة القلوية الحامية للفولاذ وتمدد الصدأ مسبباً تقشر الغطاء الخرساني.`;
+                        } else {
+                            document.getElementById('f-val-4').innerText = 'بنية كثيفة محمية';
+                            badge.className = 'status-pill pass';
+                            badge.innerText = 'كثافة عالية';
+                            diagText.innerHTML = `ضبط نسبة W/C مع إضافة غبار السيليكا (${silica}%) حوّل هيدروكسيد الكالسيوم الضعيف إلى جل سيليكات كالسيوم كثيف يحمي حديد التسليح.`;
+                        }
+
+                    } else if (this.forensicCase === 'timber') {
+                        const w = parseFloat(document.getElementById('slider-wood-w').value);
+                        const rcW = parseFloat(document.getElementById('slider-wood-rc').value);
+                        const gammaW = parseFloat(document.getElementById('slider-wood-gamma').value);
+
+                        document.getElementById('val-wood-w').innerText = `${w} %`;
+                        document.getElementById('val-wood-rc').innerText = `${rcW} kg/cm²`;
+                        document.getElementById('val-wood-gamma').innerText = `${gammaW} kg/m³`;
+
+                        // تصحيح المقاومة والكثافة إلى الرطوبة القياسية 15%
+                        const rc15 = rcW * (1 + 0.04 * (w - 15));
+                        const gamma15 = gammaW * (1 - 0.005 * (w - 15));
+                        const g15_gcm3 = gamma15 / 1000;
+
+                        // حساب معامل الجودة K = Rc(15) / (γ15² - 100)
+                        const denom = Math.max(10, Math.pow(gamma15 / 10, 2) - 100);
+                        const qualityK = rc15 / denom;
+                        const stdK = rc15 / (100 * g15_gcm3);
+
+                        formulaBox.innerHTML = `<strong>تصحيح خواص الخشب للرطوبة القياسية (15%):</strong><br>• R<sub>c(15)</sub> = R<sub>c(w)</sub> × [1 + 0.04 (W - 15)]<br>• معامل الجودة الإنشائي: K = R<sub>c(15)</sub> / (γ<sub>15</sub>² - 100)`;
+
+                        document.getElementById('f-label-1').innerText = 'المقاومة المصححة Rc(15)';
+                        document.getElementById('f-val-1').innerText = `${rc15.toFixed(0)} kg/cm²`;
+                        document.getElementById('f-label-2').innerText = 'الكثافة القياسية γ15';
+                        document.getElementById('f-val-2').innerText = `${gamma15.toFixed(0)} kg/m³`;
+                        document.getElementById('f-label-3').innerText = 'معامل الجودة (K)';
+                        document.getElementById('f-val-3').innerText = `${qualityK.toFixed(3)} (${stdK.toFixed(1)})`;
+                        document.getElementById('f-label-4').innerText = 'رتبة الخشب';
+
+                        let gradeText = 'نخب ثالث (منخفض)';
+                        if (stdK >= 8.5 && w <= 18) gradeText = 'نخب أول (إنشائي ممتاز)';
+                        else if (stdK >= 7.0) gradeText = 'نخب ثانٍ (متوسط)';
+
+                        document.getElementById('f-val-4').innerText = gradeText;
+                        badge.className = `status-pill ${w > 20 ? 'fail' : 'pass'}`;
+                        badge.innerText = w > 20 ? 'خطر تعفن فطري' : 'رطوبة آمنة';
+
+                        diagText.innerHTML = w > 20
+                            ? `ارتفاع الرطوبة إلى (<strong>${w}% &gt; 20%</strong>) يضعف الروابط السليلوزية ويهيئ بيئة مثالية لنمو الفطريات والعفن، كما أن وجود العقد الخشبية في منطقة الشد يسبب تركيز إجهادات خطير.`
+                            : `الرطوبة الحالية (${w}%) قريبة من المجال القياسي (15%)، ومعامل الجودة المحسوب يحدد أهلية العنصر للتحمل الإنشائي.`;
+                    }
+                }
+            },
+
+            /**
+             * تشغيل محاكاة الكسر في المكبس الهيدروليكي ثلاثي الأبعاد
+             */
+            startCompressionTest() {
+                if (this.currentMode !== 'qaqc') return;
+                const p3 = parseFloat(document.getElementById('slider-p3').value);
+                this.pressState.targetLoad = p3;
+                this.pressState.currentLoad = 0;
+                this.pressState.isRunning = true;
+
+                if (this.pressState.cubeMesh) {
+                    this.pressState.cubeMesh.scale.set(1, 1, 1);
+                    this.pressState.cubeMesh.position.y = 1.65;
+                    this.pressState.cubeMesh.material.color.setHex(0x9ca3af);
+                }
+                if (this.pressState.crackLines) {
+                    this.pressState.crackLines.material.opacity = 0;
+                }
+                if (this.pressState.upperPlaten) {
+                    this.pressState.upperPlaten.position.y = 2.58;
+                }
+                document.getElementById('live-specimen-state').innerText = 'جاري تطبيق الحمل المحوري...';
+                document.getElementById('live-specimen-state').style.color = '#fbbf24';
+            },
+
+            loadPresetScenario() {
+                document.getElementById('select-fn').value = '210';
+                document.getElementById('slider-p1').value = 72.0;
+                document.getElementById('slider-p2').value = 69.5;
+                document.getElementById('slider-p3').value = 48.0;
+                this.onInputChanged();
+                this.startCompressionTest();
+            },
+
+            /**
+             * تقييم قرار الطالب في طور مهندس ضبط الجودة (قبول / رفض / طلب NDT)
+             */
+            makeQADecision(decision) {
+                const { overallPass, passCond1, minFi, fn } = this.calcResults;
+                const box = document.getElementById('qa-decision-box');
+
+                if (decision === 'accept') {
+                    if (overallPass) {
+                        box.innerHTML = `<span style="color:#34d399; font-weight:700;">✔ قرار هندسي سليم (قبول الدفعة):</span> جميع العينات الفردية حققت الشرط الأول (f<sub>i</sub> ≥ 0.85 f<sub>n</sub>) والمتوسط الحسابي حقق الشرط الثاني (f<sub>cim</sub> ≥ f<sub>n</sub> + 10). يُسمح بمتابعة صب الطابق التالي دون تأخير.`;
+                    } else {
+                        box.innerHTML = `<span style="color:#fb7185; font-weight:700;">❌ خطأ جسيم ومخالفة كودية:</span> قمت بقبول دفعة خرسانية راسبة! (${!passCond1 ? 'توجد عينة فردية أقل من 0.85 fn' : 'المتوسط أقل من fn + 10'}). هذا القرار يعرض المنشأ لخطر الانهيار ويحملك المسؤولية الجزائية.`;
+                    }
+                } else if (decision === 'ndt') {
+                    if (!overallPass && minFi >= 0.72 * fn) {
+                        box.innerHTML = `<span style="color:#34d399; font-weight:700;">✔ قرار استشاري حكيم (طلب اختبارات لاإتلافية NDT):</span> نظراً لرسوب نتائج المكعبات بشكل حدي، ينص الكود العربي السوري على التدرج بطلب فحص مطرقة شميدت والأمواج فوق الصوتية أو استخراج 3 قلوب خرسانية (Cores) قبل الحكم بهدم العنصر.`;
+                    } else if (overallPass) {
+                        box.innerHTML = `<span style="color:#fbbf24; font-weight:700;">⚠️ قرار غير اقتصادي:</span> الدفعة محققة لشرطي الكود العربي السوري بالكامل؛ طلب اختبارات NDT هنا يسبب هدر المال وتأخير الجدول الزمني للمشروع بلا مبرر فني.`;
+                    } else {
+                        box.innerHTML = `<span style="color:#fbbf24; font-weight:700;">🔍 ملاحظة فنية:</span> المقاومة متدنية جداً (${minFi.toFixed(1)} kg/cm²)، يمكن أخذ قلوب خرسانية للتوثيق القانوني ولكن الاحتمال الأكبر هو وجوب التدعيم أو الإزالة.`;
+                    }
+                } else if (decision === 'reject') {
+                    if (!overallPass && minFi < 0.72 * fn) {
+                        box.innerHTML = `<span style="color:#34d399; font-weight:700;">✔ قرار حازم وصحيح (رفض وإزالة):</span> المقاومة منخفضة بشدة ولا تحقق الحد الأدنى للأمان الإنشائي. تحميل المقاول تكاليف التكسير وإعادة الصب.`;
+                    } else if (!overallPass) {
+                        box.innerHTML = `<span style="color:#fbbf24; font-weight:700;">⚠️ قرار متسرع ومكلف مالياً:</span> رغم عدم تحقق شرط المكعبات، إلا أن الكود السوري يوصي أولاً بإجراء اختبارات لاإتلافية (NDT / فحص القلوب الخرسانية) في الموقع قبل إصدار أمر الهدم المباشر.`;
+                    } else {
+                        box.innerHTML = `<span style="color:#fb7185; font-weight:700;">❌ قرار خاطئ تماماً:</span> الخرسانة مطابقة لاشتراطات الكود العربي السوري! رفضها وتكسيرها يترتب عليه خسائر مالية فادحة ونزاع قضائي خاسر.`;
+                    }
+                }
+            },
+
+            /**
+             * 4. حلقة التحديث المستمرة (Animation Loop) وحركة المكبس والتشوهات
+             */
+            update() {
+                this.animationFrameId = requestAnimationFrame(this.update.bind(this));
+
+                if (this.currentMode === 'qaqc' && this.pressState.isRunning) {
+                    const step = 0.55;
+                    this.pressState.currentLoad += step;
+
+                    const ratio = Math.min(1, this.pressState.currentLoad / this.pressState.targetLoad);
+                    const stress = (this.pressState.currentLoad * 1000) / 225;
+
+                    document.getElementById('live-load-readout').innerText =
+                        `${this.pressState.currentLoad.toFixed(1)} Ton (${stress.toFixed(0)} kg/cm²)`;
+
+                    if (this.pressState.upperPlaten && this.pressState.cubeMesh) {
+                        this.pressState.upperPlaten.position.y = 2.58 - ratio * 0.14;
+                        this.pressState.cubeMesh.scale.y = 1 - ratio * 0.08;
+                        this.pressState.cubeMesh.scale.x = 1 + ratio * 0.04;
+                        this.pressState.cubeMesh.scale.z = 1 + ratio * 0.04;
+                    }
+
+                    if (ratio > 0.65 && this.pressState.crackLines) {
+                        this.pressState.crackLines.material.opacity = (ratio - 0.65) * 2.8;
+                    }
+
+                    if (this.pressState.currentLoad >= this.pressState.targetLoad) {
+                        this.pressState.currentLoad = this.pressState.targetLoad;
+                        this.pressState.isRunning = false;
+                        if (this.pressState.cubeMesh) {
+                            this.pressState.cubeMesh.material.color.setHex(0x64748b);
+                        }
+                        const stateEl = document.getElementById('live-specimen-state');
+                        stateEl.innerText = `انكسرت العينة عند ${this.pressState.targetLoad.toFixed(1)} Ton`;
+                        stateEl.style.color = '#fb7185';
+                    }
+                }
+
+                if (this.controls) {
+                    this.controls.update();
+                }
+                if (this.renderer && this.scene && this.camera) {
+                    this.renderer.render(this.scene, this.camera);
+                }
+            },
+
+            /**
+             * 5. إعادة ضبط قيم التجربة والمدخلات إلى الحالة الابتدائية
+             */
+            reset() {
+                document.getElementById('select-fn').value = '210';
+                document.getElementById('slider-p1').value = 64.5;
+                document.getElementById('slider-p2').value = 61.0;
+                document.getElementById('slider-p3').value = 49.5;
+
+                document.getElementById('slider-va').value = 2.1;
+                document.getElementById('slider-temp').value = 58;
+                document.getElementById('slider-wc').value = 0.68;
+                document.getElementById('slider-silica').value = 0;
+                document.getElementById('slider-wood-w').value = 22;
+                document.getElementById('slider-wood-rc').value = 340;
+                document.getElementById('slider-wood-gamma').value = 540;
+
+                document.getElementById('live-load-readout').innerText = '0.0 Ton (0 kg/cm²)';
+                document.getElementById('live-specimen-state').innerText = 'جاهزة للاختبار';
+                document.getElementById('live-specimen-state').style.color = '#34d399';
+                document.getElementById('qa-decision-box').innerText = 'قم بتحليل نتائج الكسر في اللوحة اليسرى ثم اتخذ قرارك الهندسي...';
+
+                this.switchMode(this.currentMode);
+            },
+
+            _clearSceneGroup() {
+                if (!this.sceneGroup) return;
+                while (this.sceneGroup.children.length > 0) {
+                    const obj = this.sceneGroup.children[0];
+                    this._disposeHierarchy(obj);
+                    this.sceneGroup.remove(obj);
+                }
+            },
+
+            _disposeHierarchy(node) {
+                if (!node) return;
+                if (node.children && node.children.length > 0) {
+                    for (let i = node.children.length - 1; i >= 0; i--) {
+                        this._disposeHierarchy(node.children[i]);
+                    }
+                }
+                if (node.geometry) {
+                    node.geometry.dispose();
+                }
+                if (node.material) {
+                    if (Array.isArray(node.material)) {
+                        node.material.forEach(mat => {
+                            if (mat.map) mat.map.dispose();
+                            mat.dispose();
+                        });
+                    } else {
+                        if (node.material.map) node.material.map.dispose();
+                        node.material.dispose();
+                    }
+                }
+            },
+
+            _onWindowResize() {
+                if (!this.camera || !this.renderer) return;
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            },
+
+            /**
+             * 6. تفريغ كامل لـ Geometries و Materials و Textures وإيقاف حلقة requestAnimationFrame
+             * لتجنب أي تسريب لذاكرة كرت الشاشة (WebGL Memory Leaks)
+             */
+            destroy() {
+                if (this.animationFrameId) {
+                    cancelAnimationFrame(this.animationFrameId);
+                    this.animationFrameId = null;
+                }
+                if (this._boundResize) {
+                    window.removeEventListener('resize', this._boundResize);
+                }
+                if (this.controls) {
+                    this.controls.dispose();
+                    this.controls = null;
+                }
+                if (this.scene) {
+                    this._disposeHierarchy(this.scene);
+                    this.scene = null;
+                }
+                if (this.renderer) {
+                    this.renderer.dispose();
+                    if (this.renderer.domElement && this.renderer.domElement.parentNode) {
+                        this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+                    }
+                    this.renderer = null;
+                }
+                this.camera = null;
+            }
+        };
+
+        // تشغيل المختبر فور تحميل الصفحة
+        window.addEventListener('DOMContentLoaded', () => {
+            CivilLabEngine.init('canvas-container');
+        });
+    </script>
+</body>
+</html>

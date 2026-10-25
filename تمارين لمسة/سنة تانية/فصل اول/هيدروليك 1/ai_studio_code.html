@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مختبر الهيدروليك المدني التفاعلي: تحدي البوابات والبوارج</title>
+    
+    <!-- الخطوط العربية: Tajawal -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- مكتبات Three.js (r128) و OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --panel-bg: rgba(15, 23, 42, 0.78);
+            --panel-border: rgba(255, 255, 255, 0.12);
+            --accent-blue: #38bdf8;
+            --accent-cyan: #06b6d4;
+            --status-safe: #10b981;
+            --status-warn: #f59e0b;
+            --status-danger: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Tajawal', sans-serif;
+            user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .top-navbar {
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            padding: 10px 22px;
+            border-radius: 999px;
+            border: 1px solid var(--panel-border);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .app-title {
+            font-weight: 800;
+            font-size: 1.05rem;
+            color: var(--accent-blue);
+            margin-left: 10px;
+            white-space: nowrap;
+        }
+
+        .mode-btn {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            border: 1px solid transparent;
+            padding: 8px 18px;
+            border-radius: 999px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .mode-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            color: #020617;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+        }
+
+        .side-panel {
+            position: absolute;
+            top: 82px;
+            right: 20px;
+            bottom: 20px;
+            width: 400px;
+            z-index: 10;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--panel-border);
+            border-radius: 20px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        .side-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+        .side-panel::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .panel-section-title {
+            font-size: 1.02rem;
+            font-weight: 800;
+            color: var(--accent-blue);
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .control-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.88rem;
+            font-weight: 500;
+        }
+
+        .control-val {
+            color: var(--accent-cyan);
+            font-weight: 700;
+            direction: ltr;
+        }
+
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            accent-color: var(--accent-blue);
+            height: 6px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        input[type="number"] {
+            width: 66px;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            padding: 4px 6px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: 700;
+            direction: ltr;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 2px;
+        }
+
+        .radio-option {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--panel-border);
+            padding: 8px;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 0.83rem;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+
+        .radio-option.selected {
+            background: rgba(56, 189, 248, 0.2);
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+        }
+
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .telemetry-card {
+            background: rgba(0, 0, 0, 0.28);
+            border: 1px solid var(--panel-border);
+            padding: 9px 11px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .telemetry-card.full-width {
+            grid-column: span 2;
+        }
+
+        .tel-label {
+            font-size: 0.76rem;
+            color: var(--text-muted);
+        }
+
+        .tel-value {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: var(--text-main);
+            direction: ltr;
+            text-align: right;
+        }
+
+        .tel-formula {
+            font-size: 0.7rem;
+            color: var(--accent-cyan);
+            font-family: monospace;
+            direction: ltr;
+            text-align: right;
+        }
+
+        .status-banner {
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.86rem;
+            line-height: 1.45;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .status-safe {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid var(--status-safe);
+            color: #34d399;
+        }
+
+        .status-danger {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid var(--status-danger);
+            color: #f87171;
+            animation: pulse-danger 1.5s infinite;
+        }
+
+        @keyframes pulse-danger {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 16px 3px rgba(239, 68, 68, 0.4); }
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: auto;
+            padding-top: 6px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px 12px;
+            border-radius: 9px;
+            border: none;
+            font-weight: 700;
+            font-size: 0.86rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #38bdf8, #0284c7);
+            color: #020617;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #020617;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            border: 1px solid var(--panel-border);
+        }
+
+        .legend-box {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 10;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--panel-border);
+            padding: 12px 16px;
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            font-size: 0.84rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <!-- الشريط العلوي -->
+    <nav class="top-navbar">
+        <div class="app-title">مختبر الهيدروليك المدني 1</div>
+        <button id="btn-mode-dam" class="mode-btn active" onclick="CivilHydraulicsLab.switchMode('dam')">
+            1. حارس السد والبوابات (Dam Gatekeeper)
+        </button>
+        <button id="btn-mode-barge" class="mode-btn" onclick="CivilHydraulicsLab.switchMode('barge')">
+            2. استقرار وتوازن البارجة (Naval Stabilizer)
+        </button>
+    </nav>
+
+    <!-- دليل المؤشرات البصرية -->
+    <div id="legend-dam" class="legend-box">
+        <div style="font-weight: 800; color: var(--accent-blue);">دليل النقاط والمؤشرات (السد):</div>
+        <div class="legend-item"><span class="dot" style="background: #3b82f6;"></span> مركز ثقل المساحة المغمورة (S)</div>
+        <div class="legend-item"><span class="dot" style="background: #ef4444;"></span> مركز الضغط الهيدروستاتيكي الحقيقي (Zn)</div>
+        <div class="legend-item"><span class="dot" style="background: #10b981;"></span> موشور توزيع الضغط الهيدروستاتيكي</div>
+        <div class="legend-item"><span class="dot" style="background: #f59e0b;"></span> دعامة التثبيت الخلفية للبوابة</div>
+    </div>
+
+    <div id="legend-barge" class="legend-box hidden">
+        <div style="font-weight: 800; color: var(--accent-blue);">دليل نقاط الاستقرار (البارجة):</div>
+        <div class="legend-item"><span class="dot" style="background: #38bdf8;"></span> مركز الطفو (B - Center of Buoyancy)</div>
+        <div class="legend-item"><span class="dot" style="background: #facc15;"></span> مركز الثقل الكلي (G - Center of Gravity)</div>
+        <div class="legend-item"><span class="dot" style="background: #10b981;"></span> النقطة الميتاسنترية (M - Metacenter)</div>
+    </div>
+
+    <!-- لوحة التمرين الأول: حارس السد -->
+    <aside id="panel-dam" class="side-panel">
+        <div class="panel-section-title">
+            <span>مدخلات البوابة والسد</span>
+            <span style="font-size: 0.78rem; color: var(--text-muted);">γ = 9.81 kN/m³</span>
+        </div>
+
+        <div class="control-group">
+            <div class="control-header">
+                <span>عمق الماء أمام السد (h)</span>
+                <span class="control-val"><span id="val-dam-h">8.0</span> m</span>
+            </div>
+            <div class="slider-row">
+                <input type="range" id="slider-dam-h" min="1" max="15" step="0.1" value="8.0">
+                <input type="number" id="num-dam-h" min="1" max="15" step="0.1" value="8.0">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="control-header">
+                <span>زاوية ميل البوابة (α) مع الأفقي</span>
+                <span class="control-val"><span id="val-dam-alpha">65</span>°</span>
+            </div>
+            <div class="slider-row">
+                <input type="range" id="slider-dam-alpha" min="30" max="90" step="1" value="65">
+                <input type="number" id="num-dam-alpha" min="30" max="90" step="1" value="65">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="control-header">
+                <span>عرض البوابة (b)</span>
+                <span class="control-val"><span id="val-dam-b">5.0</span> m</span>
+            </div>
+            <div class="slider-row">
+                <input type="range" id="slider-dam-b" min="2" max="10" step="0.5" value="5.0">
+                <input type="number" id="num-dam-b" min="2" max="10" step="0.5" value="5.0">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="control-header">
+                <span>موضع تثبيت كابل/دعامة الإسناد</span>
+            </div>
+            <div class="radio-group">
+                <div id="support-zn" class="radio-option selected" onclick="CivilHydraulicsLab.setDamSupport('Zn')">
+                    عند مركز الضغط (Zn) ✓
+                </div>
+                <div id="support-s" class="radio-option" onclick="CivilHydraulicsLab.setDamSupport('S')">
+                    عند مركز الثقل (S) ✗
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-section-title">الحسابات الهيدروستاتيكية الفورية</div>
+
+        <div class="telemetry-grid">
+            <div class="telemetry-card">
+                <span class="tel-label">عمق مركز الثقل (Zs)</span>
+                <span class="tel-value" id="res-dam-zs">4.00 m</span>
+                <span class="tel-formula">Zs = h / 2</span>
+            </div>
+            <div class="telemetry-card">
+                <span class="tel-label">عمق مركز الضغط (Zn)</span>
+                <span class="tel-value" id="res-dam-zn" style="color: #f87171;">5.33 m</span>
+                <span class="tel-formula">Zn = Zs + (Ix·sin²α)/(Zs·A)</span>
+            </div>
+            <div class="telemetry-card">
+                <span class="tel-label">عزم العطالة الهندسي (Ix)</span>
+                <span class="tel-value" id="res-dam-ix">287.1 m⁴</span>
+                <span class="tel-formula">Ix = b·(h/sinα)³ / 12</span>
+            </div>
+            <div class="telemetry-card">
+                <span class="tel-label">القوة الهيدروستاتيكية (P)</span>
+                <span class="tel-value" id="res-dam-p" style="color: #34d399;">1732.1 kN</span>
+                <span class="tel-formula">P = γ · Zs · A</span>
+            </div>
+            <div class="telemetry-card full-width">
+                <span class="tel-label">العزم غير المتوازن حول الدعامة (M_net)</span>
+                <span class="tel-value" id="res-dam-moment">0.0 kN·m</span>
+                <span class="tel-formula">M = P · (y_cp - y_support)</span>
+            </div>
+        </div>
+
+        <div id="status-dam" class="status-banner status-safe">
+            البوابة متزنة وآمنة: الدعامة مثبتة في مركز الضغط الفعلي (Zn) فينعدم عزم الانقلاب.
+        </div>
+
+        <div class="action-buttons">
+            <button id="btn-play-dam" class="btn btn-primary" onclick="CivilHydraulicsLab.toggleSim()">إيقاف مؤقت</button>
+            <button class="btn btn-warning" onclick="CivilHydraulicsLab.triggerFloodTest()">اختبار الحمل الأقصى</button>
+            <button class="btn btn-secondary" onclick="CivilHydraulicsLab.reset()">إعادة تعيين</button>
+        </div>
+    </aside>
+
+    <!-- لوحة التمرين الثاني: مهندس البوارج -->
+    <aside id="panel-barge" class="side-panel hidden">
+        <div class="panel-section-title">
+            <span>أبعاد وأوزان البارجة</span>
+            <span style="font-size: 0.78rem; color: var(--text-muted);">ρ = 1.0 t/m³</span>
+        </div>
+
+        <div class="control-group">
+            <div class="control-header">
+                <span>عرض البارجة (B)</span>
+                <span class="control-val"><span id="val-barge-B">8.0</span> m</span>
+            </div>
+            <div class="slider-row">
+                <input type="range" id="slider-barge-B" min="3" max="12" step="0.2" value="8.0">
+                <input type="number" id="num-barge-B" min="3" max="12" step="0.2" value="8.0">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="control-header">
+                <span>طول البارجة (L)</span>
+                <span class="control-val"><span id="val-barge-L">18.0</span> m</span>
+            </div>
+            <div class="slider-row">
+                <input type="range" id="slider-barge-L" min="10" max="30" step="0.5" value="18.0">
+                <input type="number" id="num-barge-L" min="10" max="30" step="0.5" value="18.0">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="control-header">
+                <span>الارتفاع الكلي للبارجة (H)</span>
+                <span class="control-val"><span id="val-barge-H">4.5</span> m</span>
+            </div>
+            <div class="slider-row">
+                <input type="range" id="slider-barge-H" min="2" max="8" step="0.5" value="4.5">
+                <input type="number" id="num-barge-H" min="2" max="8" step="0.5" value="4.5">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="control-header">
+                <span>وزن البارجة الذاتي (Wb)</span>
+                <span class="control-val"><span id="val-barge-Wb">180</span> ton</span>
+            </div>
+            <div class="slider-row">
+                <input type="range" id="slider-barge-Wb" min="50" max="400" step="10" value="180">
+                <input type="number" id="num-barge-Wb" min="50" max="400" step="10" value="180">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="control-header">
+                <span>وزن الحمولة الإضافية (Wc)</span>
+                <span class="control-val"><span id="val-barge-Wc">90</span> ton</span>
+            </div>
+            <div class="slider-row">
+                <input type="range" id="slider-barge-Wc" min="0" max="350" step="5" value="90">
+                <input type="number" id="num-barge-Wc" min="0" max="350" step="5" value="90">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="control-header">
+                <span>ارتفاع مركز الحمولة فوق السطح (yc)</span>
+                <span class="control-val"><span id="val-barge-yc">2.0</span> m</span>
+            </div>
+            <div class="slider-row">
+                <input type="range" id="slider-barge-yc" min="0.5" max="8" step="0.2" value="2.0">
+                <input type="number" id="num-barge-yc" min="0.5" max="8" step="0.2" value="2.0">
+            </div>
+        </div>
+
+        <div class="panel-section-title">حسابات الطفو والاستقرار الميتاسنتري</div>
+
+        <div class="telemetry-grid">
+            <div class="telemetry-card">
+                <span class="tel-label">عمق الغاطس (Draft T)</span>
+                <span class="tel-value" id="res-barge-T">1.88 m</span>
+                <span class="tel-formula">T = W_tot / (ρ·L·B)</span>
+            </div>
+            <div class="telemetry-card">
+                <span class="tel-label">مركز الطفو (yB)</span>
+                <span class="tel-value" id="res-barge-yB" style="color: #38bdf8;">0.94 m</span>
+                <span class="tel-formula">yB = T / 2</span>
+            </div>
+            <div class="telemetry-card">
+                <span class="tel-label">مركز الثقل الكلي (yG)</span>
+                <span class="tel-value" id="res-barge-yG" style="color: #facc15;">3.67 m</span>
+                <span class="tel-formula">yG = Σ(W·y) / W_tot</span>
+            </div>
+            <div class="telemetry-card">
+                <span class="tel-label">نصف القطر الميتاسنتري (BM)</span>
+                <span class="tel-value" id="res-barge-BM">2.84 m</span>
+                <span class="tel-formula">BM = Ix / V</span>
+            </div>
+            <div class="telemetry-card full-width">
+                <span class="tel-label">الارتفاع الميتاسنتري الحاسم (m = GM)</span>
+                <span class="tel-value" id="res-barge-GM" style="color: #34d399;">+0.11 m</span>
+                <span class="tel-formula">GM = (Ix / V) - (yG - yB)</span>
+            </div>
+        </div>
+
+        <div id="status-barge" class="status-banner status-safe">
+            البارجة مستقرة (Stable): النقطة الميتاسنترية M أعلى من مركز الثقل G (GM > 0).
+        </div>
+
+        <div class="action-buttons">
+            <button id="btn-play-barge" class="btn btn-primary" onclick="CivilHydraulicsLab.toggleSim()">إيقاف مؤقت</button>
+            <button class="btn btn-warning" onclick="CivilHydraulicsLab.triggerWaveImpulse()">تطبيق موجة جانبية</button>
+            <button class="btn btn-secondary" onclick="CivilHydraulicsLab.reset()">إعادة تعيين</button>
+        </div>
+    </aside>
+
+    <script>
+        const CivilHydraulicsLab = {
+            container: null,
+            scene: null,
+            camera: null,
+            renderer: null,
+            controls: null,
+            animationFrameId: null,
+            clock: null,
+
+            currentMode: 'dam',
+            isSimulating: true,
+            boundResizeHandler: null,
+            uiListeners: [],
+
+            GAMMA_WATER: 9.81,
+            RHO_WATER: 1.0,
+
+            damState: {
+                h: 8.0,
+                alpha: 65,
+                b: 5.0,
+                supportAt: 'Zn',
+                Zs: 0,
+                Zn: 0,
+                Ix: 0,
+                P: 0,
+                momentNet: 0,
+                isFailing: false,
+                gateOpenAngle: 0,
+                meshes: {}
+            },
+
+            bargeState: {
+                B: 8.0,
+                L: 18.0,
+                H: 4.5,
+                Wb: 180,
+                Wc: 90,
+                yc: 2.0,
+                T: 0,
+                yB: 0,
+                yG: 0,
+                a: 0,
+                Ix: 0,
+                V: 0,
+                BM: 0,
+                GM: 0,
+                isStable: true,
+                isSinking: false,
+                rollAngle: 0,
+                rollVelocity: 0,
+                meshes: {}
+            },
+
+            init(containerId) {
+                this.container = document.getElementById(containerId);
+                this.clock = new THREE.Clock();
+
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x0f172a);
+                this.scene.fog = new THREE.FogExp2(0x0f172a, 0.012);
+
+                this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                this.container.appendChild(this.renderer.domElement);
+
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.05;
+                this.controls.maxPolarAngle = Math.PI / 2 + 0.05;
+
+                this.setupBaseEnvironment();
+                this.bindUIEvents();
+
+                this.boundResizeHandler = this.onWindowResize.bind(this);
+                window.addEventListener('resize', this.boundResizeHandler);
+
+                this.switchMode('dam');
+                this.update();
+            },
+
+            setupBaseEnvironment() {
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+                this.scene.add(ambientLight);
+
+                const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
+                dirLight.position.set(25, 40, 30);
+                dirLight.castShadow = true;
+                dirLight.shadow.mapSize.width = 2048;
+                dirLight.shadow.mapSize.height = 2048;
+                const d = 25;
+                dirLight.shadow.camera.left = -d;
+                dirLight.shadow.camera.right = d;
+                dirLight.shadow.camera.top = d;
+                dirLight.shadow.camera.bottom = -d;
+                this.scene.add(dirLight);
+
+                const gridHelper = new THREE.GridHelper(80, 80, 0x334155, 0x1e293b);
+                gridHelper.position.y = -0.02;
+                this.scene.add(gridHelper);
+            },
+
+            createTextSprite(text, bgColor) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 256;
+                canvas.height = 128;
+                const ctx = canvas.getContext('2d');
+
+                ctx.fillStyle = bgColor;
+                ctx.beginPath();
+                ctx.roundRect(16, 24, 224, 80, 40);
+                ctx.fill();
+                ctx.lineWidth = 6;
+                ctx.strokeStyle = '#ffffff';
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 38px Tajawal, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(text, 128, 66);
+
+                const texture = new THREE.CanvasTexture(canvas);
+                const material = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+                const sprite = new THREE.Sprite(material);
+                sprite.scale.set(2.2, 1.1, 1);
+                sprite.renderOrder = 999;
+                return sprite;
+            },
+
+            switchMode(modeName) {
+                this.currentMode = modeName;
+
+                document.getElementById('btn-mode-dam').classList.toggle('active', modeName === 'dam');
+                document.getElementById('btn-mode-barge').classList.toggle('active', modeName === 'barge');
+
+                document.getElementById('panel-dam').classList.toggle('hidden', modeName !== 'dam');
+                document.getElementById('panel-barge').classList.toggle('hidden', modeName !== 'barge');
+
+                document.getElementById('legend-dam').classList.toggle('hidden', modeName !== 'dam');
+                document.getElementById('legend-barge').classList.toggle('hidden', modeName !== 'barge');
+
+                this.clearModeMeshes();
+
+                if (modeName === 'dam') {
+                    this.camera.position.set(16, 12, 22);
+                    this.controls.target.set(0, 6, 0);
+                    this.buildDamScene();
+                } else {
+                    this.camera.position.set(22, 12, 22);
+                    this.controls.target.set(0, 2, 0);
+                    this.buildBargeScene();
+                }
+
+                this.controls.update();
+                this.calculate();
+            },
+
+            clearModeMeshes() {
+                const removeGroup = (group) => {
+                    if (!group) return;
+                    group.traverse((child) => {
+                        if (child.geometry) child.geometry.dispose();
+                        if (child.material) {
+                            if (Array.isArray(child.material)) {
+                                child.material.forEach(m => {
+                                    if (m.map) m.map.dispose();
+                                    m.dispose();
+                                });
+                            } else {
+                                if (child.material.map) child.material.map.dispose();
+                                child.material.dispose();
+                            }
+                        }
+                    });
+                    this.scene.remove(group);
+                };
+
+                if (this.damState.meshes.root) {
+                    removeGroup(this.damState.meshes.root);
+                    this.damState.meshes = {};
+                }
+                if (this.bargeState.meshes.root) {
+                    removeGroup(this.bargeState.meshes.root);
+                    this.bargeState.meshes = {};
+                }
+            },
+
+            buildDamScene() {
+                const root = new THREE.Group();
+                this.scene.add(root);
+                this.damState.meshes.root = root;
+
+                const floorGeo = new THREE.BoxGeometry(36, 1, 20);
+                const concreteMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.8 });
+                const floor = new THREE.Mesh(floorGeo, concreteMat);
+                floor.position.set(0, -0.5, 0);
+                floor.receiveShadow = true;
+                root.add(floor);
+
+                const wallMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.7 });
+                const backWallGeo = new THREE.BoxGeometry(1.5, 17, 6);
+                const leftWall = new THREE.Mesh(backWallGeo, wallMat);
+                leftWall.position.set(0, 8.5, -7);
+                root.add(leftWall);
+
+                const rightWall = new THREE.Mesh(backWallGeo, wallMat);
+                rightWall.position.set(0, 8.5, 7);
+                root.add(rightWall);
+
+                const gatePivot = new THREE.Group();
+                root.add(gatePivot);
+                this.damState.meshes.gatePivot = gatePivot;
+
+                const gateFlap = new THREE.Group();
+                gatePivot.add(gateFlap);
+                this.damState.meshes.gateFlap = gateFlap;
+
+                const gateMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.6, roughness: 0.3 });
+                const gateMesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1, 1), gateMat);
+                gateMesh.castShadow = true;
+                gateFlap.add(gateMesh);
+                this.damState.meshes.gateMesh = gateMesh;
+
+                const sphereGeo = new THREE.SphereGeometry(0.32, 24, 24);
+                const pointS = new THREE.Mesh(sphereGeo, new THREE.MeshBasicMaterial({ color: 0x3b82f6 }));
+                const labelS = this.createTextSprite('S (مركز الثقل)', '#2563eb');
+                labelS.position.set(1.2, 0.8, 0);
+                pointS.add(labelS);
+                gateFlap.add(pointS);
+                this.damState.meshes.pointS = pointS;
+
+                const pointZn = new THREE.Mesh(sphereGeo, new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+                const labelZn = this.createTextSprite('Zn (مركز الضغط)', '#dc2626');
+                labelZn.position.set(1.2, -0.8, 0);
+                pointZn.add(labelZn);
+                gateFlap.add(pointZn);
+                this.damState.meshes.pointZn = pointZn;
+
+                const strutMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.5, roughness: 0.4 });
+                const strutGeo = new THREE.CylinderGeometry(0.22, 0.28, 8, 16);
+                strutGeo.rotateZ(Math.PI / 2);
+                const strutMesh = new THREE.Mesh(strutGeo, strutMat);
+                root.add(strutMesh);
+                this.damState.meshes.strutMesh = strutMesh;
+
+                const waterMat = new THREE.MeshPhysicalMaterial({
+                    color: 0x0284c7,
+                    transparent: true,
+                    opacity: 0.65,
+                    roughness: 0.1
+                });
+                const waterMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), waterMat);
+                root.add(waterMesh);
+                this.damState.meshes.waterMesh = waterMesh;
+
+                const arrowsGroup = new THREE.Group();
+                gatePivot.add(arrowsGroup);
+                this.damState.meshes.arrowsGroup = arrowsGroup;
+
+                const leakGroup = new THREE.Group();
+                root.add(leakGroup);
+                this.damState.meshes.leakGroup = leakGroup;
+
+                const dropGeo = new THREE.SphereGeometry(0.18, 8, 8);
+                const dropMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.8 });
+                for (let i = 0; i < 45; i++) {
+                    const drop = new THREE.Mesh(dropGeo, dropMat);
+                    drop.visible = false;
+                    drop.userData = {
+                        vx: 2 + Math.random() * 6,
+                        vy: Math.random() * 3,
+                        vz: (Math.random() - 0.5) * 4,
+                        life: Math.random()
+                    };
+                    leakGroup.add(drop);
+                }
+            },
+
+            buildBargeScene() {
+                const root = new THREE.Group();
+                this.scene.add(root);
+                this.bargeState.meshes.root = root;
+
+                const seaGeo = new THREE.PlaneGeometry(70, 70, 48, 48);
+                seaGeo.rotateX(-Math.PI / 2);
+                const seaMat = new THREE.MeshPhysicalMaterial({
+                    color: 0x0369a1,
+                    transparent: true,
+                    opacity: 0.78,
+                    roughness: 0.15
+                });
+                const seaMesh = new THREE.Mesh(seaGeo, seaMat);
+                root.add(seaMesh);
+                this.bargeState.meshes.seaMesh = seaMesh;
+
+                const bargePivot = new THREE.Group();
+                root.add(bargePivot);
+                this.bargeState.meshes.bargePivot = bargePivot;
+
+                const hullMat = new THREE.MeshStandardMaterial({
+                    color: 0x334155,
+                    metalness: 0.4,
+                    roughness: 0.6,
+                    transparent: true,
+                    opacity: 0.82
+                });
+                const hullMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), hullMat);
+                hullMesh.castShadow = true;
+                bargePivot.add(hullMesh);
+                this.bargeState.meshes.hullMesh = hullMesh;
+
+                const edgesGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
+                const hullEdges = new THREE.LineSegments(edgesGeo, new THREE.LineBasicMaterial({ color: 0x94a3b8 }));
+                hullMesh.add(hullEdges);
+
+                const cargoMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.5 });
+                const cargoMesh = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.8, 4.0), cargoMat);
+                cargoMesh.castShadow = true;
+                bargePivot.add(cargoMesh);
+                this.bargeState.meshes.cargoMesh = cargoMesh;
+
+                const mastGeo = new THREE.CylinderGeometry(0.06, 0.06, 12, 12);
+                const mastMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 });
+                const mastMesh = new THREE.Mesh(mastGeo, mastMat);
+                bargePivot.add(mastMesh);
+                this.bargeState.meshes.mastMesh = mastMesh;
+
+                const sphereGeo = new THREE.SphereGeometry(0.35, 24, 24);
+
+                const pointB = new THREE.Mesh(sphereGeo, new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
+                const labelB = this.createTextSprite('B (مركز الطفو)', '#0284c7');
+                labelB.position.set(2.0, 0, 0);
+                pointB.add(labelB);
+                bargePivot.add(pointB);
+                this.bargeState.meshes.pointB = pointB;
+
+                const pointG = new THREE.Mesh(sphereGeo, new THREE.MeshBasicMaterial({ color: 0xfacc15 }));
+                const labelG = this.createTextSprite('G (مركز الثقل)', '#ca8a04');
+                labelG.position.set(-2.0, 0, 0);
+                pointG.add(labelG);
+                bargePivot.add(pointG);
+                this.bargeState.meshes.pointG = pointG;
+
+                const pointM = new THREE.Mesh(sphereGeo, new THREE.MeshBasicMaterial({ color: 0x10b981 }));
+                const labelM = this.createTextSprite('M (الميتاسنتر)', '#059669');
+                labelM.position.set(2.0, 0.7, 0);
+                pointM.add(labelM);
+                bargePivot.add(pointM);
+                this.bargeState.meshes.pointM = pointM;
+            },
+
+            calculate() {
+                if (this.currentMode === 'dam') {
+                    this.calculateDam();
+                } else {
+                    this.calculateBarge();
+                }
+            },
+
+            calculateDam() {
+                const s = this.damState;
+                const alphaRad = THREE.MathUtils.degToRad(s.alpha);
+                const sinAlpha = Math.sin(alphaRad);
+
+                const L_sub = s.h / sinAlpha;
+                const A = s.b * L_sub;
+
+                s.Zs = s.h / 2.0;
+                s.Ix = (s.b * Math.pow(L_sub, 3)) / 12.0;
+                s.P = this.GAMMA_WATER * s.Zs * A;
+                s.Zn = s.Zs + (s.Ix * Math.pow(sinAlpha, 2)) / (s.Zs * A);
+
+                const y_s = s.Zs / sinAlpha;
+                const y_cp = s.Zn / sinAlpha;
+                const leverArm = (s.supportAt === 'Zn') ? 0 : (y_cp - y_s);
+                s.momentNet = s.P * leverArm;
+
+                s.isFailing = (s.supportAt === 'S') || (s.h > 13.5);
+
+                document.getElementById('res-dam-zs').textContent = `${s.Zs.toFixed(2)} m`;
+                document.getElementById('res-dam-zn').textContent = `${s.Zn.toFixed(2)} m`;
+                document.getElementById('res-dam-ix').textContent = `${s.Ix.toFixed(1)} m⁴`;
+                document.getElementById('res-dam-p').textContent = `${s.P.toFixed(1)} kN`;
+                document.getElementById('res-dam-moment').textContent = `${s.momentNet.toFixed(1)} kN·m`;
+
+                const statusEl = document.getElementById('status-dam');
+                if (s.isFailing) {
+                    statusEl.className = 'status-banner status-danger';
+                    statusEl.innerHTML = (s.supportAt === 'S')
+                        ? `انهيار وتسرب! التثبيت عند (S) يولد عزماً غير متزن (${s.momentNet.toFixed(0)} kN·m) لأن مركز الضغط الفعلي (Zn) أسفل (S)!`
+                        : `خطر فيضان حرج! القوة الهيدروستاتيكية (${s.P.toFixed(0)} kN) تجاوزت قدرة التحمل القصوى!`;
+                } else {
+                    statusEl.className = 'status-banner status-safe';
+                    statusEl.innerHTML = `البوابة متزنة وآمنة: الدعامة مثبتة عند مركز الضغط الفعلي (Zn = ${s.Zn.toFixed(2)}m) فينعدم عزم الانفتاح.`;
+                }
+
+                this.updateDamGeometry(L_sub, alphaRad);
+            },
+
+            updateDamGeometry(L_sub, alphaRad) {
+                const s = this.damState;
+                const m = s.meshes;
+                if (!m.root) return;
+
+                const tiltAngle = (Math.PI / 2) - alphaRad;
+                m.gatePivot.rotation.z = -tiltAngle;
+
+                const totalGateLen = Math.max(L_sub + 1.5, 16 / Math.sin(alphaRad));
+                m.gateMesh.scale.set(1, totalGateLen, s.b);
+                m.gateMesh.position.set(0, totalGateLen / 2, 0);
+
+                const distSFromBottom = L_sub - (s.Zs / Math.sin(alphaRad));
+                const distZnFromBottom = L_sub - (s.Zn / Math.sin(alphaRad));
+
+                m.pointS.position.set(0.35, distSFromBottom, 0);
+                m.pointZn.position.set(0.35, distZnFromBottom, 0);
+
+                const supportDist = (s.supportAt === 'Zn') ? distZnFromBottom : distSFromBottom;
+                const supportWorldY = supportDist * Math.sin(alphaRad);
+                const supportWorldX = supportDist * Math.cos(alphaRad);
+                m.strutMesh.position.set(supportWorldX + 4, supportWorldY, 0);
+
+                const waterLength = 16;
+                m.waterMesh.scale.set(waterLength, s.h, s.b);
+                m.waterMesh.position.set(-waterLength / 2 + (s.h / Math.tan(alphaRad)) * 0.35, s.h / 2, 0);
+
+                while (m.arrowsGroup.children.length > 0) {
+                    m.arrowsGroup.remove(m.arrowsGroup.children[0]);
+                }
+
+                const numArrows = 8;
+                for (let i = 1; i <= numArrows; i++) {
+                    const frac = i / numArrows;
+                    const yAlongGate = L_sub * (1 - frac);
+                    const arrowLen = 0.6 + frac * (s.h * 0.38);
+                    const dir = new THREE.Vector3(1, 0, 0);
+                    const origin = new THREE.Vector3(-arrowLen - 0.3, yAlongGate, 0);
+                    const arrowHelper = new THREE.ArrowHelper(dir, origin, arrowLen, 0x10b981, 0.45, 0.3);
+                    m.arrowsGroup.add(arrowHelper);
+                }
+            },
+
+            calculateBarge() {
+                const b = this.bargeState;
+                const W_total = b.Wb + b.Wc;
+
+                b.T = W_total / (this.RHO_WATER * b.L * b.B);
+                b.yB = b.T / 2.0;
+
+                const y_barge = b.H / 2.0;
+                const y_cargo = b.H + b.yc;
+                b.yG = ((b.Wb * y_barge) + (b.Wc * y_cargo)) / W_total;
+
+                b.a = b.yG - b.yB;
+                b.Ix = (b.L * Math.pow(b.B, 3)) / 12.0;
+                b.V = b.L * b.B * b.T;
+                b.BM = b.Ix / b.V;
+                b.GM = b.BM - b.a;
+
+                b.isSinking = b.T > b.H;
+                b.isStable = (b.GM > 0) && !b.isSinking;
+
+                document.getElementById('res-barge-T').textContent = `${b.T.toFixed(2)} m`;
+                document.getElementById('res-barge-yB').textContent = `${b.yB.toFixed(2)} m`;
+                document.getElementById('res-barge-yG').textContent = `${b.yG.toFixed(2)} m`;
+                document.getElementById('res-barge-BM').textContent = `${b.BM.toFixed(2)} m`;
+
+                const gmEl = document.getElementById('res-barge-GM');
+                const sign = b.GM > 0 ? '+' : '';
+                gmEl.textContent = `${sign}${b.GM.toFixed(2)} m`;
+                gmEl.style.color = b.isStable ? '#34d399' : '#f87171';
+
+                const statusEl = document.getElementById('status-barge');
+                if (b.isSinking) {
+                    statusEl.className = 'status-banner status-danger';
+                    statusEl.innerHTML = `خطر غرق مباشر! عمق الغاطس (${b.T.toFixed(2)}m) تجاوز ارتفاع البارجة (${b.H.toFixed(2)}m)!`;
+                } else if (b.GM > 0.05) {
+                    statusEl.className = 'status-banner status-safe';
+                    statusEl.innerHTML = `البارجة مستقرة (Stable): الارتفاع الميتاسنتري موجب (GM = +${b.GM.toFixed(2)}m)، والنقطة M أعلى من G.`;
+                } else if (Math.abs(b.GM) <= 0.05) {
+                    statusEl.className = 'status-banner status-danger';
+                    statusEl.innerHTML = `توازن محايد حرج (Neutral): النقطة M منطبقة تقريباً على G (GM ≈ 0).`;
+                } else {
+                    statusEl.className = 'status-banner status-danger';
+                    statusEl.innerHTML = `غير مستقرة وتنقلب (Unstable)! مركز الثقل G ارتفع فوق الميتاسنتر M (GM = ${b.GM.toFixed(2)}m < 0).`;
+                }
+
+                this.updateBargeGeometry();
+            },
+
+            updateBargeGeometry() {
+                const b = this.bargeState;
+                const m = b.meshes;
+                if (!m.root) return;
+
+                m.hullMesh.scale.set(b.B, b.H, b.L);
+                m.hullMesh.position.set(0, b.H / 2, 0);
+
+                const cargoScale = Math.max(0.4, Math.pow(b.Wc / 100, 1 / 3));
+                m.cargoMesh.visible = b.Wc > 0;
+                m.cargoMesh.scale.set(cargoScale, cargoScale, cargoScale);
+                m.cargoMesh.position.set(0, b.H + b.yc, 0);
+
+                const yM = b.yB + b.BM;
+                m.pointB.position.set(0, b.yB, 0);
+                m.pointG.position.set(0, b.yG, 0);
+                m.pointM.position.set(0, yM, 0);
+
+                m.mastMesh.position.set(0, Math.max(b.H, yM) / 2, 0);
+                m.mastMesh.scale.set(1, Math.max(b.H + 3, yM + 2) / 12, 1);
+
+                if (!b.isStable && Math.abs(b.rollAngle) < 0.02) {
+                    b.rollVelocity = 0.15;
+                }
+            },
+
+            update() {
+                this.animationFrameId = requestAnimationFrame(this.update.bind(this));
+
+                const dt = Math.min(this.clock.getDelta(), 0.05);
+                const elapsed = this.clock.getElapsedTime();
+
+                if (this.isSimulating) {
+                    if (this.currentMode === 'dam') {
+                        this.animateDam(dt, elapsed);
+                    } else {
+                        this.animateBarge(dt, elapsed);
+                    }
+                }
+
+                if (this.controls) this.controls.update();
+                if (this.renderer && this.scene && this.camera) {
+                    this.renderer.render(this.scene, this.camera);
+                }
+            },
+
+            animateDam(dt, elapsed) {
+                const s = this.damState;
+                const m = s.meshes;
+                if (!m.root) return;
+
+                m.waterMesh.position.y = (s.h / 2) + Math.sin(elapsed * 2.5) * 0.04;
+
+                const targetAngle = s.isFailing ? -0.55 : 0;
+                s.gateOpenAngle = THREE.MathUtils.lerp(s.gateOpenAngle, targetAngle, dt * 4);
+                m.gateFlap.rotation.z = s.gateOpenAngle;
+
+                m.leakGroup.children.forEach((drop) => {
+                    if (!s.isFailing) {
+                        drop.visible = false;
+                        return;
+                    }
+                    drop.visible = true;
+                    drop.userData.life += dt * 1.4;
+                    if (drop.userData.life > 1) {
+                        drop.userData.life = 0;
+                        drop.position.set(0.2, 0.3 + Math.random() * 1.5, (Math.random() - 0.5) * (s.b * 0.8));
+                    } else {
+                        drop.position.x += drop.userData.vx * dt;
+                        drop.position.y += (drop.userData.vy - 9.8 * drop.userData.life) * dt;
+                        drop.position.z += drop.userData.vz * dt;
+                        if (drop.position.y < 0.1) drop.position.y = 0.1;
+                    }
+                });
+            },
+
+            animateBarge(dt, elapsed) {
+                const b = this.bargeState;
+                const m = b.meshes;
+                if (!m.root) return;
+
+                const posAttr = m.seaMesh.geometry.attributes.position;
+                for (let i = 0; i < posAttr.count; i++) {
+                    const x = posAttr.getX(i);
+                    const z = posAttr.getZ(i);
+                    const waveY = Math.sin(x * 0.25 + elapsed * 2.0) * 0.18 + Math.cos(z * 0.2 + elapsed * 1.5) * 0.12;
+                    posAttr.setY(i, waveY);
+                }
+                posAttr.needsUpdate = true;
+
+                if (b.isSinking) {
+                    const targetSinkY = -b.H - 1.5;
+                    m.bargePivot.position.y = THREE.MathUtils.lerp(m.bargePivot.position.y, targetSinkY, dt * 1.5);
+                    b.rollAngle = THREE.MathUtils.lerp(b.rollAngle, 0.6, dt);
+                } else {
+                    const targetDraftY = -b.T + Math.sin(elapsed * 2.0) * 0.08;
+                    m.bargePivot.position.y = THREE.MathUtils.lerp(m.bargePivot.position.y, targetDraftY, dt * 5);
+
+                    if (b.GM > 0) {
+                        const stiffness = Math.min(Math.max(b.GM * 4.5, 0.8), 12.0);
+                        const damping = 1.6;
+                        const angularAccel = -stiffness * Math.sin(b.rollAngle) - damping * b.rollVelocity;
+                        b.rollVelocity += angularAccel * dt;
+                        b.rollAngle += b.rollVelocity * dt;
+                    } else {
+                        const capsizeTarget = (b.rollAngle >= 0 ? 1 : -1) * 2.0;
+                        b.rollVelocity += (capsizeTarget - b.rollAngle) * 3.5 * dt;
+                        b.rollVelocity *= 0.92;
+                        b.rollAngle += b.rollVelocity * dt;
+                    }
+                }
+
+                m.bargePivot.rotation.z = b.rollAngle;
+            },
+
+            toggleSim() {
+                this.isSimulating = !this.isSimulating;
+                const text = this.isSimulating ? 'إيقاف مؤقت' : 'تشغيل المحاكاة';
+                const btnDam = document.getElementById('btn-play-dam');
+                const btnBarge = document.getElementById('btn-play-barge');
+                if (btnDam) btnDam.textContent = text;
+                if (btnBarge) btnBarge.textContent = text;
+            },
+
+            setDamSupport(supportType) {
+                this.damState.supportAt = supportType;
+                document.getElementById('support-zn').classList.toggle('selected', supportType === 'Zn');
+                document.getElementById('support-s').classList.toggle('selected', supportType === 'S');
+                this.calculate();
+            },
+
+            triggerFloodTest() {
+                this.setSliderValue('dam-h', 14.5);
+                this.setDamSupport('S');
+            },
+
+            triggerWaveImpulse() {
+                this.bargeState.rollAngle = 0.42;
+                this.bargeState.rollVelocity = 0.35;
+            },
+
+            reset() {
+                if (this.currentMode === 'dam') {
+                    this.setSliderValue('dam-h', 8.0);
+                    this.setSliderValue('dam-alpha', 65);
+                    this.setSliderValue('dam-b', 5.0);
+                    this.damState.gateOpenAngle = 0;
+                    this.setDamSupport('Zn');
+                } else {
+                    this.setSliderValue('barge-B', 8.0);
+                    this.setSliderValue('barge-L', 18.0);
+                    this.setSliderValue('barge-H', 4.5);
+                    this.setSliderValue('barge-Wb', 180);
+                    this.setSliderValue('barge-Wc', 90);
+                    this.setSliderValue('barge-yc', 2.0);
+                    this.bargeState.rollAngle = 0;
+                    this.bargeState.rollVelocity = 0;
+                    this.calculate();
+                }
+            },
+
+            setSliderValue(idSuffix, val) {
+                const slider = document.getElementById(`slider-${idSuffix}`);
+                const num = document.getElementById(`num-${idSuffix}`);
+                const label = document.getElementById(`val-${idSuffix}`);
+                if (slider) slider.value = val;
+                if (num) num.value = val;
+                if (label) label.textContent = val;
+
+                const [mode, param] = idSuffix.split('-');
+                if (mode === 'dam') this.damState[param] = parseFloat(val);
+                if (mode === 'barge') this.bargeState[param] = parseFloat(val);
+                this.calculate();
+            },
+
+            bindUIEvents() {
+                const configs = [
+                    { id: 'dam-h', obj: this.damState, key: 'h' },
+                    { id: 'dam-alpha', obj: this.damState, key: 'alpha' },
+                    { id: 'dam-b', obj: this.damState, key: 'b' },
+                    { id: 'barge-B', obj: this.bargeState, key: 'B' },
+                    { id: 'barge-L', obj: this.bargeState, key: 'L' },
+                    { id: 'barge-H', obj: this.bargeState, key: 'H' },
+                    { id: 'barge-Wb', obj: this.bargeState, key: 'Wb' },
+                    { id: 'barge-Wc', obj: this.bargeState, key: 'Wc' },
+                    { id: 'barge-yc', obj: this.bargeState, key: 'yc' }
+                ];
+
+                configs.forEach(({ id, obj, key }) => {
+                    const slider = document.getElementById(`slider-${id}`);
+                    const num = document.getElementById(`num-${id}`);
+                    const label = document.getElementById(`val-${id}`);
+
+                    if (!slider || !num) return;
+
+                    const onInput = (e) => {
+                        let val = parseFloat(e.target.value);
+                        if (isNaN(val)) return;
+                        val = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), val));
+                        slider.value = val;
+                        num.value = val;
+                        if (label) label.textContent = val;
+                        obj[key] = val;
+                        this.calculate();
+                    };
+
+                    slider.addEventListener('input', onInput);
+                    num.addEventListener('change', onInput);
+
+                    this.uiListeners.push({ el: slider, type: 'input', fn: onInput });
+                    this.uiListeners.push({ el: num, type: 'change', fn: onInput });
+                });
+            },
+
+            onWindowResize() {
+                if (!this.camera || !this.renderer) return;
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            },
+
+            destroy() {
+                if (this.animationFrameId) {
+                    cancelAnimationFrame(this.animationFrameId);
+                    this.animationFrameId = null;
+                }
+
+                if (this.boundResizeHandler) {
+                    window.removeEventListener('resize', this.boundResizeHandler);
+                    this.boundResizeHandler = null;
+                }
+
+                this.uiListeners.forEach(({ el, type, fn }) => {
+                    el.removeEventListener(type, fn);
+                });
+                this.uiListeners = [];
+
+                if (this.controls) {
+                    this.controls.dispose();
+                    this.controls = null;
+                }
+
+                this.clearModeMeshes();
+
+                if (this.scene) {
+                    this.scene.traverse((object) => {
+                        if (object.geometry) object.geometry.dispose();
+                        if (object.material) {
+                            if (Array.isArray(object.material)) {
+                                object.material.forEach(mat => {
+                                    if (mat.map) mat.map.dispose();
+                                    mat.dispose();
+                                });
+                            } else {
+                                if (object.material.map) object.material.map.dispose();
+                                object.material.dispose();
+                            }
+                        }
+                    });
+                    this.scene.clear();
+                    this.scene = null;
+                }
+
+                if (this.renderer) {
+                    this.renderer.dispose();
+                    if (this.renderer.forceContextLoss) {
+                        this.renderer.forceContextLoss();
+                    }
+                    if (this.renderer.domElement && this.renderer.domElement.parentNode) {
+                        this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+                    }
+                    this.renderer = null;
+                }
+            }
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            CivilHydraulicsLab.init('canvas-container');
+        });
+    </script>
+</body>
+</html>

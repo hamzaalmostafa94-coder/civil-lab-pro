@@ -1,0 +1,1989 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مختبر ديناميك المنشآت وهندسة الزلازل التفاعلي</title>
+    <!-- خط تجوال من Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <!-- مكتبة Three.js r128 و OrbitControls عبر الروابط الإلزامية -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-panel: rgba(30, 41, 59, 0.92);
+            --bg-card: rgba(15, 23, 42, 0.78);
+            --accent-blue: #38bdf8;
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: rgba(148, 163, 184, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Tajawal', sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* الشريط العلوي والتبويبات */
+        header {
+            height: 68px;
+            background: rgba(15, 23, 42, 0.95);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 20;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--accent-blue), #0284c7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 20px;
+            color: #fff;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+        }
+
+        .brand-title h1 {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .brand-title span {
+            font-size: 0.78rem;
+            color: var(--accent-blue);
+        }
+
+        .tabs-nav {
+            display: flex;
+            gap: 8px;
+            background: rgba(30, 41, 59, 0.8);
+            padding: 5px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .tab-btn {
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 7px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-btn.active {
+            background: var(--accent-blue);
+            color: #0f172a;
+            box-shadow: 0 2px 10px rgba(56, 189, 248, 0.35);
+        }
+
+        .score-box {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: var(--bg-card);
+            padding: 7px 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+
+        .score-badge {
+            color: var(--accent-green);
+            font-weight: 800;
+            font-size: 1.1rem;
+        }
+
+        /* منطقة العمل الرئيسية */
+        .workspace {
+            flex: 1;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* حاوية المشهد ثلاثي الأبعاد */
+        #webgl-container {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            outline: none;
+        }
+
+        /* لوحة التحكم الجانبية */
+        .control-panel {
+            width: 440px;
+            height: 100%;
+            background: var(--bg-panel);
+            backdrop-filter: blur(12px);
+            border-left: 1px solid var(--border-color);
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            z-index: 10;
+        }
+
+        .control-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+        .control-panel::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.3);
+            border-radius: 4px;
+        }
+
+        .mode-panel {
+            display: none;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .mode-panel.active {
+            display: flex;
+        }
+
+        .panel-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 13px;
+        }
+
+        .card-header {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--accent-blue);
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+            padding-bottom: 6px;
+        }
+
+        .mission-desc {
+            font-size: 0.84rem;
+            line-height: 1.55;
+            color: #cbd5e1;
+        }
+
+        /* أشرطة التمرير */
+        .slider-group {
+            margin-bottom: 11px;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+            font-weight: 700;
+        }
+
+        .slider-val {
+            color: var(--accent-blue);
+            font-family: monospace;
+            font-size: 0.92rem;
+            direction: ltr;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent-blue);
+            height: 6px;
+            border-radius: 4px;
+            background: #334155;
+            cursor: pointer;
+        }
+
+        /* الصناديق الرقمية الحية */
+        .readout-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .readout-item {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 7px;
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .readout-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .readout-value {
+            font-size: 0.98rem;
+            font-weight: 800;
+            color: var(--accent-blue);
+            direction: ltr;
+            text-align: right;
+            font-family: monospace;
+        }
+
+        .equation-box {
+            background: rgba(2, 6, 23, 0.65);
+            border-right: 3px solid var(--accent-blue);
+            padding: 8px 10px;
+            font-size: 0.8rem;
+            color: #e2e8f0;
+            border-radius: 4px;
+            margin-top: 6px;
+            line-height: 1.5;
+        }
+
+        /* الأزرار التفاعلية */
+        .btn-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px 14px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue), #0284c7);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--accent-green), #059669);
+            color: #fff;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, var(--accent-amber), #d97706);
+            color: #fff;
+        }
+
+        .btn-secondary {
+            background: #334155;
+            color: var(--text-main);
+        }
+        .btn-secondary:hover {
+            background: #475569;
+        }
+
+        /* رسائل التغذية الراجعة */
+        .feedback-banner {
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 0.84rem;
+            font-weight: 700;
+            line-height: 1.5;
+            display: none;
+        }
+
+        .feedback-banner.success {
+            display: block;
+            background: rgba(16, 185, 129, 0.18);
+            border: 1px solid var(--accent-green);
+            color: #6ee7b7;
+        }
+
+        .feedback-banner.error {
+            display: block;
+            background: rgba(239, 68, 68, 0.18);
+            border: 1px solid var(--accent-red);
+            color: #fca5a5;
+        }
+
+        .feedback-banner.warning {
+            display: block;
+            background: rgba(245, 158, 11, 0.18);
+            border: 1px solid var(--accent-amber);
+            color: #fcd34d;
+        }
+
+        /* الرسوم البيانية المدمجة 2D Canvas */
+        .chart-canvas {
+            width: 100%;
+            height: 135px;
+            background: #090d16;
+            border-radius: 7px;
+            border: 1px solid var(--border-color);
+            display: block;
+        }
+
+        #sniper-spectrum-canvas {
+            height: 195px;
+            cursor: crosshair;
+        }
+
+        /* أزرار الاختيار في التمرين الثاني */
+        .choice-group {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            margin-top: 6px;
+        }
+
+        .choice-btn {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 9px 12px;
+            border-radius: 7px;
+            text-align: right;
+            font-size: 0.83rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .choice-btn:hover {
+            border-color: var(--accent-blue);
+        }
+
+        .choice-btn.selected {
+            background: rgba(56, 189, 248, 0.2);
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+        }
+
+        /* ملصقات إرشادية عائمة فوق الـ 3D */
+        .scene-overlay {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .overlay-badge {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid var(--border-color);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            color: var(--text-main);
+            backdrop-filter: blur(6px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .legend-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-left: 6px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- الشريط العلوي للتنقل بين التمارين الثلاثة -->
+    <header>
+        <div class="brand">
+            <div class="brand-icon">زل</div>
+            <div class="brand-title">
+                <h1>مختبر ديناميك المنشآت وهندسة الزلازل</h1>
+                <span>محاكاة هندسية تفاعلية ثلاثية الأبعاد (SDOF & Seismic Codes)</span>
+            </div>
+        </div>
+
+        <nav class="tabs-nav">
+            <button class="tab-btn active" id="tab-twinTowers" onclick="StructuralDynamicsLab.switchMode('twinTowers')">
+                <span>1. تحدي البرجين التوأمين (m/k)</span>
+            </button>
+            <button class="tab-btn" id="tab-codeInspector" onclick="StructuralDynamicsLab.switchMode('codeInspector')">
+                <span>2. مفتش الكود الزلزالي</span>
+            </button>
+            <button class="tab-btn" id="tab-spectrumSniper" onclick="StructuralDynamicsLab.switchMode('spectrumSniper')">
+                <span>3. قناص طيف الاستجابة</span>
+            </button>
+        </nav>
+
+        <div class="score-box">
+            <span>النقاط الهندسية:</span>
+            <span class="score-badge" id="global-score">0</span>
+        </div>
+    </header>
+
+    <!-- مساحة العمل الرئيسية -->
+    <div class="workspace">
+
+        <!-- لوحة التحكم الجانبية (تتغير حسب التبويب الفعال) -->
+        <aside class="control-panel">
+
+            <!-- ==================== التبويب الأول: تحدي البرجين التوأمين ==================== -->
+            <div class="mode-panel active" id="panel-twinTowers">
+                <div class="panel-card">
+                    <div class="card-header">
+                        <span>المهمة 1: موازنة الكتلة والصلابة (m/k)</span>
+                        <span id="tt-level-badge" style="color: var(--accent-amber);">المستوى 1/3</span>
+                    </div>
+                    <p class="mission-desc">
+                        البرجان متجاوران بفاصل زلزالي حرج! اضبط <b>صلابة البرج الأيسر (k₂)</b> و<b>نسبة تخميده (ζ₂)</b> ليهتز بتطابق تام في الطور والسعة مع البرج المرجعي الأيمن وتجنب التصادم المدمر (Pounding).
+                    </p>
+                    <div class="equation-box">
+                        معادلة الحركة: m·ü + c·u̇ + k·u = -m·ü_g(t)<br>
+                        التردد الطبيعي: ω_n = √(k/m) | الدور: T_n = 2π/ω_n
+                    </div>
+                </div>
+
+                <!-- بيانات البرج المرجعي الأيمن -->
+                <div class="panel-card">
+                    <div class="card-header">
+                        <span><span class="legend-dot" style="background:#38bdf8;"></span>البرج المرجعي (الأيمن - ثابت)</span>
+                    </div>
+                    <div class="readout-grid">
+                        <div class="readout-item">
+                            <span class="readout-label">الكتلة (m₁)</span>
+                            <span class="readout-value" id="tt-m1-val">100 ton</span>
+                        </div>
+                        <div class="readout-item">
+                            <span class="readout-label">الصلابة (k₁)</span>
+                            <span class="readout-value" id="tt-k1-val">4000 kN/m</span>
+                        </div>
+                        <div class="readout-item">
+                            <span class="readout-label">الدور الطبيعي (T_n1)</span>
+                            <span class="readout-value" id="tt-tn1-val">0.993 s</span>
+                        </div>
+                        <div class="readout-item">
+                            <span class="readout-label">التخميد (ζ₁) / (ω_D1)</span>
+                            <span class="readout-value" id="tt-z1-val">5% | 6.32 rad/s</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- أدوات تحكم برج التحدي الأيسر -->
+                <div class="panel-card">
+                    <div class="card-header">
+                        <span><span class="legend-dot" style="background:#f59e0b;"></span>برج التحدي (الأيسر - تحكم الطالب)</span>
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span>الكتلة المفروضة في هذا المستوى (m₂):</span>
+                            <span class="slider-val" id="tt-m2-val" style="color:var(--accent-amber);">250 ton</span>
+                        </div>
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span>صلابة الأعمدة الجانبية (k₂):</span>
+                            <span class="slider-val" id="tt-k2-label">6000 kN/m</span>
+                        </div>
+                        <input type="range" id="tt-k2-slider" min="1000" max="15000" step="100" value="6000">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span>نسبة التخميد (ζ₂):</span>
+                            <span class="slider-val" id="tt-z2-label">2.0 %</span>
+                        </div>
+                        <input type="range" id="tt-z2-slider" min="1" max="15" step="0.5" value="2">
+                    </div>
+
+                    <div class="readout-grid">
+                        <div class="readout-item">
+                            <span class="readout-label">الدور الطبيعي (T_n2)</span>
+                            <span class="readout-value" id="tt-tn2-val">1.282 s</span>
+                        </div>
+                        <div class="readout-item">
+                            <span class="readout-label">التردد غير المخمد (ω_n2)</span>
+                            <span class="readout-value" id="tt-wn2-val">4.90 rad/s</span>
+                        </div>
+                        <div class="readout-item">
+                            <span class="readout-label">التردد المخمد (ω_D2)</span>
+                            <span class="readout-value" id="tt-wd2-val">4.90 rad/s</span>
+                        </div>
+                        <div class="readout-item">
+                            <span class="readout-label">حالة التخميد</span>
+                            <span class="readout-value" id="tt-damp-note" style="color:var(--accent-green); font-size:0.8rem;">تحت مخمد (ζ&lt;10%)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- مخطط الاستجابة الزمنية للانتقال u1(t) و u2(t) -->
+                <div class="panel-card">
+                    <div class="card-header">
+                        <span>مخطط الانتقال اللحظي u₁(t) و u₂(t)</span>
+                        <span id="tt-gap-status" style="font-size:0.78rem; color:var(--text-muted);">بانتظار الزلزال...</span>
+                    </div>
+                    <canvas id="tt-time-chart" class="chart-canvas" width="380" height="135"></canvas>
+                </div>
+
+                <div id="tt-feedback" class="feedback-banner"></div>
+
+                <div class="btn-row">
+                    <button class="btn btn-primary" id="tt-run-btn" onclick="StructuralDynamicsLab.startTwinQuake()">
+                        تشغيل الزلزال والتحقق
+                    </button>
+                    <button class="btn btn-secondary" onclick="StructuralDynamicsLab.nextTwinLevel()">
+                        المستوى التالي
+                    </button>
+                    <button class="btn btn-secondary" onclick="StructuralDynamicsLab.reset()">
+                        إعادة
+                    </button>
+                </div>
+            </div>
+
+            <!-- ==================== التبويب الثاني: مفتش الكود الزلزالي ==================== -->
+            <div class="mode-panel" id="panel-codeInspector">
+                <div class="panel-card">
+                    <div class="card-header">
+                        <span>المهمة 2: مفتش الكود الزلزالي</span>
+                        <span id="ci-case-badge" style="color: var(--accent-amber);">المشروع 1 / 6</span>
+                    </div>
+                    <p class="mission-desc">
+                        افحص بطاقة المشروع الإنشائي المعروض على المنصة ثلاثية الأبعاد، ثم قرر: هل يُسمح بتطبيق <b>الطريقة الديناميكية المكافئة</b> أم يلزم <b>تحليل ديناميكي كامل</b>؟ وما هي <b>طريقة الحل الرياضي</b> الأنسب لعناصره؟
+                    </p>
+                </div>
+
+                <!-- بطاقة المواصفات الفنية للمشروع الحالي -->
+                <div class="panel-card">
+                    <div class="card-header">
+                        <span id="ci-proj-title">مشروع 1: مبنى إداري هيكلي</span>
+                    </div>
+                    <div class="readout-grid">
+                        <div class="readout-item">
+                            <span class="readout-label">ارتفاع المبنى الكلي</span>
+                            <span class="readout-value" id="ci-height-val">32 متر (9 طوابق)</span>
+                        </div>
+                        <div class="readout-item">
+                            <span class="readout-label">انتظام الكتلة والصلابة</span>
+                            <span class="readout-value" id="ci-reg-val">منتظم رأسياً وأفقياً</span>
+                        </div>
+                        <div class="readout-item">
+                            <span class="readout-label">نوع تربة الاستناد</span>
+                            <span class="readout-value" id="ci-soil-val">تربة صخرية متماسكة (B)</span>
+                        </div>
+                        <div class="readout-item">
+                            <span class="readout-label">نوع العناصر الإنشائية</span>
+                            <span class="readout-value" id="ci-elem-val">عناصر خطية (أعمدة وجسور)</span>
+                        </div>
+                    </div>
+                    <div class="equation-box" id="ci-code-hint">
+                        شرط الكود: الطريقة المكافئة صالحة للمباني المنتظمة بارتفاع ≤ 73م (240 قدم) على تربة غير رخوة.
+                    </div>
+                </div>
+
+                <!-- القرار الأول -->
+                <div class="panel-card">
+                    <div class="card-header">
+                        <span>القرار (1): صلاحية طريقة التحليل الزلزالي</span>
+                    </div>
+                    <div class="choice-group">
+                        <button class="choice-btn" id="ci-q1-equiv" onclick="StructuralDynamicsLab.selectInspectorChoice(1, 'equivalent')">
+                            ✅ مقبول بالطريقة الديناميكية المكافئة (Equivalent Lateral Force)
+                        </button>
+                        <button class="choice-btn" id="ci-q1-dynamic" onclick="StructuralDynamicsLab.selectInspectorChoice(1, 'full_dynamic')">
+                            ⚠️ مرفوض - يلزم تحليل ديناميكي كامل (Modal / Time-History)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- القرار الثاني -->
+                <div class="panel-card">
+                    <div class="card-header">
+                        <span>القرار (2): طريقة النمذجة والحل الرياضي</span>
+                    </div>
+                    <div class="choice-group">
+                        <button class="choice-btn" id="ci-q2-stiff" onclick="StructuralDynamicsLab.selectInspectorChoice(2, 'stiffness')">
+                            📐 طريقة مصفوفة الصلابة (حل دقيق للعناصر الخطية 1D)
+                        </button>
+                        <button class="choice-btn" id="ci-q2-fem" onclick="StructuralDynamicsLab.selectInspectorChoice(2, 'fem')">
+                            🕸️ طريقة العناصر المنتهية FEM (حل تقريبي للعناصر السطحية 2D)
+                        </button>
+                    </div>
+                </div>
+
+                <div id="ci-feedback" class="feedback-banner"></div>
+
+                <div class="btn-row">
+                    <button class="btn btn-primary" onclick="StructuralDynamicsLab.verifyInspectorCase()">
+                        اعتماد واختبار زلزالي
+                    </button>
+                    <button class="btn btn-secondary" onclick="StructuralDynamicsLab.nextInspectorCase()">
+                        المشروع التالي ⬅
+                    </button>
+                </div>
+            </div>
+
+            <!-- ==================== التبويب الثالث: قناص طيف الاستجابة ==================== -->
+            <div class="mode-panel" id="panel-spectrumSniper">
+                <div class="panel-card">
+                    <div class="card-header">
+                        <span>المهمة 3: قناص طيف الاستجابة (Spectrum Sniper)</span>
+                        <span id="ss-mission-badge" style="color: var(--accent-amber);">مهمة 1 / 2</span>
+                    </div>
+                    <p class="mission-desc" id="ss-mission-text">
+                        اهرب بالإطار الإنشائي من قمة الرنين الحرجة! اضبط <b>الصلابة (k)</b> و<b>التخميد (ζ)</b> ليكون الانتقال الأقصى <b>D ≤ 0.045 m</b> والتسارع <b>A ≤ 6.5 m/s²</b>، مع ضبط دقة التسجيل الزلزالي على <b>Δt = 0.01 s</b>.
+                    </p>
+                </div>
+
+                <!-- مخطط طيف الاستجابة التفاعلي -->
+                <div class="panel-card">
+                    <div class="card-header">
+                        <span>مخطط طيف الاستجابة الزلزالية (D - V - A)</span>
+                        <span id="ss-points-info" style="font-size:0.76rem; color:var(--accent-green);">1200 نقطة زمنية</span>
+                    </div>
+                    <canvas id="sniper-spectrum-canvas" class="chart-canvas" width="380" height="195"></canvas>
+                </div>
+
+                <!-- أشرطة تحكم القناص -->
+                <div class="panel-card">
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span>دقة الفاصل الزمني للزلزال (Δt):</span>
+                            <span class="slider-val" id="ss-dt-label">0.01 s (دقيق - 1200 نقطة)</span>
+                        </div>
+                        <input type="range" id="ss-dt-slider" min="0.01" max="0.15" step="0.01" value="0.01">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span>الكتلة الطابقية للإطار (m):</span>
+                            <span class="slider-val" id="ss-m-label">80 ton</span>
+                        </div>
+                        <input type="range" id="ss-m-slider" min="40" max="200" step="10" value="80">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span>الصلابة الجانبية للإطار (k = 24EI/h³):</span>
+                            <span class="slider-val" id="ss-k-label">8000 kN/m</span>
+                        </div>
+                        <input type="range" id="ss-k-slider" min="1500" max="35000" step="500" value="8000">
+                    </div>
+
+                    <div class="slider-group" style="margin-bottom:0;">
+                        <div class="slider-header">
+                            <span>نسبة التخميد اللزج (ζ):</span>
+                            <span class="slider-val" id="ss-z-label">5.0 %</span>
+                        </div>
+                        <input type="range" id="ss-z-slider" min="2" max="20" step="1" value="5">
+                    </div>
+                </div>
+
+                <!-- القراءات الطيفية الحية (D, V, A, fs) -->
+                <div class="panel-card">
+                    <div class="readout-grid">
+                        <div class="readout-item">
+                            <span class="readout-label">الدور الطبيعي (T_n)</span>
+                            <span class="readout-value" id="ss-tn-val">0.628 s</span>
+                        </div>
+                        <div class="readout-item">
+                            <span class="readout-label">ذروة الانتقال (D)</span>
+                            <span class="readout-value" id="ss-d-val">0.068 m</span>
+                        </div>
+                        <div class="readout-item">
+                            <span class="readout-label">السرعة الطيفية (V = ω·D)</span>
+                            <span class="readout-value" id="ss-v-val">0.680 m/s</span>
+                        </div>
+                        <div class="readout-item">
+                            <span class="readout-label">التسارع الطيفي (A = ω²·D)</span>
+                            <span class="readout-value" id="ss-a-val">6.80 m/s²</span>
+                        </div>
+                    </div>
+                    <div class="equation-box" style="margin-top:8px;">
+                        القوة الزلزالية القصوى في الأعمدة: <b id="ss-fs-val" style="color:var(--accent-amber);">f_S,max = k·D = 544 kN</b>
+                    </div>
+                </div>
+
+                <div id="ss-feedback" class="feedback-banner"></div>
+
+                <div class="btn-row">
+                    <button class="btn btn-primary" onclick="StructuralDynamicsLab.fireSpectrumSniper()">
+                        🎯 إطلاق المحاكاة الزلزالية
+                    </button>
+                    <button class="btn btn-secondary" onclick="StructuralDynamicsLab.nextSniperMission()">
+                        المهمة التالية
+                    </button>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- حاوية المشهد ثلاثي الأبعاد -->
+        <main id="webgl-container">
+            <div class="scene-overlay">
+                <div class="overlay-badge" id="scene-status-title">
+                    <strong>الوضع الحالي:</strong> تحدي البرجين التوأمين (موازنة m/k)
+                </div>
+                <div class="overlay-badge" style="font-size: 0.76rem; color: var(--text-muted);">
+                    🖱️ تدوير الكاميرا: زر الفأرة الأيسر | تقريب: عجلة الفأرة | تحريك: الزر الأيمن
+                </div>
+            </div>
+        </main>
+
+    </div>
+
+    <!-- المنطق البرمجي الكامل داخل الكائن الموحد StructuralDynamicsLab -->
+    <script>
+        const StructuralDynamicsLab = {
+            // مراجع Three.js الأساسية
+            container: null,
+            scene: null,
+            camera: null,
+            renderer: null,
+            controls: null,
+            animationFrameId: null,
+            clock: null,
+
+            // حالة التطبيق العامة
+            currentMode: 'twinTowers', // 'twinTowers' | 'codeInspector' | 'spectrumSniper'
+            score: 0,
+            isSimulating: false,
+            simTime: 0,
+            boundResizeHandler: null,
+            boundListeners: [],
+
+            // مجموعة المجسمات الحالية في المشهد لسهولة التنظيف
+            modeGroup: null,
+
+            // ==================== بيانات التمرين 1: البرجين التوأمين ====================
+            twinState: {
+                level: 0,
+                levels: [
+                    { m1: 100, k1: 4000, z1: 5.0, m2: 250, defaultK2: 6000, defaultZ2: 2.0 },
+                    { m1: 150, k1: 6000, z1: 4.0, m2: 90,  defaultK2: 5500, defaultZ2: 8.0 },
+                    { m1: 200, k1: 5000, z1: 6.0, m2: 360, defaultK2: 4500, defaultZ2: 3.0 }
+                ],
+                m1: 100, k1: 4000, z1: 5.0,
+                m2: 250, k2: 6000, z2: 2.0,
+                u1: 0, v1: 0,
+                u2: 0, v2: 0,
+                ug: 0,
+                historyU1: [],
+                historyU2: [],
+                poundingOccurred: false,
+                meshes: {}
+            },
+
+            // ==================== بيانات التمرين 2: مفتش الكود الزلزالي ====================
+            inspectorState: {
+                caseIndex: 0,
+                choice1: null, // 'equivalent' | 'full_dynamic'
+                choice2: null, // 'stiffness' | 'fem'
+                testResult: null, // 'pass' | 'fail'
+                cases: [
+                    {
+                        title: "مشروع 1: مبنى إداري هيكلي منتظم",
+                        height: "32 متر (9 طوابق)",
+                        regularity: "منتظم رأسياً وأفقياً",
+                        soil: "تربة صخرية متماسكة (Site Class B)",
+                        elements: "عناصر خطية (أعمدة وجسور إطارية)",
+                        correctQ1: "equivalent",
+                        correctQ2: "stiffness",
+                        modelType: "regularFrame",
+                        explanation: "قرار سليم! المبنى منتظم وارتفاعه (32م) أقل من حد الكود (73م) وعلى تربة جيدة، لذا تصح الطريقة الديناميكية المكافئة، وبما أن عناصره خطية فطريقة مصفوفة الصلابة تعطي حلاً دقيقاً."
+                    },
+                    {
+                        title: "مشروع 2: برج تجاري شاهق الارتفاع",
+                        height: "95 متر (28 طابقاً)",
+                        regularity: "منتظم هندسياً",
+                        soil: "تربة متوسطة الكثافة (Site Class C)",
+                        elements: "عناصر خطية (إطار فولاذي مقاوم للعزوم)",
+                        correctQ1: "full_dynamic",
+                        correctQ2: "stiffness",
+                        modelType: "tallTower",
+                        explanation: "تجاوز الارتفاع حد الكود (95m > 73m). في الأبراج العالية تهيمن أنماط الاهتزاز العليا (Higher Modes) ولا يكفي النمط الأول في الطريقة المكافئة، بل يلزم تحليل ديناميكي كامل!"
+                    },
+                    {
+                        title: "مشروع 3: مبنى فندقي بكتلة متراجعة (طابق لين/عدم انتظام)",
+                        height: "45 متر (12 طابقاً)",
+                        regularity: "غير منتظم (تغير مفاجئ بالكتلة والصلابة)",
+                        soil: "تربة متماسكة (Site Class C)",
+                        elements: "عناصر خطية (أعمدة وجسور خرسانية)",
+                        correctQ1: "full_dynamic",
+                        correctQ2: "stiffness",
+                        modelType: "irregularMass",
+                        explanation: "بسبب عدم الانتظام الرأسي في الكتلة والصلابة، تتولد قوى قص وعزوم انقلاب معقدة لا تلتقطها الطريقة المكافئة، فيلزم التحليل الديناميكي الكامل."
+                    },
+                    {
+                        title: "مشروع 4: جدار قص خرساني وقشرة تغطية مستوية",
+                        height: "24 متر (6 طوابق)",
+                        regularity: "منتظم",
+                        soil: "تربة صخرية (Site Class B)",
+                        elements: "عناصر سطحية مستوية (جدران قص وبلاطات 2D)",
+                        correctQ1: "equivalent",
+                        correctQ2: "fem",
+                        modelType: "shearWallFEM",
+                        explanation: "المبنى قصير ومنتظم ومستقر، لكن عناصره سطحية مستوية؛ لذا لا تكفي صياغة العناصر الخطية ويلزم تقسيم السطح إلى شبكة عناصر منتهية (FEM) لحساب الاستجابة تقريبياً."
+                    },
+                    {
+                        title: "مشروع 5: مستودع ومبنى على تربة طينية رخوة جداً",
+                        height: "28 متر (7 طوابق)",
+                        regularity: "منتظم هندسياً",
+                        soil: "تربة رخوة جداً قابلة للتضخيم (Site Class E/F)",
+                        elements: "عناصر خطية (إطار خرساني)",
+                        correctQ1: "full_dynamic",
+                        correctQ2: "stiffness",
+                        modelType: "softSoilBuilding",
+                        explanation: "رغم أن الارتفاع أقل من 73م، إلا أن الاستناد على تربة رخوة/سيئة يضخم الأمواج الزلزالية ذات الأدوار الطويلة ويلغي صلاحية الطريقة المكافئة."
+                    },
+                    {
+                        title: "مشروع 6: صومعة وقبة قشرية عالية على تربة ضعيفة",
+                        height: "78 متر",
+                        regularity: "غير منتظم رأسياً",
+                        soil: "تربة رخوة (Site Class E)",
+                        elements: "عناصر سطحية وقشرية مستمرة",
+                        correctQ1: "full_dynamic",
+                        correctQ2: "fem",
+                        modelType: "tallShellFEM",
+                        explanation: "المنشأ يتجاوز 73م وغير منتظم وعلى تربة ضعيفة (يلزم تحليل ديناميكي كامل)، كما أن جدرانه القشرية السطحية تتطلب طريقة العناصر المنتهية (FEM)."
+                    }
+                ],
+                meshes: {}
+            },
+
+            // ==================== بيانات التمرين 3: قناص طيف الاستجابة ====================
+            sniperState: {
+                missionIdx: 0,
+                missions: [
+                    {
+                        title: "مهمة 1/2: حماية مختبر أجهزة بصرية",
+                        desc: "اضبط الصلابة (k) والتخميد (ζ) لتقنص منطقة أمان تحقق: الانتقال D ≤ 0.045 m والتسارع A ≤ 6.5 m/s² مع ضبط دقة التسجيل Δt = 0.01 s.",
+                        dLimit: 0.045,
+                        aLimit: 6.5,
+                        fixedM: null
+                    },
+                    {
+                        title: "مهمة 2/2: إطار خزان علوي ثقيل (m = 140 ton)",
+                        desc: "مع كتلة كبيرة (m ≥ 140 ton)، اهرب من منطقة الرنين بحيث يكون D ≤ 0.055 m والتسارع A ≤ 4.2 m/s² مع دقة Δt ≤ 0.02 s.",
+                        dLimit: 0.055,
+                        aLimit: 4.2,
+                        minM: 140
+                    }
+                ],
+                dt: 0.01,
+                m: 80,     // ton
+                k: 8000,   // kN/m
+                zeta: 5.0, // %
+                Tn: 0.628,
+                wn: 10.0,
+                D: 0.05,
+                V: 0.5,
+                A: 5.0,
+                fs: 400,
+                simU: 0,
+                simV: 0,
+                meshes: {}
+            },
+
+            // =========================================================================
+            // 1. دالة التهيئة الرئيسية init(containerId)
+            // =========================================================================
+            init: function(containerId = 'webgl-container') {
+                this.container = document.getElementById(containerId);
+                if (!this.container) return;
+
+                this.clock = new THREE.Clock();
+
+                // إنشاء المشهد بالخلفية الكحلية الداكنة الإلزامية
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x0f172a);
+                this.scene.fog = new THREE.FogExp2(0x0f172a, 0.015);
+
+                // إعداد الكاميرا
+                const w = this.container.clientWidth;
+                const h = this.container.clientHeight;
+                this.camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 200);
+                this.camera.position.set(0, 9, 22);
+
+                // إعداد المصير WebGLRenderer
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+                this.renderer.setSize(w, h);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                this.container.appendChild(this.renderer.domElement);
+
+                // إعداد OrbitControls
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.06;
+                this.controls.maxPolarAngle = Math.PI / 2 - 0.02;
+                this.controls.target.set(0, 4, 0);
+
+                // الإضاءة الهندسية
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+                this.scene.add(ambientLight);
+
+                const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+                dirLight.position.set(14, 24, 16);
+                dirLight.castShadow = true;
+                dirLight.shadow.mapSize.width = 2048;
+                dirLight.shadow.mapSize.height = 2048;
+                this.scene.add(dirLight);
+
+                const hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x0f172a, 0.25);
+                this.scene.add(hemiLight);
+
+                // الشبكة الأرضية الهندسية
+                const gridHelper = new THREE.GridHelper(50, 50, 0x38bdf8, 0x1e293b);
+                gridHelper.position.y = -0.5;
+                this.scene.add(gridHelper);
+
+                // حاوية مجسمات التمرين الحالي
+                this.modeGroup = new THREE.Group();
+                this.scene.add(this.modeGroup);
+
+                // ربط مستمعي أحداث أشرطة التمرير والنافذة
+                this.bindUIEvents();
+
+                // تهيئة الوضع الأول
+                this.switchMode('twinTowers');
+
+                // بدء حلقة الرسم والتحديث
+                const animateLoop = () => {
+                    this.animationFrameId = requestAnimationFrame(animateLoop);
+                    this.update();
+                    if (this.controls) this.controls.update();
+                    if (this.renderer && this.scene && this.camera) {
+                        this.renderer.render(this.scene, this.camera);
+                    }
+                };
+                animateLoop();
+            },
+
+            // ربط مستمعي الأحداث مع حفظها للتنظيف في destroy
+            bindUIEvents: function() {
+                this.boundResizeHandler = () => {
+                    if (!this.container || !this.renderer || !this.camera) return;
+                    const w = this.container.clientWidth;
+                    const h = this.container.clientHeight;
+                    this.camera.aspect = w / h;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(w, h);
+                };
+                window.addEventListener('resize', this.boundResizeHandler);
+
+                // أحداث التمرين الأول
+                this.addListener('tt-k2-slider', 'input', (e) => {
+                    this.twinState.k2 = parseFloat(e.target.value);
+                    this.calculate();
+                    this.updateTwinVisualSizes();
+                });
+                this.addListener('tt-z2-slider', 'input', (e) => {
+                    this.twinState.z2 = parseFloat(e.target.value);
+                    this.calculate();
+                });
+
+                // أحداث التمرين الثالث
+                this.addListener('ss-dt-slider', 'input', (e) => {
+                    this.sniperState.dt = parseFloat(e.target.value);
+                    this.calculate();
+                });
+                this.addListener('ss-m-slider', 'input', (e) => {
+                    this.sniperState.m = parseFloat(e.target.value);
+                    this.calculate();
+                    this.updateSniperFrameGeometry();
+                });
+                this.addListener('ss-k-slider', 'input', (e) => {
+                    this.sniperState.k = parseFloat(e.target.value);
+                    this.calculate();
+                    this.updateSniperFrameGeometry();
+                });
+                this.addListener('ss-z-slider', 'input', (e) => {
+                    this.sniperState.zeta = parseFloat(e.target.value);
+                    this.calculate();
+                    this.updateSniperFrameGeometry();
+                });
+            },
+
+            addListener: function(id, event, fn) {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener(event, fn);
+                    this.boundListeners.push({ el, event, fn });
+                }
+            },
+
+            // =========================================================================
+            // 2. دالة التبديل بين التمارين الثلاثة switchMode(modeName)
+            // =========================================================================
+            switchMode: function(modeName) {
+                this.currentMode = modeName;
+                this.isSimulating = false;
+                this.simTime = 0;
+
+                // تحديث التبويبات العلوية
+                ['twinTowers', 'codeInspector', 'spectrumSniper'].forEach(m => {
+                    const tab = document.getElementById('tab-' + m);
+                    const panel = document.getElementById('panel-' + m);
+                    if (tab) tab.classList.toggle('active', m === modeName);
+                    if (panel) panel.classList.toggle('active', m === modeName);
+                });
+
+                // تنظيف مجسمات الوضع السابق من الذاكرة
+                this.clearModeGroup();
+
+                const titleEl = document.getElementById('scene-status-title');
+
+                if (modeName === 'twinTowers') {
+                    if (titleEl) titleEl.innerHTML = '<strong>الوضع الحالي:</strong> 1. تحدي البرجين التوأمين (موازنة m/k)';
+                    this.camera.position.set(0, 8.5, 21);
+                    this.controls.target.set(0, 4.2, 0);
+                    this.loadTwinLevel(this.twinState.level);
+                    this.buildTwinTowersScene();
+                } else if (modeName === 'codeInspector') {
+                    if (titleEl) titleEl.innerHTML = '<strong>الوضع الحالي:</strong> 2. مفتش الكود الزلزالي وطرق النمذجة';
+                    this.camera.position.set(12, 11, 18);
+                    this.controls.target.set(0, 5, 0);
+                    this.loadInspectorCase(this.inspectorState.caseIndex);
+                } else if (modeName === 'spectrumSniper') {
+                    if (titleEl) titleEl.innerHTML = '<strong>الوضع الحالي:</strong> 3. قناص طيف الاستجابة (Response Spectrum Sniper)';
+                    this.camera.position.set(0, 7.5, 17);
+                    this.controls.target.set(0, 4, 0);
+                    this.buildSniperScene();
+                    this.calculate();
+                }
+            },
+
+            clearModeGroup: function() {
+                if (!this.modeGroup) return;
+                while (this.modeGroup.children.length > 0) {
+                    const obj = this.modeGroup.children[0];
+                    this.disposeObject3D(obj);
+                    this.modeGroup.remove(obj);
+                }
+            },
+
+            disposeObject3D: function(obj) {
+                if (!obj) return;
+                if (obj.children && obj.children.length > 0) {
+                    [...obj.children].forEach(c => this.disposeObject3D(c));
+                }
+                if (obj.geometry) obj.geometry.dispose();
+                if (obj.material) {
+                    if (Array.isArray(obj.material)) {
+                        obj.material.forEach(m => {
+                            if (m.map) m.map.dispose();
+                            m.dispose();
+                        });
+                    } else {
+                        if (obj.material.map) obj.material.map.dispose();
+                        obj.material.dispose();
+                    }
+                }
+            },
+
+            // =========================================================================
+            // 3. بناء ومنطق التمرين الأول: تحدي البرجين التوأمين
+            // =========================================================================
+            loadTwinLevel: function(lvlIdx) {
+                const st = this.twinState;
+                st.level = lvlIdx % st.levels.length;
+                const cfg = st.levels[st.level];
+                st.m1 = cfg.m1; st.k1 = cfg.k1; st.z1 = cfg.z1;
+                st.m2 = cfg.m2; st.k2 = cfg.defaultK2; st.z2 = cfg.defaultZ2;
+
+                document.getElementById('tt-level-badge').textContent = `المستوى ${st.level + 1}/3`;
+                document.getElementById('tt-k2-slider').value = st.k2;
+                document.getElementById('tt-z2-slider').value = st.z2;
+                this.hideFeedback('tt-feedback');
+                this.calculate();
+            },
+
+            buildTwinTowersScene: function() {
+                const st = this.twinState;
+                st.meshes = {};
+
+                // طاولة الاهتزاز الزلزالية Shake Table
+                const baseGeo = new THREE.BoxGeometry(14, 0.7, 6);
+                const baseMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.5, roughness: 0.4 });
+                const shakeTable = new THREE.Mesh(baseGeo, baseMat);
+                shakeTable.position.set(0, -0.15, 0);
+                shakeTable.receiveShadow = true;
+                this.modeGroup.add(shakeTable);
+                st.meshes.shakeTable = shakeTable;
+
+                // شريط تحذيري على القاعدة
+                const stripeGeo = new THREE.BoxGeometry(14.1, 0.15, 6.1);
+                const stripeMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+                const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+                stripe.position.y = 0.15;
+                shakeTable.add(stripe);
+
+                // البرج المرجعي الأيمن (X = +2.0)
+                st.meshes.tower1 = this.createDeformableSDOFTower(2.1, 0x38bdf8, 8.0);
+                shakeTable.add(st.meshes.tower1.root);
+
+                // برج التحدي الأيسر (X = -2.0)
+                st.meshes.tower2 = this.createDeformableSDOFTower(-2.1, 0xf59e0b, 8.0);
+                shakeTable.add(st.meshes.tower2.root);
+
+                // خط الليزر التحذيري للفاصل الزلزالي في المنتصف (X = 0)
+                const laserGeo = new THREE.CylinderGeometry(0.04, 0.04, 9.2, 12);
+                const laserMat = new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.65 });
+                const laserLine = new THREE.Mesh(laserGeo, laserMat);
+                laserLine.position.set(0, 4.6, 0);
+                shakeTable.add(laserLine);
+                st.meshes.laserLine = laserLine;
+
+                // كرة وميض التصادم
+                const sparkGeo = new THREE.SphereGeometry(0.65, 16, 16);
+                const sparkMat = new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.0 });
+                const sparkMesh = new THREE.Mesh(sparkGeo, sparkMat);
+                sparkMesh.position.set(0, 8.2, 0);
+                shakeTable.add(sparkMesh);
+                st.meshes.spark = sparkMesh;
+
+                this.updateTwinVisualSizes();
+                this.drawTwinTimeChart();
+            },
+
+            // إنشاء إطار SDOF بأعمدة قابلة للانحناء الحقيقي (تحديث رؤوس الهندسة)
+            createDeformableSDOFTower: function(baseX, colorHex, height) {
+                const root = new THREE.Group();
+                root.position.set(baseX, 0.2, 0);
+
+                const colMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.6, roughness: 0.3 });
+                const columns = [];
+                const colOffsets = [
+                    { x: -1.1, z: -1.1 },
+                    { x:  1.1, z: -1.1 },
+                    { x: -1.1, z:  1.1 },
+                    { x:  1.1, z:  1.1 }
+                ];
+
+                colOffsets.forEach(off => {
+                    // تقسيم العمود رأسياً إلى 20 مقطعاً لينحني بواقعية مع دالة التشوه التكعيبية
+                    const geo = new THREE.BoxGeometry(0.22, height, 0.22, 1, 20, 1);
+                    // حفظ الإحداثيات الأصلية للرؤوس
+                    const posAttr = geo.attributes.position;
+                    const origX = new Float32Array(posAttr.count);
+                    for (let i = 0; i < posAttr.count; i++) {
+                        origX[i] = posAttr.getX(i);
+                    }
+                    geo.userData.origX = origX;
+                    geo.userData.height = height;
+
+                    const mesh = new THREE.Mesh(geo, colMat);
+                    mesh.position.set(off.x, height / 2, off.z);
+                    mesh.castShadow = true;
+                    root.add(mesh);
+                    columns.push(mesh);
+                });
+
+                // الكتلة المركزة العلوية
+                const massGeo = new THREE.BoxGeometry(2.8, 1.1, 2.8);
+                const massMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.25, metalness: 0.2 });
+                const massBlock = new THREE.Mesh(massGeo, massMat);
+                massBlock.position.set(0, height + 0.4, 0);
+                massBlock.castShadow = true;
+                root.add(massBlock);
+
+                return { root, columns, massBlock, height };
+            },
+
+            // تحديث انحناء الأعمدة وحركة الكتلة مع الانتقال u(t)
+            deformSDOFTower: function(towerObj, uDisp) {
+                if (!towerObj) return;
+                const h = towerObj.height;
+                towerObj.massBlock.position.x = uDisp;
+
+                towerObj.columns.forEach(colMesh => {
+                    const geo = colMesh.geometry;
+                    const pos = geo.attributes.position;
+                    const origX = geo.userData.origX;
+                    for (let i = 0; i < pos.count; i++) {
+                        const localY = pos.getY(i) + h / 2; // من 0 إلى h
+                        const s = Math.max(0, Math.min(1, localY / h));
+                        // دالة شكل التشوه لإطار مقيد الدوران في الأعلى والأسفل: 3s^2 - 2s^3
+                        const shape = 3 * s * s - 2 * s * s * s;
+                        pos.setX(i, origX[i] + uDisp * shape);
+                    }
+                    pos.needsUpdate = true;
+                });
+            },
+
+            updateTwinVisualSizes: function() {
+                const st = this.twinState;
+                if (!st.meshes.tower1 || !st.meshes.tower2) return;
+
+                // تحجيم الكتل والأعمدة بصرياً للتعبير عن m و k
+                const scaleM1 = 0.85 + (st.m1 / 350) * 0.4;
+                const scaleM2 = 0.85 + (st.m2 / 350) * 0.4;
+                st.meshes.tower1.massBlock.scale.set(1, scaleM1, 1);
+                st.meshes.tower2.massBlock.scale.set(1, scaleM2, 1);
+
+                const colScale1 = 0.7 + (st.k1 / 12000) * 0.8;
+                const colScale2 = 0.7 + (st.k2 / 12000) * 0.8;
+                st.meshes.tower1.columns.forEach(c => c.scale.set(colScale1, 1, colScale1));
+                st.meshes.tower2.columns.forEach(c => c.scale.set(colScale2, 1, colScale2));
+            },
+
+            startTwinQuake: function() {
+                const st = this.twinState;
+                st.u1 = 0; st.v1 = 0;
+                st.u2 = 0; st.v2 = 0;
+                st.historyU1 = [];
+                st.historyU2 = [];
+                st.poundingOccurred = false;
+                this.simTime = 0;
+                this.isSimulating = true;
+                this.hideFeedback('tt-feedback');
+                document.getElementById('tt-gap-status').textContent = 'الزلزال يضرب القاعدة الآن...';
+            },
+
+            nextTwinLevel: function() {
+                this.isSimulating = false;
+                this.loadTwinLevel(this.twinState.level + 1);
+                this.reset();
+            },
+
+            drawTwinTimeChart: function() {
+                const canvas = document.getElementById('tt-time-chart');
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const w = canvas.width;
+                const h = canvas.height;
+                ctx.clearRect(0, 0, w, h);
+
+                // خط الصفر الأوسط
+                ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+                ctx.beginPath();
+                ctx.moveTo(0, h / 2);
+                ctx.lineTo(w, h / 2);
+                ctx.stroke();
+
+                const st = this.twinState;
+                if (st.historyU1.length < 2) return;
+
+                // رسم u1(t) باللون السماوي
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                st.historyU1.forEach((val, idx) => {
+                    const x = (idx / 180) * w;
+                    const y = h / 2 - val * 55;
+                    if (idx === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+
+                // رسم u2(t) باللون البرتقالي المتقطع
+                ctx.strokeStyle = '#f59e0b';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 3]);
+                ctx.beginPath();
+                st.historyU2.forEach((val, idx) => {
+                    const x = (idx / 180) * w;
+                    const y = h / 2 - val * 55;
+                    if (idx === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+                ctx.setLineDash([]);
+            },
+
+            // =========================================================================
+            // 4. بناء ومنطق التمرين الثاني: مفتش الكود الزلزالي
+            // =========================================================================
+            loadInspectorCase: function(idx) {
+                const st = this.inspectorState;
+                st.caseIndex = idx % st.cases.length;
+                st.choice1 = null;
+                st.choice2 = null;
+                st.testResult = null;
+                this.isSimulating = false;
+                this.simTime = 0;
+
+                const c = st.cases[st.caseIndex];
+                document.getElementById('ci-case-badge').textContent = `المشروع ${st.caseIndex + 1} / ${st.cases.length}`;
+                document.getElementById('ci-proj-title').textContent = c.title;
+                document.getElementById('ci-height-val').textContent = c.height;
+                document.getElementById('ci-reg-val').textContent = c.regularity;
+                document.getElementById('ci-soil-val').textContent = c.soil;
+                document.getElementById('ci-elem-val').textContent = c.elements;
+
+                ['ci-q1-equiv', 'ci-q1-dynamic', 'ci-q2-stiff', 'ci-q2-fem'].forEach(id => {
+                    const btn = document.getElementById(id);
+                    if (btn) btn.classList.remove('selected');
+                });
+
+                this.hideFeedback('ci-feedback');
+                this.buildInspectorScene(c.modelType);
+            },
+
+            selectInspectorChoice: function(qNum, val) {
+                if (qNum === 1) {
+                    this.inspectorState.choice1 = val;
+                    document.getElementById('ci-q1-equiv').classList.toggle('selected', val === 'equivalent');
+                    document.getElementById('ci-q1-dynamic').classList.toggle('selected', val === 'full_dynamic');
+                } else {
+                    this.inspectorState.choice2 = val;
+                    document.getElementById('ci-q2-stiff').classList.toggle('selected', val === 'stiffness');
+                    document.getElementById('ci-q2-fem').classList.toggle('selected', val === 'fem');
+                }
+            },
+
+            buildInspectorScene: function(modelType) {
+                this.clearModeGroup();
+                const st = this.inspectorState;
+                st.meshes = {};
+
+                // منصة الفحص والتربة
+                const soilColor = (modelType === 'softSoilBuilding' || modelType === 'tallShellFEM') ? 0x78350f : 0x334155;
+                const baseGeo = new THREE.CylinderGeometry(6.5, 7.2, 1.0, 32);
+                const baseMat = new THREE.MeshStandardMaterial({ color: soilColor, roughness: 0.7 });
+                const platform = new THREE.Mesh(baseGeo, baseMat);
+                platform.position.y = -0.2;
+                platform.receiveShadow = true;
+                this.modeGroup.add(platform);
+
+                const buildingRoot = new THREE.Group();
+                platform.add(buildingRoot);
+                st.meshes.platform = platform;
+                st.meshes.buildingRoot = buildingRoot;
+                st.meshes.stories = [];
+
+                if (modelType === 'regularFrame' || modelType === 'softSoilBuilding') {
+                    // مبنى إطاري منتظم 5 طوابق تمثيلية
+                    for (let i = 0; i < 5; i++) {
+                        const floorGrp = this.createInspectorFloor(3.6, 1.6, 3.6, 0x38bdf8, false);
+                        floorGrp.position.y = 0.5 + i * 1.6;
+                        buildingRoot.add(floorGrp);
+                        st.meshes.stories.push(floorGrp);
+                    }
+                } else if (modelType === 'tallTower') {
+                    // برج شاهق الارتفاع (95m)
+                    for (let i = 0; i < 10; i++) {
+                        const floorGrp = this.createInspectorFloor(2.8, 1.15, 2.8, 0xf59e0b, false);
+                        floorGrp.position.y = 0.5 + i * 1.15;
+                        buildingRoot.add(floorGrp);
+                        st.meshes.stories.push(floorGrp);
+                    }
+                } else if (modelType === 'irregularMass') {
+                    // مبنى غير منتظم رأسياً (قاعدة عريضة، طابق لين، كتلة ضخمة بارزة في الأعلى)
+                    for (let i = 0; i < 6; i++) {
+                        const w = (i < 2) ? 4.8 : (i === 4 ? 4.4 : 2.2);
+                        const col = (i === 4) ? 0xef4444 : 0x38bdf8;
+                        const floorGrp = this.createInspectorFloor(w, 1.5, 3.2, col, false);
+                        floorGrp.position.y = 0.5 + i * 1.5;
+                        buildingRoot.add(floorGrp);
+                        st.meshes.stories.push(floorGrp);
+                    }
+                } else if (modelType === 'shearWallFEM' || modelType === 'tallShellFEM') {
+                    // عناصر سطحية مستوية مقسمة بشبكة العناصر المنتهية FEM
+                    const count = modelType === 'tallShellFEM' ? 8 : 5;
+                    for (let i = 0; i < count; i++) {
+                        const w = modelType === 'tallShellFEM' ? 3.2 - i * 0.15 : 4.2;
+                        const floorGrp = this.createInspectorFloor(w, 1.4, 0.5, 0x10b981, true);
+                        floorGrp.position.y = 0.5 + i * 1.4;
+                        buildingRoot.add(floorGrp);
+                        st.meshes.stories.push(floorGrp);
+                    }
+                }
+            },
+
+            createInspectorFloor: function(w, h, d, colorHex, isFEMSurface) {
+                const grp = new THREE.Group();
+                if (isFEMSurface) {
+                    // تمثيل الجدار السطحي مع شبكة العناصر المنتهية FEM
+                    const wallGeo = new THREE.BoxGeometry(w, h, d, 6, 3, 1);
+                    const wallMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.4, transparent: true, opacity: 0.85 });
+                    const wall = new THREE.Mesh(wallGeo, wallMat);
+                    wall.position.y = h / 2;
+                    grp.add(wall);
+
+                    const wireGeo = new THREE.WireframeGeometry(wallGeo);
+                    const wireMat = new THREE.LineBasicMaterial({ color: 0xffffff });
+                    const wire = new THREE.LineSegments(wireGeo, wireMat);
+                    wire.position.y = h / 2;
+                    grp.add(wire);
+                } else {
+                    // إطار خطي (أعمدة وبلاطة)
+                    const slabGeo = new THREE.BoxGeometry(w, 0.22, d);
+                    const slabMat = new THREE.MeshStandardMaterial({ color: colorHex });
+                    const slab = new THREE.Mesh(slabGeo, slabMat);
+                    slab.position.y = h;
+                    grp.add(slab);
+
+                    const colGeo = new THREE.BoxGeometry(0.2, h, 0.2);
+                    const colMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1 });
+                    const offsets = [
+                        [-w/2 + 0.2, -d/2 + 0.2], [w/2 - 0.2, -d/2 + 0.2],
+                        [-w/2 + 0.2,  d/2 - 0.2], [w/2 - 0.2,  d/2 - 0.2]
+                    ];
+                    offsets.forEach(([cx, cz]) => {
+                        const col = new THREE.Mesh(colGeo, colMat);
+                        col.position.set(cx, h / 2, cz);
+                        grp.add(col);
+                    });
+                }
+                return grp;
+            },
+
+            verifyInspectorCase: function() {
+                const st = this.inspectorState;
+                if (!st.choice1 || !st.choice2) {
+                    this.showFeedback('ci-feedback', 'warning', 'يرجى اتخاذ القرارين (1) و (2) أولاً قبل تشغيل الاختبار الزلزالي.');
+                    return;
+                }
+
+                const c = st.cases[st.caseIndex];
+                const isCorrect = (st.choice1 === c.correctQ1) && (st.choice2 === c.correctQ2);
+
+                this.simTime = 0;
+                this.isSimulating = true;
+
+                if (isCorrect) {
+                    st.testResult = 'pass';
+                    this.addScore(25);
+                    this.showFeedback('ci-feedback', 'success', '✅ ' + c.explanation);
+                } else {
+                    st.testResult = 'fail';
+                    this.showFeedback('ci-feedback', 'error', '❌ خطأ هندسي خطير! ' + c.explanation);
+                }
+            },
+
+            nextInspectorCase: function() {
+                this.loadInspectorCase(this.inspectorState.caseIndex + 1);
+            },
+
+            // =========================================================================
+            // 5. بناء ومنطق التمرين الثالث: قناص طيف الاستجابة
+            // =========================================================================
+            buildSniperScene: function() {
+                this.clearModeGroup();
+                const st = this.sniperState;
+                st.meshes = {};
+
+                // قاعدة الإطار
+                const baseGeo = new THREE.BoxGeometry(9, 0.6, 5);
+                const baseMat = new THREE.MeshStandardMaterial({ color: 0x334155 });
+                const base = new THREE.Mesh(baseGeo, baseMat);
+                base.position.y = -0.2;
+                this.modeGroup.add(base);
+                st.meshes.base = base;
+
+                // إنشاء الإطار البوابي Portal Frame القابل للتشوه
+                const tower = this.createDeformableSDOFTower(0, 0x38bdf8, 7.5);
+                base.add(tower.root);
+                st.meshes.frame = tower;
+
+                // مخمد لزج مائل (Damper) داخل الإطار
+                const damperGeo = new THREE.CylinderGeometry(0.14, 0.14, 7.8, 12);
+                const damperMat = new THREE.MeshStandardMaterial({ color: 0x10b981, metalness: 0.7, roughness: 0.2 });
+                const damper = new THREE.Mesh(damperGeo, damperMat);
+                damper.position.set(0, 3.8, 0);
+                damper.rotation.z = 0.28;
+                tower.root.add(damper);
+                st.meshes.damper = damper;
+
+                this.updateSniperFrameGeometry();
+            },
+
+            updateSniperFrameGeometry: function() {
+                const st = this.sniperState;
+                if (!st.meshes.frame) return;
+
+                // تحديث سمك الأعمدة حسب الصلابة k وحجم الكتلة حسب m
+                const colScale = 0.6 + (st.k / 35000) * 1.4;
+                st.meshes.frame.columns.forEach(c => c.scale.set(colScale, 1, colScale));
+
+                const massScaleY = 0.7 + (st.m / 200) * 1.1;
+                st.meshes.frame.massBlock.scale.set(1.1, massScaleY, 1.1);
+
+                if (st.meshes.damper) {
+                    const dScale = 0.6 + (st.zeta / 20) * 1.4;
+                    st.meshes.damper.scale.set(dScale, 1, dScale);
+                }
+            },
+
+            // دالة حساب طيف الاستجابة الزلزالية مع تأثير دقة الفاصل الزمني dt
+            evalResponseSpectrumD: function(T, zetaPct, dt) {
+                const z = zetaPct / 100;
+                const dampFactor = Math.sqrt(0.05 / Math.max(0.01, z));
+                // طيف مرجعي ذو قمة رنين حادة عند T = 0.65s وقمة ثانوية عند T = 1.25s
+                const peak1 = 0.085 * Math.exp(-Math.pow((T - 0.65) / 0.22, 2));
+                const peak2 = 0.045 * Math.exp(-Math.pow((T - 1.25) / 0.35, 2));
+                const baseTrend = 0.018 * Math.min(1.5, T);
+                let D = (peak1 + peak2 + baseTrend) * dampFactor;
+
+                // إذا كبر الفاصل الزمني dt عن 0.02s تضيع القمم النبضية ويتشوه المنحنى
+                if (dt > 0.025) {
+                    const loss = Math.max(0.45, 1.0 - (dt - 0.02) * 3.8);
+                    const aliasNoise = 0.012 * Math.sin(T * 18 * dt * 10);
+                    D = D * loss + aliasNoise;
+                }
+                return Math.max(0.004, D);
+            },
+
+            drawSniperSpectrumChart: function() {
+                const canvas = document.getElementById('sniper-spectrum-canvas');
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const w = canvas.width;
+                const h = canvas.height;
+                ctx.clearRect(0, 0, w, h);
+
+                const st = this.sniperState;
+                const mission = st.missions[st.missionIdx];
+                const maxT = 2.2;
+                const maxD = 0.12;
+
+                // رسم منطقة الأمان الخضراء تحت حد الانتقال المسموح
+                const limitY = h - 24 - (mission.dLimit / maxD) * (h - 38);
+                ctx.fillStyle = 'rgba(16, 185, 129, 0.12)';
+                ctx.fillRect(35, limitY, w - 45, (h - 24) - limitY);
+
+                ctx.strokeStyle = '#10b981';
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(35, limitY);
+                ctx.lineTo(w - 10, limitY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                ctx.fillStyle = '#10b981';
+                ctx.font = '11px Tajawal';
+                ctx.fillText(`حد الأمان D_limit = ${mission.dLimit}m`, w - 135, limitY - 5);
+
+                // رسم المحاور
+                ctx.strokeStyle = '#475569';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(35, 10);
+                ctx.lineTo(35, h - 24);
+                ctx.lineTo(w - 10, h - 24);
+                ctx.stroke();
+
+                // رسم الطيف المرجعي الدقيق بخط خافت إذا كان dt كبيراً لتوضيح الضياع
+                if (st.dt > 0.025) {
+                    ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    for (let px = 35; px <= w - 10; px += 3) {
+                        const T = ((px - 35) / (w - 45)) * maxT;
+                        const dVal = this.evalResponseSpectrumD(T, st.zeta, 0.01);
+                        const py = h - 24 - Math.min(1, dVal / maxD) * (h - 38);
+                        if (px === 35) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
+                    }
+                    ctx.stroke();
+                }
+
+                // رسم منحنى طيف الاستجابة الحالي
+                ctx.strokeStyle = st.dt <= 0.02 ? '#38bdf8' : '#f59e0b';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                const stepPx = Math.max(3, Math.floor((st.dt / 0.01) * 2.5));
+                for (let px = 35; px <= w - 10; px += stepPx) {
+                    const T = ((px - 35) / (w - 45)) * maxT;
+                    const dVal = this.evalResponseSpectrumD(T, st.zeta, st.dt);
+                    const py = h - 24 - Math.min(1, dVal / maxD) * (h - 38);
+                    if (px === 35) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.stroke();
+
+                // رسم مؤشر القناص عند الدور الطبيعي الحالي Tn
+                const curX = 35 + Math.min(1, st.Tn / maxT) * (w - 45);
+                const curY = h - 24 - Math.min(1, st.D / maxD) * (h - 38);
+
+                ctx.strokeStyle = 'rgba(239, 68, 68, 0.7)';
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.moveTo(curX, 12);
+                ctx.lineTo(curX, h - 24);
+                ctx.stroke();
+
+                const isSafe = (st.D <= mission.dLimit) && (st.A <= mission.aLimit) && (st.dt <= 0.02);
+                ctx.fillStyle = isSafe ? '#10b981' : '#ef4444';
+                ctx.beginPath();
+                ctx.arc(curX, curY, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.stroke();
+
+                ctx.fillStyle = '#cbd5e1';
+                ctx.font = '11px Tajawal';
+                ctx.fillText('الدور الطبيعي Tn (ثانية) ⬅', w / 2 - 40, h - 6);
+            },
+
+            fireSpectrumSniper: function() {
+                const st = this.sniperState;
+                const mission = st.missions[st.missionIdx];
+
+                this.simTime = 0;
+                this.isSimulating = true;
+
+                if (st.dt > 0.02) {
+                    this.showFeedback('ss-feedback', 'error', `⚠️ دقة الفاصل الزمني غير مقبولة (Δt = ${st.dt}s)! تسببت قلة النقاط في ضياع قمم التسارع الحقيقية. اضبط Δt على 0.01s أو 0.02s (1000-1500 نقطة).`);
+                    return;
+                }
+
+                if (mission.minM && st.m < mission.minM) {
+                    this.showFeedback('ss-feedback', 'warning', `يجب أن لا تقل الكتلة في هذه المهمة عن ${mission.minM} ton!`);
+                    return;
+                }
+
+                if (st.D <= mission.dLimit && st.A <= mission.aLimit) {
+                    this.addScore(35);
+                    this.showFeedback('ss-feedback', 'success', `🎯 قنص هندسي دقيق! صمد الإطار بأمان: الانتقال D = ${st.D.toFixed(3)}m ≤ ${mission.dLimit}m، والتسارع A = ${st.A.toFixed(2)}m/s² ≤ ${mission.aLimit}m/s².`);
+                } else {
+                    this.showFeedback('ss-feedback', 'error', `💥 تجاوز الإطار حدود الأمان التصميمية! (D = ${st.D.toFixed(3)}m, A = ${st.A.toFixed(2)}m/s²). عدّل الصلابة k والتخميد ζ للابتعاد عن ذروة الطيف.`);
+                }
+            },
+
+            nextSniperMission: function() {
+                const st = this.sniperState;
+                st.missionIdx = (st.missionIdx + 1) % st.missions.length;
+                const m = st.missions[st.missionIdx];
+                document.getElementById('ss-mission-badge').textContent = `مهمة ${st.missionIdx + 1} / ${st.missions.length}`;
+                document.getElementById('ss-mission-text').textContent = m.desc;
+                if (m.minM && st.m < m.minM) {
+                    st.m = m.minM;
+                    document.getElementById('ss-m-slider').value = st.m;
+                }
+                this.hideFeedback('ss-feedback');
+                this.calculate();
+            },
+
+            // =========================================================================
+            // 6. دالة الحسابات الفيزيائية والهندسية الموحدة calculate()
+            // =========================================================================
+            calculate: function() {
+                // حسابات التمرين الأول
+                const tt = this.twinState;
+                const wn1 = Math.sqrt(tt.k1 / tt.m1);
+                const tn1 = (2 * Math.PI) / wn1;
+                const wd1 = wn1 * Math.sqrt(1 - Math.pow(tt.z1 / 100, 2));
+
+                const wn2 = Math.sqrt(tt.k2 / tt.m2);
+                const tn2 = (2 * Math.PI) / wn2;
+                const wd2 = wn2 * Math.sqrt(1 - Math.pow(tt.z2 / 100, 2));
+
+                document.getElementById('tt-m1-val').textContent = `${tt.m1} ton`;
+                document.getElementById('tt-k1-val').textContent = `${tt.k1} kN/m`;
+                document.getElementById('tt-tn1-val').textContent = `${tn1.toFixed(3)} s`;
+                document.getElementById('tt-z1-val').textContent = `${tt.z1}% | ${wd1.toFixed(2)} rad/s`;
+
+                document.getElementById('tt-m2-val').textContent = `${tt.m2} ton`;
+                document.getElementById('tt-k2-label').textContent = `${tt.k2} kN/m`;
+                document.getElementById('tt-z2-label').textContent = `${tt.z2.toFixed(1)} %`;
+                document.getElementById('tt-tn2-val').textContent = `${tn2.toFixed(3)} s`;
+                document.getElementById('tt-wn2-val').textContent = `${wn2.toFixed(2)} rad/s`;
+                document.getElementById('tt-wd2-val').textContent = `${wd2.toFixed(2)} rad/s`;
+
+                const dampNote = document.getElementById('tt-damp-note');
+                if (dampNote) {
+                    dampNote.textContent = tt.z2 < 10 ? 'تحت مخمد (ω_D ≈ ω_n)' : 'تخميد مرتفع نسبياً';
+                }
+
+                // حسابات التمرين الثالث
+                const ss = this.sniperState;
+                ss.wn = Math.sqrt(ss.k / ss.m);
+                ss.Tn = (2 * Math.PI) / ss.wn;
+                ss.D = this.evalResponseSpectrumD(ss.Tn, ss.zeta, ss.dt);
+                ss.V = ss.wn * ss.D;
+                ss.A = ss.wn * ss.V;
+                ss.fs = ss.k * ss.D; // kN
+
+                const numPts = Math.round(12 / ss.dt);
+                const ptsEl = document.getElementById('ss-points-info');
+                if (ptsEl) {
+                    ptsEl.textContent = `${numPts} نقطة زمنية`;
+                    ptsEl.style.color = ss.dt <= 0.02 ? 'var(--accent-green)' : 'var(--accent-red)';
+                }
+
+                document.getElementById('ss-dt-label').textContent = `${ss.dt.toFixed(2)} s (${numPts} نقطة)`;
+                document.getElementById('ss-m-label').textContent = `${ss.m} ton`;
+                document.getElementById('ss-k-label').textContent = `${ss.k} kN/m`;
+                document.getElementById('ss-z-label').textContent = `${ss.zeta.toFixed(1)} %`;
+
+                document.getElementById('ss-tn-val').textContent = `${ss.Tn.toFixed(3)} s`;
+                document.getElementById('ss-d-val').textContent = `${ss.D.toFixed(3)} m`;
+                document.getElementById('ss-v-val').textContent = `${ss.V.toFixed(3)} m/s`;
+                document.getElementById('ss-a-val').textContent = `${ss.A.toFixed(2)} m/s²`;
+                document.getElementById('ss-fs-val').textContent = `f_S,max = k·D = ${ss.fs.toFixed(0)} kN`;
+
+                if (this.currentMode === 'spectrumSniper') {
+                    this.drawSniperSpectrumChart();
+                }
+            },
+
+            // =========================================================================
+            // 7. حلقة التحديث الفيزيائي اللحظي update()
+            // =========================================================================
+            update: function() {
+                if (!this.isSimulating) return;
+                const dt = 0.016;
+                this.simTime += dt;
+
+                // ---------------- تحديث التمرين الأول: البرجين التوأمين ----------------
+                if (this.currentMode === 'twinTowers') {
+                    const st = this.twinState;
+                    const t = this.simTime;
+
+                    // موجة تسارع زلزالي أرضي مركبة تتلاشى بعد 8 ثوانٍ
+                    const env = Math.exp(-0.28 * t);
+                    const ugAcc = env * (3.8 * Math.sin(6.3 * t) + 2.2 * Math.sin(11.5 * t) + 1.5 * Math.cos(4.1 * t));
+                    const tableDisp = env * 0.35 * Math.sin(6.3 * t);
+
+                    if (st.meshes.shakeTable) {
+                        st.meshes.shakeTable.position.x = tableDisp;
+                    }
+
+                    // تكامل معادلة الحركة التفاضلية للبرجين: u_ddot = -ugAcc - 2*zeta*wn*u_dot - wn^2*u
+                    const wn1 = Math.sqrt(st.k1 / st.m1);
+                    const z1 = st.z1 / 100;
+                    const a1 = -ugAcc - 2 * z1 * wn1 * st.v1 - (wn1 * wn1) * st.u1;
+                    st.v1 += a1 * dt;
+                    st.u1 += st.v1 * dt;
+
+                    const wn2 = Math.sqrt(st.k2 / st.m2);
+                    const z2 = st.z2 / 100;
+                    const a2 = -ugAcc - 2 * z2 * wn2 * st.v2 - (wn2 * wn2) * st.u2;
+                    st.v2 += a2 * dt;
+                    st.u2 += st.v2 * dt;
+
+                    // تحريك وتشويه الأعمدة ثلاثية الأبعاد
+                    const visualScale = 1.65;
+                    const disp1 = st.u1 * visualScale;
+                    const disp2 = st.u2 * visualScale;
+                    this.deformSDOFTower(st.meshes.tower1, disp1);
+                    this.deformSDOFTower(st.meshes.tower2, disp2);
+
+                    // فحص التصادم (Pounding) في الفاصل الزلزالي عند اختلاف الطور
+                    const phaseDiff = Math.abs(disp1 - disp2);
+                    if (phaseDiff > 0.22) {
+                        st.poundingOccurred = true;
+                        if (st.meshes.spark) {
+                            st.meshes.spark.material.opacity = 0.9;
+                            st.meshes.spark.scale.setScalar(1 + Math.sin(t * 40) * 0.35);
+                        }
+                        document.getElementById('tt-gap-status').innerHTML = '<span style="color:#ef4444;">💥 تصادم زلزالي (Pounding)!</span>';
+                    } else if (st.meshes.spark) {
+                        st.meshes.spark.material.opacity = Math.max(0, st.meshes.spark.material.opacity - 0.1);
+                    }
+
+                    // تحديث المخطط الزمني
+                    st.historyU1.push(disp1);
+                    st.historyU2.push(disp2);
+                    if (st.historyU1.length > 180) {
+                        st.historyU1.shift();
+                        st.historyU2.shift();
+                    }
+                    this.drawTwinTimeChart();
+
+                    // انتهاء الهزة وتقييم النتيجة
+                    if (t > 6.5) {
+                        this.isSimulating = false;
+                        const targetK2 = (st.m2 * st.k1) / st.m1;
+                        const kRatioErr = Math.abs(st.k2 - targetK2) / targetK2;
+                        const zErr = Math.abs(st.z2 - st.z1);
+
+                        if (kRatioErr < 0.04 && zErr <= 0.6 && !st.poundingOccurred) {
+                            this.addScore(30);
+                            document.getElementById('tt-gap-status').innerHTML = '<span style="color:#10b981;">✅ تطابق تام في الطور والسعة!</span>';
+                            this.showFeedback('tt-feedback', 'success', `أحسنت! بتحقيق النسبة m₂/k₂ = m₁/k₁ (أي k₂ = ${targetK2} kN/m) وتساوي التخميد ζ = ${st.z1}%، تساوى الدور الطبيعي T_n واهتز البرجان بتطابق تام دون تصادم.`);
+                        } else {
+                            this.showFeedback('tt-feedback', 'error', `حدث اختلاف في الطور وتصادم بين البرجين! تلميح: اجعل النسبة m₂/k₂ تساوي m₁/k₁ ونسبة التخميد ζ₂ = ${st.z1}%.`);
+                        }
+                    }
+                }
+
+                // ---------------- تحديث التمرين الثاني: مفتش الكود ----------------
+                else if (this.currentMode === 'codeInspector') {
+                    const st = this.inspectorState;
+                    const t = this.simTime;
+                    const env = Math.exp(-0.35 * t);
+
+                    if (st.meshes.platform) {
+                        st.meshes.platform.position.x = env * 0.45 * Math.sin(14 * t);
+                    }
+
+                    st.meshes.stories.forEach((flr, idx) => {
+                        const mode1 = Math.sin(((idx + 1) / st.meshes.stories.length) * (Math.PI / 2));
+                        const mode2 = Math.sin(((idx + 1) / st.meshes.stories.length) * Math.PI * 1.5);
+                        if (st.testResult === 'pass') {
+                            flr.position.x = env * 0.25 * mode1 * Math.sin(10 * t);
+                            flr.rotation.z = 0;
+                        } else {
+                            // إظهار الفشل الإنشائي والانحراف الطابقي بسبب إغفال الأنماط العليا
+                            flr.position.x = env * (0.55 * mode1 * Math.sin(9 * t) + 0.65 * mode2 * Math.cos(19 * t));
+                            flr.rotation.z = Math.min(0.22, t * 0.04) * (idx % 2 === 0 ? 1 : -0.6);
+                        }
+                    });
+
+                    if (t > 5.0) {
+                        this.isSimulating = false;
+                    }
+                }
+
+                // ---------------- تحديث التمرين الثالث: قناص طيف الاستجابة ----------------
+                else if (this.currentMode === 'spectrumSniper') {
+                    const st = this.sniperState;
+                    const t = this.simTime;
+                    const env = Math.exp(-(st.zeta / 100) * st.wn * 0.45 * t);
+                    const disp = env * (st.D * 18) * Math.sin(st.wn * t);
+
+                    if (st.meshes.base) {
+                        st.meshes.base.position.x = Math.exp(-0.5 * t) * 0.3 * Math.sin(12 * t);
+                    }
+                    this.deformSDOFTower(st.meshes.frame, disp);
+
+                    if (t > 5.0) {
+                        this.isSimulating = false;
+                        this.deformSDOFTower(st.meshes.frame, 0);
+                        if (st.meshes.base) st.meshes.base.position.x = 0;
+                    }
+                }
+            },
+
+            // =========================================================================
+            // 8. دوال المساعدة، إعادة التعيين reset()، والتدمير الآمن destroy()
+            // =========================================================================
+            addScore: function(pts) {
+                this.score += pts;
+                const el = document.getElementById('global-score');
+                if (el) el.textContent = this.score;
+            },
+
+            showFeedback: function(id, type, msg) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.className = 'feedback-banner ' + type;
+                el.innerHTML = msg;
+            },
+
+            hideFeedback: function(id) {
+                const el = document.getElementById(id);
+                if (el) el.className = 'feedback-banner';
+            },
+
+            reset: function() {
+                this.isSimulating = false;
+                this.simTime = 0;
+
+                if (this.currentMode === 'twinTowers') {
+                    const st = this.twinState;
+                    st.u1 = 0; st.v1 = 0; st.u2 = 0; st.v2 = 0;
+                    st.historyU1 = []; st.historyU2 = [];
+                    if (st.meshes.shakeTable) st.meshes.shakeTable.position.x = 0;
+                    this.deformSDOFTower(st.meshes.tower1, 0);
+                    this.deformSDOFTower(st.meshes.tower2, 0);
+                    if (st.meshes.spark) st.meshes.spark.material.opacity = 0;
+                    this.drawTwinTimeChart();
+                    this.hideFeedback('tt-feedback');
+                } else if (this.currentMode === 'codeInspector') {
+                    this.loadInspectorCase(this.inspectorState.caseIndex);
+                } else if (this.currentMode === 'spectrumSniper') {
+                    this.deformSDOFTower(this.sniperState.meshes.frame, 0);
+                    this.hideFeedback('ss-feedback');
+                }
+            },
+
+            // دالة التنظيف الإلزامية لمنع تسريب ذاكرة WebGL
+            destroy: function() {
+                this.isSimulating = false;
+                if (this.animationFrameId) {
+                    cancelAnimationFrame(this.animationFrameId);
+                    this.animationFrameId = null;
+                }
+
+                if (this.boundResizeHandler) {
+                    window.removeEventListener('resize', this.boundResizeHandler);
+                    this.boundResizeHandler = null;
+                }
+
+                this.boundListeners.forEach(({ el, event, fn }) => {
+                    el.removeEventListener(event, fn);
+                });
+                this.boundListeners = [];
+
+                if (this.controls) {
+                    this.controls.dispose();
+                    this.controls = null;
+                }
+
+                if (this.scene) {
+                    this.scene.traverse(obj => this.disposeObject3D(obj));
+                    this.scene.clear();
+                    this.scene = null;
+                }
+
+                if (this.renderer) {
+                    this.renderer.dispose();
+                    if (this.renderer.domElement && this.renderer.domElement.parentNode) {
+                        this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+                    }
+                    this.renderer = null;
+                }
+            }
+        };
+
+        // تشغيل المختبر فور جهوزية الصفحة
+        window.addEventListener('DOMContentLoaded', () => {
+            StructuralDynamicsLab.init('webgl-container');
+        });
+    </script>
+</body>
+</html>

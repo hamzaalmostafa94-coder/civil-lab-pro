@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المختبر الافتراضي لهندسة الموارد المائية والهيدرولوجيا</title>
+    
+    <!-- استدعاء خط تجوال من Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- استدعاء مكتبات Three.js r128 الإلزامية -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --panel-bg: rgba(15, 23, 42, 0.78);
+            --panel-border: rgba(255, 255, 255, 0.12);
+            --accent-blue: #38bdf8;
+            --accent-teal: #2dd4bf;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Tajawal', sans-serif;
+            user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+        }
+
+        /* حاوية المشهد ثلاثي الأبعاد */
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* الشريط العلوي والتبويبات */
+        .top-nav {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            padding: 10px 20px;
+            border-radius: 16px;
+            border: 1px solid var(--panel-border);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            width: max-content;
+            max-width: 95vw;
+        }
+
+        .brand-title {
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: var(--accent-blue);
+            margin-left: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-left: 1px solid var(--panel-border);
+            padding-left: 15px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            padding: 8px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.92rem;
+            transition: all 0.25s ease;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(45, 212, 191, 0.25));
+            border-color: var(--accent-blue);
+            color: #fff;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+        }
+
+        /* لوحة التحكم الجانبية (Glassmorphism) */
+        .side-panel {
+            position: absolute;
+            top: 85px;
+            right: 20px;
+            width: 390px;
+            max-height: calc(100vh - 105px);
+            z-index: 10;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--panel-border);
+            border-radius: 18px;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .side-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+        .side-panel::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .module-section {
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .module-section.active {
+            display: flex;
+        }
+
+        .panel-header h2 {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--accent-teal);
+            margin-bottom: 4px;
+        }
+
+        .panel-header p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        /* صندوق المعادلات */
+        .equation-box {
+            background: rgba(0, 0, 0, 0.35);
+            border-right: 3px solid var(--accent-blue);
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .equation-box .eq-title {
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            margin-bottom: 3px;
+        }
+
+        .equation-box .eq-math {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: 700;
+            color: var(--accent-blue);
+            direction: ltr;
+            text-align: left;
+            font-size: 0.95rem;
+        }
+
+        /* عناصر التحكم والأشرطة */
+        .control-group {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .control-value {
+            color: var(--accent-blue);
+            font-weight: 800;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--accent-blue);
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+            transition: transform 0.15s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+
+        /* شبكة القراءات الرقمية */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stat-card {
+            background: rgba(0, 0, 0, 0.25);
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        .stat-card .stat-title {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .stat-card .stat-num {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .stat-card .stat-unit {
+            font-size: 0.75rem;
+            color: var(--accent-teal);
+            margin-right: 3px;
+        }
+
+        /* أشرطة التحذير والحالة */
+        .progress-wrapper {
+            margin-top: 6px;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--success);
+            transition: width 0.2s ease, background-color 0.2s ease;
+        }
+
+        /* الأزرار */
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 11px 15px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.92rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #0284c7, #0d9488);
+            color: white;
+            box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4);
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.12);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            border: 1px solid var(--panel-border);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        .btn-challenge {
+            background: linear-gradient(135deg, #f59e0b, #ea580c);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(234, 88, 12, 0.4);
+            width: 100%;
+            padding: 13px;
+            font-size: 0.98rem;
+        }
+
+        /* رسائل التنبيه والشهادات */
+        .status-banner {
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            line-height: 1.5;
+            text-align: center;
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid var(--success);
+            color: #a7f3d0;
+        }
+
+        .status-banner.warning {
+            background: rgba(245, 158, 11, 0.18);
+            border-color: var(--warning);
+            color: #fde68a;
+        }
+
+        .status-banner.danger {
+            background: rgba(239, 68, 68, 0.22);
+            border-color: var(--danger);
+            color: #fecaca;
+            animation: pulse-danger 1.2s infinite alternate;
+        }
+
+        @keyframes pulse-danger {
+            from { box-shadow: 0 0 5px rgba(239, 68, 68, 0.3); }
+            to { box-shadow: 0 0 18px rgba(239, 68, 68, 0.8); }
+        }
+
+        /* دليل التحكم السفلي */
+        .camera-hint {
+            position: absolute;
+            bottom: 15px;
+            left: 20px;
+            z-index: 10;
+            background: var(--panel-bg);
+            backdrop-filter: blur(8px);
+            padding: 8px 14px;
+            border-radius: 10px;
+            border: 1px solid var(--panel-border);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* استجابة الشاشات الصغيرة */
+        @media (max-width: 768px) {
+            .top-nav {
+                flex-direction: column;
+                gap: 8px;
+                padding: 10px;
+                top: 10px;
+            }
+            .brand-title {
+                border-left: none;
+                padding-left: 0;
+                margin-left: 0;
+            }
+            .side-panel {
+                width: calc(100vw - 24px);
+                right: 12px;
+                top: auto;
+                bottom: 12px;
+                max-height: 55vh;
+            }
+            .camera-hint {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- حاوية الرسم ثلاثي الأبعاد -->
+    <div id="canvas-container"></div>
+
+    <!-- شريط التنقل العلوي -->
+    <nav class="top-nav">
+        <div class="brand-title">
+            <span>💧</span>
+            <span>مختبر الهيدرولوجيا الرقمي 3D</span>
+        </div>
+        <div class="nav-tabs">
+            <button class="tab-btn active" id="tab-flood" onclick="HydroCivilLab.switchModule('flood')">
+                1. غرفة طوارئ السد (The Flood Master)
+            </button>
+            <button class="tab-btn" id="tab-risk" onclick="HydroCivilLab.switchModule('risk')">
+                2. معضلة الميزانية والمخاطرة (Risk & Budget)
+            </button>
+        </div>
+    </nav>
+
+    <!-- لوحة التحكم الجانبية -->
+    <aside class="side-panel">
+        
+        <!-- ==================== التمرين الأول: غرفة طوارئ السد ==================== -->
+        <div class="module-section active" id="module-flood">
+            <div class="panel-header">
+                <h2>غرفة طوارئ السد وموجة الفيضان</h2>
+                <p>تحكم في بوابات المفيض أثناء عبور العاصفة التصميمية لحماية السد من الغمر (Overtopping) دون إغراق المدينة في المصب.</p>
+            </div>
+
+            <div class="equation-box">
+                <div class="eq-title">معادلة الموازنة المائية (Storage Routing):</div>
+                <div class="eq-math">ΔS = (Q_in - Q_out) × Δt</div>
+            </div>
+
+            <!-- شريط التحكم بفتحة المفيض -->
+            <div class="control-group">
+                <div class="control-label">
+                    <span>نسبة فتح بوابات المفيض (Spillway Gate):</span>
+                    <span class="control-value" id="gate-val-label">25%</span>
+                </div>
+                <input type="range" id="gate-slider" min="0" max="100" value="25" step="1"
+                       oninput="HydroCivilLab.onGateSliderChange(this.value)">
+            </div>
+
+            <!-- القراءات الهيدرولوجية اللحظية -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-title">زمن العاصفة (t)</div>
+                    <div><span class="stat-num" id="stat-time">0.0</span><span class="stat-unit">ساعة</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">مؤشر كفاءة التشغيل</div>
+                    <div><span class="stat-num" id="stat-score">100</span><span class="stat-unit">%</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">التدفق الداخل (Q_in)</div>
+                    <div><span class="stat-num" id="stat-qin">120</span><span class="stat-unit">م³/ث</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">التدفق المفرغ (Q_out)</div>
+                    <div><span class="stat-num" id="stat-qout">110</span><span class="stat-unit">م³/ث</span></div>
+                </div>
+            </div>
+
+            <!-- أشرطة الأمان الحرجة -->
+            <div class="control-group">
+                <div class="control-label">
+                    <span>منسوب بحيرة السد (الحد الأقصى: 95 م)</span>
+                    <span class="control-value" id="stat-level">72.0 م</span>
+                </div>
+                <div class="progress-wrapper">
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="bar-reservoir" style="width: 60%;"></div>
+                    </div>
+                </div>
+
+                <div class="control-label" style="margin-top: 12px;">
+                    <span>أمان قناة المصب والمدينة (العتبة: 850 م³/ث)</span>
+                    <span class="control-value" id="stat-downstream-status">آمن</span>
+                </div>
+                <div class="progress-wrapper">
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="bar-downstream" style="width: 20%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- حالة النظام -->
+            <div class="status-banner" id="flood-banner">
+                النظام جاهز. اضغط "بدء العاصفة" لمحاكاة هيدروغراف الفيضان.
+            </div>
+
+            <!-- أزرار التحكم -->
+            <div class="btn-group">
+                <button class="btn btn-primary" id="btn-toggle-sim" onclick="HydroCivilLab.toggleFloodSimulation()">
+                    ▶ بدء العاصفة
+                </button>
+                <button class="btn btn-secondary" onclick="HydroCivilLab.reset()">
+                    ↺ إعادة تعيين
+                </button>
+            </div>
+        </div>
+
+        <!-- ==================== التمرين الثاني: معضلة الميزانية والمخاطرة ==================== -->
+        <div class="module-section" id="module-risk">
+            <div class="panel-header">
+                <h2>معضلة الميزانية والمخاطرة الاحتمالية</h2>
+                <p>صمم عبّارة مائية لمنشأة استراتيجية بعمر تصميمي (n = 30 سنة). وازن بين التكلفة الإنشائية ومخاطرة الفيضان.</p>
+            </div>
+
+            <div class="equation-box">
+                <div class="eq-title">معادلة تالبوت والطريقة العقلانية والمخاطرة:</div>
+                <div class="eq-math">i = a/(t+b) | Q = C·i·A | R = 1-(1-1/T)^n</div>
+            </div>
+
+            <!-- مدخلات التصميم -->
+            <div class="control-group">
+                <div class="control-label">
+                    <span>فترة التردد التصميمية (T):</span>
+                    <span class="control-value" id="risk-t-label">25 سنة</span>
+                </div>
+                <input type="range" id="risk-t-slider" min="0" max="4" value="2" step="1"
+                       oninput="HydroCivilLab.updateRiskParameters()">
+                <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
+                    <span>5 سنوات</span><span>10</span><span>25</span><span>50</span><span>100 سنة</span>
+                </div>
+
+                <div class="control-label" style="margin-top: 12px;">
+                    <span>مدة العاصفة المطرية (t):</span>
+                    <span class="control-value" id="risk-dur-label">30 دقيقة</span>
+                </div>
+                <input type="range" id="risk-dur-slider" min="10" max="120" value="30" step="5"
+                       oninput="HydroCivilLab.updateRiskParameters()">
+
+                <div class="control-label" style="margin-top: 12px;">
+                    <span>مساحة الحوض الصباب (A):</span>
+                    <span class="control-value" id="risk-area-label">12.0 كم²</span>
+                </div>
+                <input type="range" id="risk-area-slider" min="2" max="30" value="12" step="1"
+                       oninput="HydroCivilLab.updateRiskParameters()">
+            </div>
+
+            <!-- نتائج الحسابات الهيدرولوجية -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-title">شدة المطر التصميمية (i)</div>
+                    <div><span class="stat-num" id="risk-stat-i">85.2</span><span class="stat-unit">مم/ساعة</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">التدفق التصميمي (Q_des)</div>
+                    <div><span class="stat-num" id="risk-stat-q">142.0</span><span class="stat-unit">م³/ث</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">المخاطرة الهندسية (R)</div>
+                    <div><span class="stat-num" id="risk-stat-r" style="color:var(--warning);">70.8</span><span class="stat-unit">%</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">التكلفة الإنشائية</div>
+                    <div><span class="stat-num" id="risk-stat-cost" style="color:var(--accent-teal);">1.45</span><span class="stat-unit">مليون $</span></div>
+                </div>
+            </div>
+
+            <!-- حالة اختبار الـ 30 سنة -->
+            <div class="status-banner" id="risk-banner">
+                اختر المعاملات الهندسية ثم اضغط زر التحدي لمحاكاة 30 سنة من العواصف العشوائية (Monte Carlo).
+            </div>
+
+            <button class="btn btn-challenge" id="btn-run-monte-carlo" onclick="HydroCivilLab.runThirtyYearChallenge()">
+                ⚡ اختبار 30 عاماً من الأمان (تحدي الواقع)
+            </button>
+
+            <button class="btn btn-secondary" onclick="HydroCivilLab.reset()">
+                ↺ إعادة ضبط التصميم
+            </button>
+        </div>
+
+    </aside>
+
+    <!-- تلميح التحكم بالكاميرا -->
+    <div class="camera-hint">
+        🖱️ تدوير: زر الفأرة الأيسر | تقريب: عجلة الفأرة | تحريك: زر الفأرة الأيمن
+    </div>
+
+    <!-- ==================== الكود البرمجي الموحد (HydroCivilLab) ==================== -->
+    <script>
+        /**
+         * الكائن البرمجي المغلق (HydroCivilLab)
+         * يحتوي على كامل منطق المشهد ثلاثي الأبعاد، المعادلات الهيدرولوجية، وحماية الذاكرة.
+         */
+        const HydroCivilLab = {
+            // مراجع Three.js الأساسية
+            container: null,
+            scene: null,
+            camera: null,
+            renderer: null,
+            controls: null,
+            animationFrameId: null,
+            boundResizeHandler: null,
+
+            // حالة التطبيق العامة
+            activeModule: 'flood', // 'flood' أو 'risk'
+            clock: new THREE.Clock(),
+
+            // مجموعات المجسمات لفصل التمارين
+            floodGroup: null,
+            riskGroup: null,
+
+            // مراجع مجسمات التمرين الأول (السد)
+            meshes: {
+                reservoirWater: null,
+                downstreamWater: null,
+                spillwayJet: null,
+                gateMesh: null,
+                cityBuildings: [],
+                culvertBox: null,
+                culvertWater: null,
+                rainParticles: null
+            },
+
+            // متغيرات المحاكاة للتمرين الأول (غرفة طوارئ السد)
+            floodSim: {
+                isRunning: false,
+                isGameOver: false,
+                timeHours: 0,           // الزمن بالساعات (0 إلى 24 ساعة)
+                maxTimeHours: 24,
+                waterLevel: 72.0,       // منسوب المياه الابتدائي (متر)
+                minLevel: 50.0,         // منسوب التخزين الميت
+                maxSafeLevel: 95.0,     // منسوب قمة السد (Overtopping)
+                reservoirArea: 180000,  // مساحة سطح البحيرة المكافئة (م²) لتسريع المحاكاة البصرية
+                gateOpeningPct: 25,     // نسبة فتح البوابة %
+                qIn: 120,               // التدفق الداخل (م³/ث)
+                qOut: 110,              // التدفق الخارج (م³/ث)
+                maxSafeDownstreamQ: 850,// عتبة فيضان المدينة في المصب (م³/ث)
+                score: 100              // مؤشر الأداء المئوي
+            },
+
+            // متغيرات المحاكاة للتمرين الثاني (المخاطرة والميزانية)
+            riskSim: {
+                returnPeriods: [5, 10, 25, 50, 100],
+                selectedT: 25,
+                durationMin: 30,
+                areaKm2: 12,
+                runoffCoeffC: 0.55,     // معامل الجريان السطحي C
+                designIntensity: 0,     // شدة المطر (مم/ساعة)
+                designQ: 0,             // التدفق التصميمي (م³/ث)
+                riskPercent: 0,         // المخاطرة الهندسية %
+                costMillion: 0,         // التكلفة بالمليون دولار
+                isTesting30Years: false,
+                currentTestYear: 0,
+                testTimer: null,
+                currentSimFlowRatio: 0.35
+            },
+
+            /**
+             * 1. دالة التهيئة (init)
+             * تقوم بإنشاء المشهد، الكاميرا، الإضاءة، الشبكة الأرضية، والمجسمات الهندسية.
+             */
+            init: function(containerId) {
+                this.container = document.getElementById(containerId);
+                if (!this.container) return;
+
+                // إنشاء المشهد بخلفية كحلية داكنة (#0f172a)
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x0f172a);
+                this.scene.fog = new THREE.FogExp2(0x0f172a, 0.0022);
+
+                // إعداد الكاميرا
+                const aspect = window.innerWidth / window.innerHeight;
+                this.camera = new THREE.PerspectiveCamera(45, aspect, 1, 2000);
+                this.camera.position.set(-140, 95, 160);
+
+                // إعداد المصير (Renderer)
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                this.container.appendChild(this.renderer.domElement);
+
+                // إعداد متحكمات الكاميرا (OrbitControls)
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.06;
+                this.controls.maxPolarAngle = Math.PI / 2 - 0.03; // منع النزول تحت الأرض
+                this.controls.minDistance = 40;
+                this.controls.maxDistance = 420;
+                this.controls.target.set(0, 20, 0);
+
+                // إعداد الإضاءة المتوازنة
+                this.setupLightsAndGrid();
+
+                // إنشاء مجموعات التمارين
+                this.floodGroup = new THREE.Group();
+                this.riskGroup = new THREE.Group();
+                this.scene.add(this.floodGroup);
+                this.scene.add(this.riskGroup);
+
+                // بناء مجسمات التمرين الأول والتمرين الثاني
+                this.buildFloodMasterScene();
+                this.buildRiskDilemmaScene();
+
+                // تفعيل التمرين الأول افتراضياً
+                this.switchModule('flood');
+                this.updateRiskParameters();
+
+                // ربط حدث تغيير حجم النافذة
+                this.boundResizeHandler = this.onWindowResize.bind(this);
+                window.addEventListener('resize', this.boundResizeHandler);
+
+                // بدء حلقة التحديث والأنيميشن
+                this.animate();
+            },
+
+            /**
+             * إعداد الإضاءة والشبكة الأرضية (GridHelper)
+             */
+            setupLightsAndGrid: function() {
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
+                this.scene.add(ambientLight);
+
+                const dirLight = new THREE.DirectionalLight(0xfffbeb, 0.9);
+                dirLight.position.set(120, 180, 100);
+                dirLight.castShadow = true;
+                dirLight.shadow.mapSize.width = 2048;
+                dirLight.shadow.mapSize.height = 2048;
+                dirLight.shadow.camera.near = 10;
+                dirLight.shadow.camera.far = 500;
+                const d = 160;
+                dirLight.shadow.camera.left = -d;
+                dirLight.shadow.camera.right = d;
+                dirLight.shadow.camera.top = d;
+                dirLight.shadow.camera.bottom = -d;
+                this.scene.add(dirLight);
+
+                const hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x0f172a, 0.3);
+                this.scene.add(hemiLight);
+
+                // شبكة أرضية هندسية
+                const gridHelper = new THREE.GridHelper(400, 40, 0x38bdf8, 0x1e293b);
+                gridHelper.position.y = -0.2;
+                this.scene.add(gridHelper);
+            },
+
+            /**
+             * بناء المشهد ثلاثي الأبعاد للتمرين الأول: السد، البحيرة، المفيض، والمدينة
+             */
+            buildFloodMasterScene: function() {
+                // 1. قاعدة الوادي والجدران الجانبية
+                const terrainMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.85 });
+                const baseFloor = new THREE.Mesh(new THREE.BoxGeometry(240, 4, 100), terrainMat);
+                baseFloor.position.set(0, 2, 0);
+                baseFloor.receiveShadow = true;
+                this.floodGroup.add(baseFloor);
+
+                // ضفاف القناة الصخرية
+                const bankGeo = new THREE.BoxGeometry(240, 55, 12);
+                const leftBank = new THREE.Mesh(bankGeo, terrainMat);
+                leftBank.position.set(0, 29.5, -44);
+                leftBank.castShadow = true;
+                leftBank.receiveShadow = true;
+                this.floodGroup.add(leftBank);
+
+                const rightBank = new THREE.Mesh(bankGeo, terrainMat);
+                rightBank.position.set(0, 29.5, 44);
+                rightBank.castShadow = true;
+                rightBank.receiveShadow = true;
+                this.floodGroup.add(rightBank);
+
+                // 2. جسم السد الخرساني (Dam Wall)
+                const concreteMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.6 });
+                
+                // الكتف الأيمن والأيسر للسد
+                const damSideGeo = new THREE.BoxGeometry(26, 52, 26);
+                const damLeft = new THREE.Mesh(damSideGeo, concreteMat);
+                damLeft.position.set(0, 30, -25);
+                damLeft.castShadow = true;
+                damLeft.receiveShadow = true;
+                this.floodGroup.add(damLeft);
+
+                const damRight = new THREE.Mesh(damSideGeo, concreteMat);
+                damRight.position.set(0, 30, 25);
+                damRight.castShadow = true;
+                damRight.receiveShadow = true;
+                this.floodGroup.add(damRight);
+
+                // الجزء السفلي تحت فتحة المفيض (Spillway Crest)
+                const spillwayCrest = new THREE.Mesh(new THREE.BoxGeometry(28, 34, 24), concreteMat);
+                spillwayCrest.position.set(2, 21, 0);
+                spillwayCrest.castShadow = true;
+                this.floodGroup.add(spillwayCrest);
+
+                // منحدر المفيض (Spillway Chute)
+                const chuteGeo = new THREE.BoxGeometry(36, 6, 24);
+                const chuteMesh = new THREE.Mesh(chuteGeo, concreteMat);
+                chuteMesh.position.set(18, 18, 0);
+                chuteMesh.rotation.z = -Math.PI / 5.5;
+                this.floodGroup.add(chuteMesh);
+
+                // بوابة المفيض الفولاذية المتحركة (Spillway Gate)
+                const gateMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.6, roughness: 0.3 });
+                this.meshes.gateMesh = new THREE.Mesh(new THREE.BoxGeometry(3, 16, 23), gateMat);
+                this.meshes.gateMesh.position.set(-4, 46, 0);
+                this.floodGroup.add(this.meshes.gateMesh);
+
+                // 3. مجسم مياه بحيرة التخزين (خلف السد X < 0)
+                const waterMat = new THREE.MeshStandardMaterial({
+                    color: 0x0284c7,
+                    transparent: true,
+                    opacity: 0.82,
+                    roughness: 0.15,
+                    metalness: 0.1
+                });
+                // ننشئ مجسم بارتفاع أساسي = 1 ليتم تحجيمه (scale.y) ديناميكياً حسب المنسوب
+                this.meshes.reservoirWater = new THREE.Mesh(new THREE.BoxGeometry(106, 1, 76), waterMat);
+                this.meshes.reservoirWater.position.set(-66, 20, 0);
+                this.floodGroup.add(this.meshes.reservoirWater);
+
+                // 4. مجسم المياه المتدفقة فوق المفيض (Spillway Jet)
+                const jetMat = new THREE.MeshStandardMaterial({
+                    color: 0x38bdf8,
+                    transparent: true,
+                    opacity: 0.85,
+                    roughness: 0.1
+                });
+                this.meshes.spillwayJet = new THREE.Mesh(new THREE.BoxGeometry(40, 2.5, 22), jetMat);
+                this.meshes.spillwayJet.position.set(19, 21.5, 0);
+                this.meshes.spillwayJet.rotation.z = -Math.PI / 5.5;
+                this.floodGroup.add(this.meshes.spillwayJet);
+
+                // 5. مجسم مياه قناة المصب (أمام السد X > 0)
+                this.meshes.downstreamWater = new THREE.Mesh(new THREE.BoxGeometry(105, 1, 76), waterMat.clone());
+                this.meshes.downstreamWater.position.set(66, 8, 0);
+                this.floodGroup.add(this.meshes.downstreamWater);
+
+                // 6. مباني المدينة في المصب (لتوضيح خطر الغمر)
+                this.meshes.cityBuildings = [];
+                const buildingPositions = [
+                    { x: 75, z: -26, h: 18 },
+                    { x: 92, z: -24, h: 24 },
+                    { x: 82, z: 25, h: 16 },
+                    { x: 102, z: 24, h: 22 }
+                ];
+
+                // رصيف المدينة في المصب
+                const cityPlatform = new THREE.Mesh(
+                    new THREE.BoxGeometry(50, 12, 22),
+                    new THREE.MeshStandardMaterial({ color: 0x475569 })
+                );
+                cityPlatform.position.set(90, 10, -26);
+                this.floodGroup.add(cityPlatform);
+
+                const cityPlatform2 = cityPlatform.clone();
+                cityPlatform2.position.set(90, 10, 26);
+                this.floodGroup.add(cityPlatform2);
+
+                buildingPositions.forEach(b => {
+                    const bMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.4 });
+                    const bMesh = new THREE.Mesh(new THREE.BoxGeometry(10, b.h, 10), bMat);
+                    bMesh.position.set(b.x, 16 + b.h / 2, b.z);
+                    bMesh.castShadow = true;
+                    this.floodGroup.add(bMesh);
+                    this.meshes.cityBuildings.push(bMesh);
+                });
+            },
+
+            /**
+             * بناء المشهد ثلاثي الأبعاد للتمرين الثاني: العبّارة المائية (Box Culvert) والحوض المائي
+             */
+            buildRiskDilemmaScene: function() {
+                // أرضية القناة والردم الترابي للطريق
+                const soilMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.9 });
+                const floor = new THREE.Mesh(new THREE.BoxGeometry(180, 4, 120), soilMat);
+                floor.position.set(0, 2, 0);
+                this.riskGroup.add(floor);
+
+                // جسر الطريق السريع فوق العبارة
+                const roadMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7 });
+                const roadDeck = new THREE.Mesh(new THREE.BoxGeometry(36, 4, 120), roadMat);
+                roadDeck.position.set(0, 42, 0);
+                this.riskGroup.add(roadDeck);
+
+                // جسم العبّارة الخرسانية (Box Culvert) الذي يتغير حجمه حسب فترة التردد T
+                const culvertMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.5 });
+                this.meshes.culvertBox = new THREE.Mesh(new THREE.BoxGeometry(38, 24, 30), culvertMat);
+                this.meshes.culvertBox.position.set(0, 16, 0);
+                this.meshes.culvertBox.castShadow = true;
+                this.riskGroup.add(this.meshes.culvertBox);
+
+                // مجرى المياه العابر للعبارة
+                const streamMat = new THREE.MeshStandardMaterial({
+                    color: 0x0ea5e9,
+                    transparent: true,
+                    opacity: 0.82,
+                    roughness: 0.15
+                });
+                this.meshes.culvertWater = new THREE.Mesh(new THREE.BoxGeometry(178, 1, 26), streamMat);
+                this.meshes.culvertWater.position.set(0, 8, 0);
+                this.riskGroup.add(this.meshes.culvertWater);
+
+                // جزيئات المطر الثلاثية الأبعاد (Rain Particles)
+                const rainCount = 600;
+                const rainGeo = new THREE.BufferGeometry();
+                const positions = new Float32Array(rainCount * 3);
+                for (let i = 0; i < rainCount * 3; i += 3) {
+                    positions[i] = (Math.random() - 0.5) * 160;
+                    positions[i + 1] = Math.random() * 90 + 10;
+                    positions[i + 2] = (Math.random() - 0.5) * 100;
+                }
+                rainGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                const rainMat = new THREE.PointsMaterial({
+                    color: 0x7dd3fc,
+                    size: 1.2,
+                    transparent: true,
+                    opacity: 0.65
+                });
+                this.meshes.rainParticles = new THREE.Points(rainGeo, rainMat);
+                this.riskGroup.add(this.meshes.rainParticles);
+            },
+
+            /**
+             * التبديل بين التمرين الأول والتمرين الثاني
+             */
+            switchModule: function(moduleName) {
+                this.activeModule = moduleName;
+
+                // تحديث أزرار التبويب
+                document.getElementById('tab-flood').classList.toggle('active', moduleName === 'flood');
+                document.getElementById('tab-risk').classList.toggle('active', moduleName === 'risk');
+
+                // تحديث اللوحات الجانبية
+                document.getElementById('module-flood').classList.toggle('active', moduleName === 'flood');
+                document.getElementById('module-risk').classList.toggle('active', moduleName === 'risk');
+
+                // إظهار/إخفاء المجموعات ثلاثية الأبعاد
+                this.floodGroup.visible = (moduleName === 'flood');
+                this.riskGroup.visible = (moduleName === 'risk');
+
+                // ضبط زاوية الكاميرا المثالية لكل تمرين
+                if (moduleName === 'flood') {
+                    this.camera.position.set(-140, 95, 160);
+                    this.controls.target.set(0, 20, 0);
+                } else {
+                    this.camera.position.set(-110, 75, 115);
+                    this.controls.target.set(0, 18, 0);
+                    this.updateRiskParameters();
+                }
+            },
+
+            // =========================================================================
+            // منطق التمرين الأول: غرفة طوارئ السد (The Flood Master)
+            // =========================================================================
+
+            onGateSliderChange: function(val) {
+                this.floodSim.gateOpeningPct = parseFloat(val);
+                document.getElementById('gate-val-label').textContent = `${val}%`;
+            },
+
+            toggleFloodSimulation: function() {
+                if (this.floodSim.isGameOver) {
+                    this.reset();
+                    return;
+                }
+                this.floodSim.isRunning = !this.floodSim.isRunning;
+                const btn = document.getElementById('btn-toggle-sim');
+                if (this.floodSim.isRunning) {
+                    btn.innerHTML = '⏸ إيقاف مؤقت';
+                    this.setBanner('flood-banner', 'العاصفة الفيضانية قيد العبور! راقب منسوب البحيرة وتصريف المصب.', 'warning');
+                } else {
+                    btn.innerHTML = '▶ استئناف العاصفة';
+                }
+            },
+
+            /**
+             * تحديث الحسابات الهيدرولوجية للسد في كل إطار زمني
+             * يطبق معادلة الموازنة المائية: ΔS = (Q_in - Q_out) * Δt
+             */
+            updateFloodMasterPhysics: function(dt) {
+                // تحديث التمثيل البصري للبوابة ومنسوب المياه دائماً
+                const gateRatio = this.floodSim.gateOpeningPct / 100;
+                if (this.meshes.gateMesh) {
+                    // رفع البوابة للأعلى عند زيادة الفتح
+                    this.meshes.gateMesh.position.y = 43 + gateRatio * 12;
+                }
+
+                if (this.floodSim.isRunning && !this.floodSim.isGameOver) {
+                    // تقدم الزمن (كل ثانية حقيقية تعادل 0.85 ساعة من زمن العاصفة)
+                    const simHoursStep = dt * 0.85;
+                    this.floodSim.timeHours += simHoursStep;
+
+                    const t = this.floodSim.timeHours;
+
+                    // 1. حساب التدفق الداخل (Q_in) وفق هيدروغراف فيضان حقيقي (منحني صعود، ذروة عند 9 ساعات، ومنحني هبوط)
+                    // Q_in(t) = Q_base + Q_peak * exp(-((t - t_p)/w)^2)
+                    const qBase = 120;
+                    const qPeakAdd = 960; // ذروة العاصفة تصل إلى 1080 م³/ث
+                    const tPeak = 9.5;
+                    const spread = 4.2;
+                    this.floodSim.qIn = qBase + qPeakAdd * Math.exp(-Math.pow((t - tPeak) / spread, 2));
+
+                    // 2. حساب التدفق المفرغ (Q_out) عبر بوابات المفيض (يعتمد على نسبة الفتح والضاغط المائي Head)
+                    const effectiveHead = Math.max(1, this.floodSim.waterLevel - this.floodSim.minLevel);
+                    const maxGateCapacity = 1150; // أقصى تصريف للمفيض
+                    this.floodSim.qOut = gateRatio * maxGateCapacity * Math.sqrt(effectiveHead / 45);
+
+                    // 3. معادلة الموازنة المائية: ΔS = (Q_in - Q_out) * Δt
+                    const deltaSeconds = simHoursStep * 3600;
+                    const deltaStorage = (this.floodSim.qIn - this.floodSim.qOut) * deltaSeconds;
+                    const deltaLevel = deltaStorage / this.floodSim.reservoirArea;
+
+                    this.floodSim.waterLevel = Math.max(this.floodSim.minLevel, this.floodSim.waterLevel + deltaLevel);
+
+                    // خصم نقاط الأداء إذا اقترب المنسوب من الخطر أو زاد التصريف عن الأمان
+                    if (this.floodSim.waterLevel > 90 || this.floodSim.qOut > 780) {
+                        this.floodSim.score = Math.max(0, this.floodSim.score - dt * 6);
+                    }
+
+                    // 4. فحص شروط الفوز والخسارة
+                    if (this.floodSim.waterLevel >= this.floodSim.maxSafeLevel) {
+                        this.floodSim.isGameOver = true;
+                        this.floodSim.isRunning = false;
+                        this.setBanner('flood-banner', '💥 كارثة هندسية: تجاوزت المياه قمة السد (Overtopping) وحدث انهيار للمنشأة!', 'danger');
+                        document.getElementById('btn-toggle-sim').innerHTML = '↺ إعادة المحاولة';
+                    } else if (this.floodSim.qOut >= this.floodSim.maxSafeDownstreamQ) {
+                        this.floodSim.isGameOver = true;
+                        this.floodSim.isRunning = false;
+                        this.markCityFlooded(true);
+                        this.setBanner('flood-banner', '🌊 غمر المصب: التصريف المفرغ تجاوز سعة النهر (850 م³/ث) وأغرق المدينة!', 'danger');
+                        document.getElementById('btn-toggle-sim').innerHTML = '↺ إعادة المحاولة';
+                    } else if (this.floodSim.timeHours >= this.floodSim.maxTimeHours) {
+                        this.floodSim.isGameOver = true;
+                        this.floodSim.isRunning = false;
+                        const finalScore = Math.round(this.floodSim.score);
+                        this.setBanner('flood-banner', `🏆 نجاح باهر! عبرت موجة الفيضان بسلام وحافظت على السد والمدينة بكفاءة ${finalScore}%.`, '');
+                        document.getElementById('btn-toggle-sim').innerHTML = '↺ تشغيل مجدداً';
+                    }
+                }
+
+                // تحديث أبعاد المجسمات المائية ثلاثية الأبعاد لحظياً
+                const normLevel = (this.floodSim.waterLevel - this.floodSim.minLevel) / (this.floodSim.maxSafeLevel - this.floodSim.minLevel);
+                const visualHeight = 8 + Math.max(0.05, normLevel) * 44; // ارتفاع بصري بين 8 و 52 وحدة
+                if (this.meshes.reservoirWater) {
+                    this.meshes.reservoirWater.scale.y = visualHeight;
+                    this.meshes.reservoirWater.position.y = 4 + visualHeight / 2;
+                }
+
+                // تحديث نافورة المفيض ومياه المصب
+                if (this.meshes.spillwayJet) {
+                    this.meshes.spillwayJet.visible = gateRatio > 0.01;
+                    this.meshes.spillwayJet.scale.y = 0.2 + gateRatio * 1.4;
+                }
+
+                if (this.meshes.downstreamWater) {
+                    const dsHeight = 4 + (this.floodSim.qOut / 900) * 16;
+                    this.meshes.downstreamWater.scale.y = dsHeight;
+                    this.meshes.downstreamWater.position.y = 4 + dsHeight / 2;
+                }
+
+                // تحديث واجهة المستخدم الرقمية (DOM)
+                this.updateFloodUI();
+            },
+
+            markCityFlooded: function(isFlooded) {
+                const colorHex = isFlooded ? 0xef4444 : 0xe2e8f0;
+                this.meshes.cityBuildings.forEach(b => {
+                    b.material.color.setHex(colorHex);
+                });
+            },
+
+            updateFloodUI: function() {
+                document.getElementById('stat-time').textContent = this.floodSim.timeHours.toFixed(1);
+                document.getElementById('stat-score').textContent = Math.round(this.floodSim.score);
+                document.getElementById('stat-qin').textContent = Math.round(this.floodSim.qIn);
+                document.getElementById('stat-qout').textContent = Math.round(this.floodSim.qOut);
+                document.getElementById('stat-level').textContent = `${this.floodSim.waterLevel.toFixed(1)} م`;
+
+                // شريط منسوب البحيرة
+                const resPct = Math.min(100, Math.max(0, ((this.floodSim.waterLevel - 50) / (95 - 50)) * 100));
+                const resBar = document.getElementById('bar-reservoir');
+                resBar.style.width = `${resPct}%`;
+                resBar.style.backgroundColor = resPct > 88 ? 'var(--danger)' : (resPct > 72 ? 'var(--warning)' : 'var(--success)');
+
+                // شريط أمان المصب
+                const dsPct = Math.min(100, (this.floodSim.qOut / this.floodSim.maxSafeDownstreamQ) * 100);
+                const dsBar = document.getElementById('bar-downstream');
+                const dsLabel = document.getElementById('stat-downstream-status');
+                dsBar.style.width = `${dsPct}%`;
+                if (dsPct >= 100) {
+                    dsBar.style.backgroundColor = 'var(--danger)';
+                    dsLabel.textContent = 'غمر كارثي!';
+                } else if (dsPct > 80) {
+                    dsBar.style.backgroundColor = 'var(--warning)';
+                    dsLabel.textContent = 'حرج';
+                } else {
+                    dsBar.style.backgroundColor = 'var(--success)';
+                    dsLabel.textContent = 'آمن';
+                }
+            },
+
+            // =========================================================================
+            // منطق التمرين الثاني: معضلة الميزانية والمخاطرة (Risk & Budget Dilemma)
+            // =========================================================================
+
+            /**
+             * حساب شدة المطر، التدفق التصميمي، المخاطرة الاحتمالية، والتكلفة الإنشائية لحظياً
+             */
+            updateRiskParameters: function() {
+                const tIndex = parseInt(document.getElementById('risk-t-slider').value, 10);
+                const T = this.riskSim.returnPeriods[tIndex];
+                const duration = parseFloat(document.getElementById('risk-dur-slider').value);
+                const area = parseFloat(document.getElementById('risk-area-slider').value);
+                const n = 30; // العمر التصميمي 30 سنة
+
+                this.riskSim.selectedT = T;
+                this.riskSim.durationMin = duration;
+                this.riskSim.areaKm2 = area;
+
+                // تحديث نصوص الأشرطة
+                document.getElementById('risk-t-label').textContent = `${T} سنة`;
+                document.getElementById('risk-dur-label').textContent = `${duration} دقيقة`;
+                document.getElementById('risk-area-label').textContent = `${area.toFixed(1)} كم²`;
+
+                // 1. معادلة تالبوت لشدة المطر: i = a / (t + b)
+                // المعامل a يزداد مع فترة التردد T
+                const a = 1900 * Math.pow(T, 0.26);
+                const b = 22;
+                const intensity = a / (duration + b); // مم/ساعة
+                this.riskSim.designIntensity = intensity;
+
+                // 2. المعادلة العقلانية للتدفق التصميمي: Q = 0.278 * C * i * A
+                const qDesign = 0.278 * this.riskSim.runoffCoeffC * intensity * area;
+                this.riskSim.designQ = qDesign;
+
+                // 3. معادلة المخاطرة الهندسية: R = 1 - (1 - 1/T)^n
+                const risk = (1 - Math.pow(1 - (1 / T), n)) * 100;
+                this.riskSim.riskPercent = risk;
+
+                // 4. التكلفة الإنشائية التقديرية (مليون دولار) تزداد مع سعة العبارة وفترة التردد
+                const cost = 0.45 + 0.011 * qDesign + 0.015 * T;
+                this.riskSim.costMillion = cost;
+
+                // تحديث الأرقام في الواجهة
+                document.getElementById('risk-stat-i').textContent = intensity.toFixed(1);
+                document.getElementById('risk-stat-q').textContent = qDesign.toFixed(1);
+                document.getElementById('risk-stat-r').textContent = risk.toFixed(1);
+                document.getElementById('risk-stat-cost').textContent = cost.toFixed(2);
+
+                // تحديث أبعاد مجسم العبّارة المائية ثلاثية الأبعاد (تتسع وتضيق حسب T و Q_design)
+                if (this.meshes.culvertBox && this.meshes.culvertWater) {
+                    const widthScale = 0.65 + (tIndex * 0.28) + (area / 45);
+                    const heightScale = 0.75 + (tIndex * 0.16);
+                    this.meshes.culvertBox.scale.set(1, heightScale, widthScale);
+                    this.meshes.culvertBox.position.y = 4 + (24 * heightScale) / 2;
+
+                    this.meshes.culvertWater.scale.z = widthScale * 0.85;
+                }
+            },
+
+            /**
+             * محاكاة مونت كارلو (Monte Carlo) لاختبار 30 عاماً من العواصف العشوائية
+             */
+            runThirtyYearChallenge: function() {
+                if (this.riskSim.isTesting30Years) return;
+                this.riskSim.isTesting30Years = true;
+
+                const T_design = this.riskSim.selectedT;
+                const cost = this.riskSim.costMillion;
+                let failedYear = null;
+                let maxStormEquivalentT = 0;
+
+                // توليد 30 سنة من الأحداث المطرية العشوائية
+                for (let year = 1; year <= 30; year++) {
+                    // احتمال تجاوز العاصفة التصميمية في السنة الواحدة هو p = 1 / T_design
+                    const randomEvent = Math.random();
+                    const stormReturnPeriod = Math.round(1 / (1 - randomEvent));
+                    if (stormReturnPeriod > maxStormEquivalentT) {
+                        maxStormEquivalentT = stormReturnPeriod;
+                    }
+                    if (stormReturnPeriod > T_design && failedYear === null) {
+                        failedYear = year;
+                    }
+                }
+
+                // تأثير بصري لارتفاع المياه أثناء الاختبار
+                if (failedYear !== null) {
+                    this.riskSim.currentSimFlowRatio = 1.35; // فيضان يتجاوز العبارة
+                    const damageCost = (cost * 3.8).toFixed(2);
+                    this.setBanner(
+                        'risk-banner',
+                        `❌ فشل التصميم في السنة (${failedYear})! ضربت عاصفة بتردد (${maxStormEquivalentT} سنة) وتجاوزت التدفق التصميمي. خسائر الكارثة: ${damageCost} مليون $.`,
+                        'danger'
+                    );
+                } else {
+                    this.riskSim.currentSimFlowRatio = 0.72; // جريان آمن داخل العبارة
+                    if (T_design === 100 && cost > 3.2) {
+                        this.setBanner(
+                            'risk-banner',
+                            `✅ صمدت المنشأة 30 عاماً بنجاح، لكن الميزانية مرتفعة جداً (${cost.toFixed(2)} مليون $). حاول تحقيق توازن اقتصادي أفضل (T=50).`,
+                            'warning'
+                        );
+                    } else {
+                        this.setBanner(
+                            'risk-banner',
+                            `🏅 شهادة المهندس الاقتصادي المعتمد! صمدت المنشأة طوال 30 عاماً بميزانية مثالية (${cost.toFixed(2)} مليون $) ومخاطرة محسوبة.`,
+                            ''
+                        );
+                    }
+                }
+
+                setTimeout(() => {
+                    this.riskSim.isTesting30Years = false;
+                }, 600);
+            },
+
+            /**
+             * تحديث حركة المطر وجريان العبارة في التمرين الثاني
+             */
+            updateRiskVisuals: function(dt) {
+                // تحريك ذرات المطر للأسفل
+                if (this.meshes.rainParticles) {
+                    const positions = this.meshes.rainParticles.geometry.attributes.position.array;
+                    const rainSpeed = 45 + (this.riskSim.designIntensity * 0.4);
+                    for (let i = 1; i < positions.length; i += 3) {
+                        positions[i] -= rainSpeed * dt;
+                        if (positions[i] < 4) {
+                            positions[i] = 95;
+                        }
+                    }
+                    this.meshes.rainParticles.geometry.attributes.position.needsUpdate = true;
+                }
+
+                // تحديث ارتفاع المياه داخل العبارة
+                if (this.meshes.culvertWater && this.meshes.culvertBox) {
+                    const targetHeight = 6 + this.riskSim.currentSimFlowRatio * 18;
+                    this.meshes.culvertWater.scale.y += (targetHeight - this.meshes.culvertWater.scale.y) * 0.08;
+                    this.meshes.culvertWater.position.y = 4 + this.meshes.culvertWater.scale.y / 2;
+
+                    // تلوين العبارة بالأحمر عند حدوث فشل فيضاني
+                    if (this.riskSim.currentSimFlowRatio > 1.0) {
+                        this.meshes.culvertBox.material.color.setHex(0xef4444);
+                    } else {
+                        this.meshes.culvertBox.material.color.setHex(0x94a3b8);
+                    }
+                }
+            },
+
+            /**
+             * أداة مساعدة لتحديث رسائل الحالة
+             */
+            setBanner: function(elementId, text, typeClass) {
+                const el = document.getElementById(elementId);
+                if (!el) return;
+                el.textContent = text;
+                el.className = 'status-banner';
+                if (typeClass) el.classList.add(typeClass);
+            },
+
+            /**
+             * 2. دالة التحديث المستمر (animate / update)
+             */
+            animate: function() {
+                this.animationFrameId = requestAnimationFrame(this.animate.bind(this));
+
+                const dt = Math.min(this.clock.getDelta(), 0.1);
+
+                if (this.controls) {
+                    this.controls.update();
+                }
+
+                if (this.activeModule === 'flood') {
+                    this.updateFloodMasterPhysics(dt);
+                } else {
+                    this.updateRiskVisuals(dt);
+                }
+
+                if (this.renderer && this.scene && this.camera) {
+                    this.renderer.render(this.scene, this.camera);
+                }
+            },
+
+            /**
+             * 3. دالة إعادة التعيين (reset)
+             */
+            reset: function() {
+                // إعادة ضبط متغيرات التمرين الأول
+                this.floodSim.isRunning = false;
+                this.floodSim.isGameOver = false;
+                this.floodSim.timeHours = 0;
+                this.floodSim.waterLevel = 72.0;
+                this.floodSim.gateOpeningPct = 25;
+                this.floodSim.qIn = 120;
+                this.floodSim.qOut = 110;
+                this.floodSim.score = 100;
+
+                document.getElementById('gate-slider').value = 25;
+                document.getElementById('gate-val-label').textContent = '25%';
+                document.getElementById('btn-toggle-sim').innerHTML = '▶ بدء العاصفة';
+                this.markCityFlooded(false);
+                this.setBanner('flood-banner', 'النظام جاهز. اضغط "بدء العاصفة" لمحاكاة هيدروغراف الفيضان.', '');
+                this.updateFloodUI();
+
+                // إعادة ضبط متغيرات التمرين الثاني
+                document.getElementById('risk-t-slider').value = 2; // T = 25
+                document.getElementById('risk-dur-slider').value = 30;
+                document.getElementById('risk-area-slider').value = 12;
+                this.riskSim.currentSimFlowRatio = 0.35;
+                this.updateRiskParameters();
+                this.setBanner('risk-banner', 'اختر المعاملات الهندسية ثم اضغط زر التحدي لمحاكاة 30 سنة من العواصف العشوائية (Monte Carlo).', '');
+            },
+
+            /**
+             * استجابة لتغير أبعاد الشاشة
+             */
+            onWindowResize: function() {
+                if (!this.camera || !this.renderer) return;
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            },
+
+            /**
+             * 4. دالة التنظيف وحماية الذاكرة (destroy)
+             * تفرغ جميع الـ Geometries والـ Materials والـ Textures وتوقف requestAnimationFrame
+             */
+            destroy: function() {
+                if (this.animationFrameId) {
+                    cancelAnimationFrame(this.animationFrameId);
+                    this.animationFrameId = null;
+                }
+
+                if (this.boundResizeHandler) {
+                    window.removeEventListener('resize', this.boundResizeHandler);
+                }
+
+                if (this.scene) {
+                    this.scene.traverse((object) => {
+                        if (object.geometry) {
+                            object.geometry.dispose();
+                        }
+                        if (object.material) {
+                            if (Array.isArray(object.material)) {
+                                object.material.forEach(mat => {
+                                    if (mat.map) mat.map.dispose();
+                                    mat.dispose();
+                                });
+                            } else {
+                                if (object.material.map) object.material.map.dispose();
+                                object.material.dispose();
+                            }
+                        }
+                    });
+                }
+
+                if (this.renderer) {
+                    this.renderer.dispose();
+                    if (this.renderer.domElement && this.renderer.domElement.parentNode) {
+                        this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+                    }
+                }
+            }
+        };
+
+        // تشغيل المختبر فور اكتمال تحميل الصفحة
+        window.addEventListener('DOMContentLoaded', () => {
+            HydroCivilLab.init('canvas-container');
+        });
+    </script>
+</body>
+</html>
