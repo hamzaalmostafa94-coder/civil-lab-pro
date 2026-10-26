@@ -411,8 +411,8 @@ const syriaCurriculum = {
     }
 };
 
-const TELEGRAM_BOT_TOKEN = "8695897260:AAEKKsdzpuNYPKgeoHCy-rTuWi7iDZP_F2A"; 
-const TELEGRAM_CHAT_ID = "8432485890";
+const TELEGRAM_BOT_TOKEN = CONFIG.TELEGRAM_BOT_TOKEN; 
+const TELEGRAM_CHAT_ID = CONFIG.TELEGRAM_CHAT_ID;
 
 function generateDeviceID() { return 'device_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36); }
 
@@ -967,7 +967,7 @@ const SubscriptionFlow = {
     },
 
     sendIntentToTelegram() {
-        if(!TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN === "ضع_التوكن_الخاص_بالبوت_هنا") return;
+        if(!TELEGRAM_BOT_TOKEN || CONFIG.TELEGRAM_BOT_TOKEN === "ضع_التوكن_الخاص_بالبوت_هنا") return;
         
         const studentName = currentUser.name ? currentUser.name : 'طالب';
         const studentPhone = currentUser.phone ? currentUser.phone : 'غير مدرج';
@@ -979,7 +979,7 @@ const SubscriptionFlow = {
                      "📦 الباقة: " + pkgName + "\n" +
                      "🔑 **كود التفعيل المقترح:** `" + currentActivationCode + "`";
                      
-        fetch("https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage", { 
+        fetch("https://api.telegram.org/bot" + CONFIG.TELEGRAM_BOT_TOKEN + "/sendMessage", { 
             method: 'POST', 
             headers: {'Content-Type': 'application/json'}, 
             body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: text, parse_mode: 'Markdown' }) 
