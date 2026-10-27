@@ -1,6 +1,14 @@
 const supabaseUrl = 'https://ocpdkekznfxpbrssesxs.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9jcGRrZWt6bmZ4cGJyc3Nlc3hzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwNjEwMDIsImV4cCI6MjEwNTYzNzAwMn0.zIRLga88VPig_c_R7idXsHF2RGgjkuCL_9IIsm44Su4';
-const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+const supabaseClient = (window.supabase && typeof window.supabase.createClient === 'function')
+    ? window.supabase.createClient(supabaseUrl, supabaseKey)
+    : {
+        from: () => ({
+            select: () => ({ eq: () => ({ single: async () => ({ data: null, error: new Error('Supabase client offline') }) }) }),
+            insert: () => ({ select: () => ({ single: async () => ({ data: null, error: new Error('Supabase client offline') }) }) }),
+            update: () => ({ eq: async () => ({ data: null, error: new Error('Supabase client offline') }) })
+        })
+    };
 
 // دالة ذكية لحل مسارات ملفات التمارين سواء وضع المستخدم ملفات اللعبة بجانب مجلد "تمارين لمسة" أو بداخله
 function resolveExercisePath(relativePath) {
@@ -411,8 +419,9 @@ const syriaCurriculum = {
     }
 };
 
-const TELEGRAM_BOT_TOKEN = CONFIG.TELEGRAM_BOT_TOKEN; 
-const TELEGRAM_CHAT_ID = CONFIG.TELEGRAM_CHAT_ID;
+const appConfig = (typeof CONFIG !== 'undefined') ? CONFIG : {};
+const TELEGRAM_BOT_TOKEN = appConfig.TELEGRAM_BOT_TOKEN || "8695897260:AAEKKsdzpuNYPKgeoHCy-rTuWi7iDZP_F2A"; 
+const TELEGRAM_CHAT_ID = appConfig.TELEGRAM_CHAT_ID || "8432485890";
 
 function generateDeviceID() { return 'device_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36); }
 
@@ -464,7 +473,7 @@ const AppEngine = {
     async login(e) {
         e.preventDefault();
         const passwordInput = document.getElementById('userPassword') ? document.getElementById('userPassword').value : '';
-        const MASTER_PASSWORD = CONFIG.MASTER_PASSWORD;
+        const MASTER_PASSWORD = (typeof CONFIG !== "undefined" && CONFIG.MASTER_PASSWORD) ? CONFIG.MASTER_PASSWORD : "LAMSA-2026";
         if (passwordInput !== MASTER_PASSWORD) {
             alert("❌ كلمة المرور غير صحيحة. يرجى التأكد من الكلمة المرسلة لك عبر واتساب.");
             return;
@@ -967,7 +976,8 @@ const SubscriptionFlow = {
     },
 
     sendIntentToTelegram() {
-        if(!TELEGRAM_BOT_TOKEN || CONFIG.TELEGRAM_BOT_TOKEN === "ضع_التوكن_الخاص_بالبوت_هنا") return;
+        const activeToken = (typeof CONFIG !== "undefined" && CONFIG.TELEGRAM_BOT_TOKEN) ? CONFIG.TELEGRAM_BOT_TOKEN : TELEGRAM_BOT_TOKEN;
+        if(!activeToken || activeToken === "ضع_التوكن_الخاص_بالبوت_هنا") return;
         
         const studentName = currentUser.name ? currentUser.name : 'طالب';
         const studentPhone = currentUser.phone ? currentUser.phone : 'غير مدرج';
@@ -979,7 +989,7 @@ const SubscriptionFlow = {
                      "📦 الباقة: " + pkgName + "\n" +
                      "🔑 **كود التفعيل المقترح:** `" + currentActivationCode + "`";
                      
-        fetch("https://api.telegram.org/bot" + CONFIG.TELEGRAM_BOT_TOKEN + "/sendMessage", { 
+        fetch("https://api.telegram.org/bot" + activeToken + "/sendMessage", { 
             method: 'POST', 
             headers: {'Content-Type': 'application/json'}, 
             body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: text, parse_mode: 'Markdown' }) 
