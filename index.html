@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>طوق النجاة :: لعبة الهندسة المدنية (PRO)</title>
     
     <!-- PWA Meta Tags -->
@@ -13,31 +13,209 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" integrity="sha384-CI3ELBVUz9XQO+97x6nwMDPosPR5XvsxW2ua7N1Xeygeh1IxtgqtCkGfQY9WWdHu" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js" integrity="sha384-wagZhIFgY4hD+7awjQjR4e2E294y6J2HSnd8eTNc15ZubTeQeVRZwhQJ+W6hnBsf" crossorigin="anonymous"></script>    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" integrity="sha384-jK8n5m+jD1z7zQ+5zPzW9Hk/qTzQGZ0sU8+f+zG8/xWz5/y+wT0x/Z+wZ+W+Z+W+" crossorigin="anonymous"></script>
+
+    <!-- خط تاجوال للهوية الهندسية -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    
     <!-- ربط ملف التنسيقات -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <header>
-        <div class="brand">طوق النجاة :: CIVIL_ENG_LAB</div>
-        <div class="badge">يعمل 100% Offline</div>
+    <header class="header">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <button class="menu-btn" onclick="AppEngine.toggleSidebar()">☰</button>
+            <div class="brand">لمسة | LAMSA</div>
+        </div>
+        <div id="trial-badge" class="badge">⏳ جاري التحقق...</div>
     </header>
 
+    <!-- القائمة الجانبية -->
+    <div class="sidebar" id="sidebar">
+        <button class="close-btn" onclick="AppEngine.toggleSidebar()">×</button>
+        <div class="user-info">
+            <div class="user-avatar"></div>
+            <div>
+                <h3 id="sidebar-name">زائر جديد</h3>
+                <p id="sidebar-device" style="font-size: 12px; opacity: 0.8; margin-top: 4px; color: var(--text-muted, #64748b);">الجهاز: غير متصل</p>
+            </div>
+        </div>
+        <ul class="sidebar-links" style="list-style: none; padding: 0; margin-top: 30px;">
+            <li onclick="AppEngine.closeExternalLab(false); AppEngine.navigate('screen-dashboard'); AppEngine.toggleSidebar();" style="padding: 15px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05);">الرئيسية</li>
+            <li onclick="SidebarEngine.openSettings()" style="padding: 15px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05);">إعدادات الحساب</li>
+            <li onclick="SidebarEngine.openSubscription()" style="padding: 15px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05);">حالة الاشتراك</li>
+            <li onclick="SidebarEngine.openAbout()" style="padding: 15px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05);">عن التطبيق</li>
+        </ul>
+    </div>
+
     <main>
+        <!-- شاشة التحميل التفاعلية -->
+       <div id="loading-overlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <h3 style="color: var(--primary, #0090ff); font-size: 1.5rem;">جاري تهيئة المخبر الافتراضي...</h3>
+        <p id="loading-tip" style="color: var(--text-muted, #64748b); font-size: 0.95rem; margin-top: 10px;">
+        💡 تلميح: يتم الآن تحميل المعدات الهندسية ومعايرة أدوات القياس 🏗️
+        </p>
+       </div>
+
+       <!-- 1. شاشة القفل عند انتهاء الفترة التجريبية -->
+        <div id="trial-expired-screen" class="trial-expired-screen">
+            <div class="trial-card">
+                <div class="trial-icon">⏱️</div>
+                <h2 style="color: var(--danger, #ef4444); margin-bottom: 15px;">انتهت الفترة التجريبية</h2>
+                <p style="color: var(--text-muted, #64748b); margin-bottom: 25px; line-height: 1.7; font-size: 0.95rem;">
+                    لقد استمتعت بـ 24 ساعة من الوصول المجاني لمخابر "لمسة" الهندسية. للاستمرار في إجراء التجارب وحفظ تقاريرك، يرجى ترقية حسابك.
+                </p>
+                <button class="btn btn-primary" style="width: 100%; font-size: 1.1rem; padding: 12px;" onclick="SubscriptionFlow.openPackages()">
+                    استعراض باقات الاشتراك ➔
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. شاشة الباقات الجديدة (طالب / خريج) -->
+        <div id="packages-screen" class="activation-screen">
+            <div class="activation-card" style="max-width: 750px; width: 95%;">
+                <h2 style="color: var(--primary, #0090ff); margin-bottom: 20px;">اختر باقة الاشتراك المناسبة لك 🚀</h2>
+                
+                <div class="pricing-grid">
+                    <!-- باقة الطالب -->
+                    <div class="pricing-card">
+                        <div class="pkg-header">
+                            <h3>باقة الطالب</h3>
+                            <div class="price">1$ <span>/ 5 سنوات</span></div>
+                        </div>
+                        <ul class="pkg-features">
+                            <li>✔️ وصول كامل لكافة المخابر الافتراضية</li>
+                            <li>✔️ تغطية جميع المقررات الدراسية</li>
+                            <li>✔️ دورات امتحانية مخصصة للمواد</li>
+                            <li>✔️ تحديثات المناهج الدورية</li>
+                        </ul>
+                        <button class="btn btn-outline" style="width: 100%;" onclick="SubscriptionFlow.selectPackage('student')">اختيار باقة الطالب</button>
+                    </div>
+
+                    <!-- باقة المهندس / الخريج (Premium) -->
+                    <div class="pricing-card premium">
+                        <div class="premium-badge">الأكثر طلباً وشمولية</div>
+                        <div class="pkg-header">
+                            <h3 style="color: #fff;">باقة المهندس / الخريج</h3>
+                            <div class="price" style="color: #fff;">5$ <span>/ مدى الحياة</span></div>
+                        </div>
+                        <ul class="pkg-features">
+                            <li>✔️ <b>كافة مزايا باقة الطالب</b></li>
+                            <li>✔️ تصدير تقارير الحسابات الإنشائية (PDF)</li>
+                            <li>✔️ أدوات تسعير وحصر كميات ديناميكية</li>
+                            <li>✔️ مكتبة نماذج عقود وتفاصيل (CAD/Revit)</li>
+                            <li>✔️ أولوية الدعم الفني الهندسي المباشر</li>
+                        </ul>
+                        <button class="btn" style="width: 100%; background: #fff; color: var(--primary, #0090ff); font-weight: 800;" onclick="SubscriptionFlow.selectPackage('graduate')">اختيار باقة المهندس (VIP)</button>
+                    </div>
+                </div>
+                
+                <button class="btn btn-outline" style="margin-top: 20px;" onclick="document.getElementById('packages-screen').classList.remove('active'); document.getElementById('trial-expired-screen').classList.add('active');">العودة للخلف</button>
+            </div>
+        </div>
+
+        <!-- 3. شاشة التفعيل والدفع (شام كاش) المحدثة -->
+        <div id="activation-screen" class="activation-screen">
+            <div class="activation-card">
+                <h2 style="color: var(--primary, #0090ff); margin-bottom: 10px;">ترقية حسابك في "لمسة" 🚀</h2>
+                <p style="color: var(--text-muted, #64748b); font-size: 0.9rem; margin-bottom: 20px; line-height: 1.6;">
+                    يرجى تحويل رسوم الاشتراك عبر تطبيق <b>شام كاش</b> إلى الرقم أدناه:
+                </p>
+                 <div class="shamcash-box">
+                    <div style="font-size: 0.85rem; color: var(--text-muted, #64748b); margin-bottom: 8px;">رقم عملية التحويل في شام كاش:</div>
+                    
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--bg-dark, #f1f5f9); padding: 10px 15px; border-radius: 8px; border: 1px dashed var(--surface-300, #e2e8f0);">
+                        <span style="font-family: monospace; font-size: 0.6rem; font-weight: bold; color: #334155; word-break: break-all; text-align: left; direction: ltr;">fc341c81849ed48ed179942abf9e2b29</span>
+                        <button onclick="SubscriptionFlow.copyShamcashID(this)" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem; border-color: var(--primary, #0090ff); color: var(--primary, #0090ff); white-space: nowrap;">نسخ 📋</button>
+                    </div>
+                    
+                    <div id="dynamic-price" style="font-size: 0.95rem; font-weight: 800; color: var(--success, #10b981); margin-top: 12px;">رسوم الاشتراك: -- ل.س</div>
+                </div>
+                
+                <p style="color: var(--text-muted, #64748b); font-size: 0.85rem; margin-bottom: 15px;">
+                    بعد إتمام التحويل، أرسل إشعار الدفع عبر الواتساب للحصول على كود التفعيل الخاص بك.
+                </p>
+
+                <input type="text" id="activation-code" class="activation-input" placeholder="أدخل كود التفعيل (مثال: LAMSA-XXXX)" autocomplete="off">
+                <div id="activation-error" class="error-msg">❌ الكود غير صحيح أو مستخدم، يرجى التأكد.</div>
+
+                <button class="btn btn-primary" style="width: 100%; font-size: 1.1rem; padding: 12px;" onclick="ActivationManager.verifyCode()">
+                    تفعيل الحساب الآن ✔️
+                </button>
+                <button class="btn btn-outline" style="width: 100%; margin-top: 10px;" onclick="document.getElementById('activation-screen').classList.remove('active'); document.getElementById('packages-screen').classList.add('active');">
+                    العودة لاختيار الباقات
+                </button>
+            </div>
+        </div>
+
+        <!-- الشاشة الترويجية (الواجهة الرئيسية) -->
+        <div id="screen-home" class="screen active" style="padding: 0; padding-bottom: 80px;">
+            
+            <h2 class="section-title">مخابرنا التدريبية (Promotional)</h2>
+            <div class="horizontal-scroll">
+                <div class="promo-card">
+                    <img src="https://via.placeholder.com/600x300/1e293b/0ea5e9?text=Concrete+Lab" alt="مخبر البيتون">
+                    <div class="card-content"><div class="card-title">مخبر البيتون المسلح 1</div></div>
+                </div>
+                <div class="promo-card">
+                    <img src="ex2.png" alt="مخبر الفولاذ">
+                    <div class="card-content"><div class="card-title">اختبار الهيدروليك</div></div>
+                </div>
+                <div class="promo-card">
+                    <img src="https://via.placeholder.com/600x300/1e293b/0ea5e9?text=Soil+Mechanics" alt="ميكانيك التربة">
+                    <div class="card-content"><div class="card-title">تجارب ميكانيك التربة</div></div>
+                </div>
+                <div class="promo-card">
+                    <img src="ex4.png" alt="التحليل الإنشائي">
+                    <div class="card-content"><div class="card-title">  ميكانيك الانشاءات</div></div>
+                </div>
+            </div>
+
+            <h2 class="section-title">مشاركاتنا (What's New)</h2>
+            <div class="horizontal-scroll">
+                <div class="promo-card">
+                    <img src="https://via.placeholder.com/600x300/1e293b/0ea5e9?text=Event+1" alt="مشاركة 1">
+                    <div class="card-content"><div class="card-title">مشاركتنا في حاضنة تقانة المعلومات</div></div>
+                </div>
+                <div class="promo-card">
+                    <img src="https://via.placeholder.com/600x300/1e293b/0ea5e9?text=Event+2" alt="مشاركة 2">
+                    <div class="card-content"><div class="card-title">غرفة التجارة والصناعة</div></div>
+                </div>
+                <div class="promo-card">
+                    <img src="https://via.placeholder.com/600x300/1e293b/0ea5e9?text=Event+3" alt="مشاركة 3">
+                    <div class="card-content"><div class="card-title">لقاء وزير الاتصالات</div></div>
+                </div>
+                <div class="promo-card">
+                    <img src="https://via.placeholder.com/600x300/1e293b/0ea5e9?text=Event+4" alt="مشاركة 4">
+                    <div class="card-content"><div class="card-title">معرض المشاريع </div></div>
+                </div>
+            </div>
+
+            <div class="bottom-action">
+                <button class="btn btn-primary btn-play" onclick="AppEngine.startJourney()">بدء اللعب والتجربة</button>
+            </div>
+        </div>
+
+    
         <!-- الشاشة 1: تسجيل الدخول -->
-        <div id="screen-auth" class="screen active">
+        <div id="screen-auth" class="screen">
             <div class="card" style="max-width: 500px; margin: 60px auto;">
-                <h2 style="margin-bottom: 8px; color: var(--primary); text-align: center;">تسجيل دخول المهندس</h2>
-                <p style="color: var(--text-muted); font-size: 0.85rem; text-align: center; margin-bottom: 24px;">أدخل معلوماتك الشخصية لتخصيص سجلك الأكاديمي</p>
+                <h2 style="margin-bottom: 8px; color: var(--primary, #0090ff); text-align: center;">تسجيل دخول المهندس</h2>
+                <p style="color: var(--text-muted, #64748b); font-size: 0.85rem; text-align: center; margin-bottom: 24px;">أدخل معلوماتك الشخصية لتخصيص سجلك وربط جهازك</p>
 
                 <form onsubmit="AppEngine.login(event)">
                     <div class="input-group">
                         <label>الاسم الثلاثي:</label>
-                        <input type="text" id="userName" class="form-control" placeholder="أدخل اسمك الثلاثي هنا" required>
+                        <input type="text" id="userName" class="form-control" placeholder="أدخل اسمك الثلاثي" required>
                     </div>
                     <div class="input-group">
-                        <label>رقم الهاتف (سوريا):</label>
+                        <label>رقم الهاتف (الذي سجلت به في الاستبيان):</label>
                         <input type="tel" id="userPhone" class="form-control" placeholder="+963 xxxxxxxx" required>
+                    </div>
+                    <div class="input-group">
+                        <label>كلمة المرور (التي وصلتك على واتساب):</label>
+                        <input type="password" id="userPassword" class="form-control" placeholder="****" required>
                     </div>
                     <div style="display: flex; gap: 10px;">
                         <div class="input-group" style="flex: 1;">
@@ -45,82 +223,121 @@
                             <input type="number" id="userAge" class="form-control" value="21" required>
                         </div>
                         <div class="input-group" style="flex: 2;">
-                            <label>السنة الجامعية الحاليّة:</label>
+                            <label>السنة الجامعية:</label>
                             <select id="userYear" class="form-control">
                                 <option value="1">السنة الأولى</option>
                                 <option value="2">السنة الثانية</option>
-                                <option value="3" selected>السنة الثالثة</option>
+                                <option value="3">السنة الثالثة</option>
                                 <option value="4">السنة الرابعة</option>
                                 <option value="5">السنة الخامسة</option>
                             </select>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">حفظ</button>
+                    <button type="submit" id="btnLoginSubmit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">تسجيل الدخول وربط الجهاز ➔</button>
                 </form>
             </div>
         </div>
+
 
         <!-- الشاشة 2: خارطة السنوات -->
         <div id="screen-dashboard" class="screen">
             <div style="max-width: 1100px; margin: 0 auto;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                     <div>
-                        <h2 style="color: var(--text-main);">مرحباً بك مهندس <span id="displayStudentName" style="color: var(--primary);"></span></h2>
-                        <p style="color: var(--text-muted); font-size: 0.9rem;">اختر السنة الدراسية لعرض المواد والمخابر المتاحة</p>
+                        <h2 style="color: var(--text-main, #1a1a1a);">مرحباً بك مهندس <span id="displayStudentName" style="color: var(--primary, #0090ff);"></span></h2>
+                        <p style="color: var(--text-muted, #64748b); font-size: 0.9rem;">اختر السنة الدراسية لعرض الفصول والمواد والمخابر المتاحة</p>
                     </div>
                     <button onclick="AppEngine.navigate('screen-auth')" class="btn btn-outline">تعديل البيانات</button>
                 </div>
 
                 <div class="grid-cards">
                     <div class="custom-card" id="card-year-1" onclick="AppEngine.openYear(1)">
-                        <div class="card-title">🔹 السنة الأولى</div>
-                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">العلوم الأساسية للهندسة</p>
-                        <span class="subject-tag">الفيزياء</span> <span class="subject-tag">الكيمياء</span> <span class="subject-tag">الرسم</span>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <div class="card-title" style="margin:0;">🔹 السنة الأولى</div>
+                            <span class="badge-lab-active">4 تمارين نشطة 🧪</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--text-muted, #64748b); margin-bottom: 10px;">العلوم الأساسية للهندسة</p>
+                        <span class="subject-tag">الفيزياء (2)</span> <span class="subject-tag">الميكانيك 1</span> <span class="subject-tag">التمثيل الهندسي</span>
                     </div>
                     <div class="custom-card" id="card-year-2" onclick="AppEngine.openYear(2)">
-                        <div class="card-title">🔹 السنة الثانية</div>
-                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">علوم المواد والميكانيك</p>
-                        <span class="subject-tag">مقاومة المواد</span> <span class="subject-tag">المساحة</span> <span class="subject-tag">السوائل</span>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <div class="card-title" style="margin:0;">🔹 السنة الثانية</div>
+                            <span class="badge-lab-active">10 تمارين نشطة 🧪</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--text-muted, #64748b); margin-bottom: 10px;">علوم المواد والميكانيك</p>
+                        <span class="subject-tag">مقاومة 1 و 2</span> <span class="subject-tag">مساحة 1 و 2</span> <span class="subject-tag">هيدروليك 1 و 2</span>
                     </div>
                     <div class="custom-card" id="card-year-3" onclick="AppEngine.openYear(3)">
-                        <div class="card-title">🔹 السنة الثالثة</div>
-                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">الإنشاءات والبيتون</p>
-                        <span class="subject-tag">بيتون مسلح 1</span> <span class="subject-tag">الإنشاءات</span> <span class="subject-tag">تربة</span>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <div class="card-title" style="margin:0;">🔹 السنة الثالثة</div>
+                            <span class="badge-lab-active">3 تمارين نشطة 🧪</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--text-muted, #64748b); margin-bottom: 10px;">الإنشاءات والبيتون</p>
+                        <span class="subject-tag">بيتون 1</span> <span class="subject-tag">إنشاءات 1</span> <span class="subject-tag">طرق 1</span>
                     </div>
                     <div class="custom-card" id="card-year-4" onclick="AppEngine.openYear(4)">
-                        <div class="card-title">🔹 السنة الرابعة</div>
-                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">التصميم التنفيذي</p>
-                        <span class="subject-tag">بيتون مسلح 2</span> <span class="subject-tag">معدنية</span> <span class="subject-tag">طرق</span>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <div class="card-title" style="margin:0;">🔹 السنة الرابعة</div>
+                            <span class="badge-lab-active">7 تمارين نشطة 🧪</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--text-muted, #64748b); margin-bottom: 10px;">التصميم التنفيذي</p>
+                        <span class="subject-tag">بيتون 3</span> <span class="subject-tag">أساسات 1</span> <span class="subject-tag">معدنية 1</span> <span class="subject-tag">ديناميك</span>
                     </div>
                     <div class="custom-card" id="card-year-5" onclick="AppEngine.openYear(5)">
-                        <div class="card-title">🔹 السنة الخامسة</div>
-                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">مشروع التخرج</p>
-                        <span class="subject-tag">الزلازل</span> <span class="subject-tag">إدارة المشاريع</span>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <div class="card-title" style="margin:0;">🔹 السنة الخامسة والأخيرة</div>
+                            <span class="badge-lab-pending">قريباً ⏳</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--text-muted, #64748b); margin-bottom: 10px;">مشروع التخرج</p>
+                        <span class="subject-tag">إدارة المشاريع</span> <span class="subject-tag">هندسة الجسور</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- الشاشة 3: المواد -->
+        <!-- الشاشة 3: المواد والفصول -->
         <div id="screen-subjects" class="screen">
             <div style="max-width: 1100px; margin: 0 auto;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
-                    <h2 style="color: var(--text-main);">📚 مواد وتجارب: <span id="selectedYearTitle" style="color: var(--primary);"></span></h2>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <div>
+                        <h2 style="color: var(--text-main, #1a1a1a);">📚 <span id="selectedYearTitle" style="color: var(--primary, #0090ff);"></span></h2>
+                        <p id="selectedSemesterSubTitle" style="color: var(--text-muted, #64748b); font-size: 0.9rem; margin-top: 4px;">اختر الفصل الدراسي لعرض المقررات</p>
+                    </div>
                     <button onclick="AppEngine.navigate('screen-dashboard')" class="btn btn-outline">↩ العودة للسنوات</button>
                 </div>
+
+                <!-- شريط اختيار الفصلين الدراسيين -->
+                <div class="semester-selector-wrapper">
+                    <button id="btn-sem-1" class="semester-tab active" onclick="AppEngine.switchSemester(1)">
+                        <span class="tab-icon">📖</span>
+                        <div class="tab-text">
+                            <span class="tab-title">الفصل الأول</span>
+                            <span class="tab-desc" id="sem1-count-desc">مقررات وتجارب الفصل الأول</span>
+                        </div>
+                    </button>
+                    <button id="btn-sem-2" class="semester-tab" onclick="AppEngine.switchSemester(2)">
+                        <span class="tab-icon">📘</span>
+                        <div class="tab-text">
+                            <span class="tab-title">الفصل الثاني</span>
+                            <span class="tab-desc" id="sem2-count-desc">مقررات وتجارب الفصل الثاني</span>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- شبكة المواد للفصل المختار -->
                 <div id="subjectsListGrid" class="grid-cards"></div>
             </div>
         </div>
 
-        <!-- الشاشة 4: مخبر البيتون -->
+        <!-- الشاشة 4: مخبر البيتون المدمج -->
         <div id="screen-concrete" class="screen">
             <div class="lab-container">
                 <div class="viewport-3d" id="concrete-canvas">
-                    <button class="btn btn-outline" style="position: absolute; top: 16px; right: 16px; z-index: 5; background: var(--surface-200);" onclick="AppEngine.navigate('screen-subjects')">➔ عودة</button>
+                    <button class="btn btn-outline" style="position: absolute; top: 16px; right: 16px; z-index: 5; background: var(--surface-200, #f8f9fa);" onclick="AppEngine.navigate('screen-subjects')">➔ عودة للمواد</button>
                 </div>
                 
                 <div class="lab-panel">
-                    <div class="panel-header">إعدادات اختبار الضغط</div>
+                    <div class="panel-header">إعدادات اختبار الضغط (بيتون 1)</div>
                     <div class="panel-body">
                         <div class="formula-box">f'ci = (Cf · Ct · Ch) · f''ci<br>f''ci = (NR / Ac) · 10</div>
                         <div class="input-group">
@@ -139,16 +356,16 @@
                             <label>قوة الانكسار المقاسة NR (Kg)</label>
                             <input type="number" id="c_force" class="form-control" value="53200" oninput="ConcreteLab.calculate()">
                         </div>
-                        <hr style="border-color: var(--surface-300); margin: 20px 0;">
+                        <hr style="border-color: var(--surface-300, #e2e8f0); margin: 20px 0;">
                         <div class="data-display">
                             <span class="data-label">عامل تصحيح العمر (Ct):</span>
-                            <span class="data-value" id="res_ct" style="color: var(--warning);">1.50</span>
+                            <span class="data-value" id="res_ct" style="color: var(--warning, #f59e0b);">1.50</span>
                         </div>
                         <div class="data-display">
                             <span class="data-label">الإجهاد الفعلي (f''ci):</span>
                             <span class="data-value" id="res_f_prime_prime">23.64 MPa</span>
                         </div>
-                        <div class="data-display" style="border-color: var(--success);">
+                        <div class="data-display" style="border-color: var(--success, #10b981);">
                             <span class="data-label">الإجهاد المصحح النظامي (f'ci):</span>
                             <span class="data-value" id="res_f_prime">28.37 MPa</span>
                         </div>
@@ -158,16 +375,16 @@
             </div>
         </div>
 
-        <!-- الشاشة 5: مخبر الفولاذ -->
+        <!-- الشاشة 5: مخبر الفولاذ المدمج -->
         <div id="screen-steel" class="screen">
             <div style="display: flex; flex-direction: column; gap: 20px; height: 100%;">
                 <div style="display: grid; grid-template-columns: 1fr 350px; gap: 20px; flex: 1; min-height: 380px;">
                     <div class="viewport-3d" id="steel-canvas">
-                        <button class="btn btn-outline" style="position: absolute; top: 16px; right: 16px; z-index: 5; background: var(--surface-200);" onclick="AppEngine.navigate('screen-subjects')">➔ عودة</button>
+                        <button class="btn btn-outline" style="position: absolute; top: 16px; right: 16px; z-index: 5; background: var(--surface-200, #f8f9fa);" onclick="AppEngine.navigate('screen-subjects')">➔ عودة للمواد</button>
                     </div>
                     
                     <div class="lab-panel">
-                        <div class="panel-header">اختبار الشد</div>
+                        <div class="panel-header">اختبار الشد المباشر (مقاومة 1)</div>
                         <div class="panel-body">
                             <div class="formula-box">As = (π · d²) / 4<br>Ny = (N'y - Ng) · 10<br>fyi = Ny / As</div>
                             <div class="input-group">
@@ -175,7 +392,7 @@
                                 <select id="s_dia" class="form-control">
                                     <option value="12">12 mm (مخبر مواد بناء)</option>
                                     <option value="16">16 mm (مخبر مواد بناء)</option>
-                                    <option value="22" selected>22 mm (مخبر البيتون)</option>
+                                    <option value="22" selected>22 mm (مخبر البيتون والمقاومة)</option>
                                 </select>
                             </div>
                             <div class="input-group">
@@ -189,8 +406,8 @@
 
                 <div class="card" style="margin: 0; display: flex; flex-direction: column; height: 260px;">
                     <div style="display:flex; justify-content:space-between; margin-bottom: 10px;">
-                        <h3 style="color: var(--primary);">الجدول الإحصائي (إجهاد الخضوع fy)</h3>
-                        <div style="font-size: 0.9rem;">الوسطي (fym): <strong id="stat_fym" style="color: var(--success); font-size: 1.2rem;">0.00 MPa</strong></div>
+                        <h3 style="color: var(--primary, #0090ff);">الجدول الإحصائي (إجهاد الخضوع fy)</h3>
+                        <div style="font-size: 0.9rem;">الوسطي (fym): <strong id="stat_fym" style="color: var(--success, #10b981); font-size: 1.2rem;">0.00 MPa</strong></div>
                     </div>
                     <div style="flex: 1; overflow-y: auto;">
                         <table class="pro-table">
@@ -204,11 +421,11 @@
             </div>
         </div>
 
-        <!-- الشاشة 6: التحليل الإنشائي CAD -->
+        <!-- الشاشة 6: التحليل الإنشائي CAD المدمج -->
         <div id="screen-cad" class="screen">
             <div style="max-width: 1100px; margin: 0 auto;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2 style="color: var(--primary);">📐 استديو التحليل الإنشائي وتصميم الجوائز (CAD Studio)</h2>
+                    <h2 style="color: var(--primary, #0090ff);">📐 استديو التحليل الإنشائي وتصميم الجوائز CAD (إنشاءات 1)</h2>
                     <button onclick="AppEngine.navigate('screen-subjects')" class="btn btn-outline">العودة للمواد</button>
                 </div>
 
@@ -217,15 +434,15 @@
 
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px;">
                         <div class="input-group">
-                            <label>طول الجائز (L): <b id="spanVal" style="color:var(--primary);">6.0 m</b></label>
+                            <label>طول الجائز (L): <b id="spanVal" style="color:var(--primary, #0090ff);">6.0 m</b></label>
                             <input type="range" id="spanInput" class="form-control" min="3" max="10" step="0.5" value="6" oninput="CADLab.recalculate()">
                         </div>
                         <div class="input-group">
-                            <label>الحمل الموزع (q): <b id="loadVal" style="color:var(--warning);">30 kN/m</b></label>
+                            <label>الحمل الموزع (q): <b id="loadVal" style="color:var(--warning, #f59e0b);">30 kN/m</b></label>
                             <input type="range" id="loadInput" class="form-control" min="10" max="80" step="5" value="30" oninput="CADLab.recalculate()">
                         </div>
                         <div class="input-group">
-                            <label>عمق المقطع (h): <b id="depthVal" style="color:var(--success);">50 cm</b></label>
+                            <label>عمق المقطع (h): <b id="depthVal" style="color:var(--success, #10b981);">50 cm</b></label>
                             <input type="range" id="depthInput" class="form-control" min="30" max="90" step="5" value="50" oninput="CADLab.recalculate()">
                         </div>
                     </div>
@@ -235,55 +452,121 @@
                             <span class="data-label">العزم المحسوب ($M_{max}$):</span>
                             <span class="data-value" id="mMaxVal">135.0 kN.m</span>
                         </div>
-                        <div class="data-display" style="border-color: var(--danger);">
+                        <div class="data-display" style="border-color: var(--danger, #ef4444);">
                             <span class="data-label">القص المحسوب ($V_{max}$):</span>
-                            <span class="data-value" id="vMaxVal" style="color: var(--danger);">90.0 kN</span>
+                            <span class="data-value" id="vMaxVal" style="color: var(--danger, #ef4444);">90.0 kN</span>
                         </div>
-                        <div class="data-display" style="border-color: var(--success);">
+                        <div class="data-display" style="border-color: var(--success, #10b981);">
                             <span class="data-label">التسليح التقريبي ($A_s$):</span>
-                            <span class="data-value" id="rebarVal" style="color: var(--success);">4 T 16</span>
+                            <span class="data-value" id="rebarVal" style="color: var(--success, #10b981);">4 T 16</span>
                         </div>
                     </div>
 
                     <div style="display: flex; gap: 10px; margin-top: 15px;">
-                        <button class="btn" style="background: var(--warning); color: #000;" onclick="CADLab.simulateEarthquake()">⚠️ محاكاة زلزال</button>
+                        <button class="btn" style="background: var(--warning, #f59e0b); color: #000;" onclick="CADLab.simulateEarthquake()">⚠️ محاكاة زلزال</button>
                     </div>
                 </div>
             </div>
         </div>
-      
-      <!-- نافذة الاشتراك وتفعيل الحساب -->
-        <div id="subscriptionModal" class="modal-overlay">
-            <div class="modal-box">
-                <button class="modal-close" onclick="AppEngine.closeModal()">×</button>
-                <h3 class="modal-title">تفعيل الدخول للمخبر 🚧</h3>
-                <p class="modal-text">للبدء بإجراء التجارب العملية واستخدام المعدات الافتراضية، يرجى تفعيل اشتراكك في منصة لمسة.</p>
-                
-                <div class="modal-info">
-                    اضغط على الزر أدناه للتواصل معنا مباشرة عبر واتساب للحصول على رمز التفعيل الخاص بك والبدء بتجربتك الهندسية.
+
+        <!-- الشاشة 7: مشغل المخابر الخارجية المعزول (Iframe Lab Viewer) -->
+        <div id="screen-external-lab" class="screen external-lab-screen">
+            <div class="external-lab-wrapper" id="external-lab-wrapper">
+                <div class="external-lab-toolbar">
+                    <div class="external-lab-info">
+                        <span class="external-lab-badge">مخبر تفاعلي 3D</span>
+                        <h3 id="external-lab-title">اسم التمرين</h3>
+                    </div>
+                    <div class="external-lab-actions">
+                        <button class="btn btn-outline btn-sm" onclick="AppEngine.reloadExternalLab()" title="إعادة ضبط التمرين">🔄 إعادة ضبط</button>
+                        <button class="btn btn-outline btn-sm" onclick="AppEngine.toggleFullscreenLab()" title="ملء الشاشة">⛶ ملء الشاشة</button>
+                        <button class="btn btn-primary btn-sm" onclick="AppEngine.closeExternalLab(true)">↩ العودة للمواد</button>
+                    </div>
                 </div>
+                <div class="external-lab-frame-container">
+                    <iframe id="external-lab-frame" src="about:blank" allowfullscreen></iframe>
+                </div>
+            </div>
+        </div>
+
+        <!-- نافذة استعراض تمارين المادة (عند وجود تمرين أو عدة تمارين داخل المادة) -->
+        <div id="subjectExercisesModal" class="modal-overlay">
+            <div class="modal-box exercises-modal-box">
+                <button class="modal-close" onclick="SidebarEngine.closeModal('subjectExercisesModal')">×</button>
+                <h3 class="modal-title" id="modalSubjectTitle">تمارين المادة 🧪</h3>
+                <p class="modal-text" id="modalSubjectSubtitle" style="margin-bottom: 18px;">اختر التمرين المطلوب لتشغيل بيئة المحاكاة التفاعلية</p>
                 
-                <button class="btn btn-whatsapp" onclick="AppEngine.redirectToWhatsApp()">تفعيل الاشتراك عبر واتساب 💬</button>
+                <div id="subjectExercisesList" class="exercises-list-container"></div>
                 
-                <button class="btn btn-outline btn-code" onclick="AppEngine.enterCode()">
-                    <span>لدي رمز تفعيل مسبقاً</span>
-                    <span>❯</span>
+                <button class="btn btn-outline" style="width: 100%; margin-top: 15px;" onclick="SidebarEngine.closeModal('subjectExercisesModal')">إغلاق النافذة</button>
+            </div>
+        </div>
+      
+        <!-- نافذة التسجيل والاستبيان -->
+        <div id="registrationModal" class="modal-overlay">
+            <div class="modal-box">
+                <button class="modal-close" onclick="AppEngine.closeRegistrationModal()">×</button>
+                <h3 class="modal-title">إعداد حسابك الشخصي 📋</h3>
+                <p class="modal-text">للبدء، يرجى ملء استبيان جوجل السريع لنتمكن من تخصيص تجربتك (سواء كنت طالباً أو مهندساً)، وسنرسل لك كلمة المرور فوراً لتسجيل الدخول وربط جهازك.</p>
+                <button class="btn btn-primary" style="width: 100%; margin-bottom: 12px; padding: 12px;" onclick="window.open('https://docs.google.com/forms/d/e/1FAIpQLSdkulHoNy7BcFb2-AvjLAxqbTtmOysiwRa556fsGTG4TG_Y5g/viewform?usp=publish-editor', '_blank')">تعبئة استبيان جوجل 📝</button>
+                <button class="btn btn-outline" style="width: 100%; padding: 12px;" onclick="AppEngine.proceedToLogin()">
+                    لدي حساب واستلمت كلمة المرور ❯
                 </button>
             </div>
         </div>
 
+        <!-- 1. نافذة إعدادات الحساب -->
+        <div id="settingsModal" class="modal-overlay">
+            <div class="modal-box">
+                <button class="modal-close" onclick="SidebarEngine.closeModal('settingsModal')">×</button>
+                <h3 class="modal-title">إعدادات الحساب ⚙️</h3>
+                
+                <div style="margin-bottom: 15px; text-align: right;">
+                    <label style="display: block; color: var(--text-muted, #64748b); margin-bottom: 5px; font-size: 0.9rem;">الاسم الكامل</label>
+                    <input type="text" id="editName" class="form-control" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--surface-300, #e2e8f0); background: var(--surface-100, #ffffff); color: var(--text-main, #1a1a1a);">
+                </div>
+                
+                <div style="margin-bottom: 20px; text-align: right;">
+                    <label style="display: block; color: var(--text-muted, #64748b); margin-bottom: 5px; font-size: 0.9rem;">رقم الهاتف (للاشتراك)</label>
+                    <input type="text" id="editPhone" class="form-control" disabled style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--surface-300, #e2e8f0); background: var(--surface-200, #f8f9fa); color: var(--text-muted, #64748b); cursor: not-allowed;">
+                </div>
+                
+                <button class="btn btn-primary" onclick="SidebarEngine.saveSettings()" style="width: 100%; margin-bottom: 10px; padding: 12px;">حفظ التعديلات</button>
+                <button class="btn btn-outline" onclick="SidebarEngine.logout()" style="width: 100%; padding: 12px; color: var(--danger, #ef4444); border-color: var(--danger, #ef4444);">تسجيل الخروج من الجهاز</button>
+            </div>
+        </div>
+
+        <!-- 2. نافذة حالة الاشتراك -->
+        <div id="subStatusModal" class="modal-overlay">
+            <div class="modal-box" style="text-align: center;">
+                <button class="modal-close" onclick="SidebarEngine.closeModal('subStatusModal')">×</button>
+                <h3 class="modal-title">حالة الاشتراك 💎</h3>
+                
+                <div id="subStatusContent" class="modal-info" style="font-size: 1.1rem; margin-top: 20px; padding: 25px 15px;">
+                    <!-- سيتم تعبئة الحالة برمجياً هنا -->
+                </div>
+                
+                <button id="btnUpgradeFromSidebar" class="btn btn-primary" onclick="SubscriptionFlow.openPackages(); SidebarEngine.closeModal('subStatusModal'); AppEngine.toggleSidebar();" style="width: 100%; display: none; padding: 12px;">ترقية الحساب الآن 🚀</button>
+            </div>      
+        </div>
+
+        <!-- 3. نافذة عن التطبيق -->
+        <div id="aboutModal" class="modal-overlay">
+            <div class="modal-box" style="text-align: center;">
+                <button class="modal-close" onclick="SidebarEngine.closeModal('aboutModal')">×</button>
+                <h3 class="modal-title">عن منصة لـمـسـة 💡</h3>
+                                
+                <p class="modal-text" style="font-size: 1rem;">أول مخبر هندسي افتراضي تفاعلي في سوريا، مصمم لطلاب الهندسة المدنية لمحاكاة التجارب العملية بدقة، بأمان، وبدون الحاجة لاتصال بالإنترنت.</p>
+                
+                <div style="background: var(--surface-100, #ffffff); padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 0.95rem; color: var(--text-muted, #64748b); border: 1px solid var(--surface-300, #e2e8f0);">
+                    <p style="margin-bottom: 5px;"><strong>الإصدار:</strong> 1.0.0 (PWA)</p>
+                </div>
+                
+                <a href="https://wa.me/963954008416" target="_blank" class="btn btn-primary" style="display: block; text-decoration: none; padding: 12px; border-radius: 8px; width: 100%;">تواصل مع الدعم الفني</a>
+            </div>
+        </div>
     </main>
 
-    <!-- رسالة طلب التثبيت (PWA) -->
-    <div id="installPrompt" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--surface-200); border: 1px solid var(--primary); padding: 20px; border-radius: 12px; z-index: 9999; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.8); width: 90%; max-width: 400px;">
-        <h4 style="color: var(--primary); margin-bottom: 10px;">تثبيت اللعبة 📲</h4>
-        <p style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-main);">هل تريد تثبيت "مخبر الهندسة" ليعمل كـ تطبيق بدون إنترنت؟</p>
-        <div style="display: flex; gap: 10px; justify-content: center;">
-            <button id="btnInstallYes" class="btn btn-success" style="flex: 1;">نعم، تثبيت</button>
-            <button id="btnInstallNo" class="btn btn-outline" style="flex: 1;">لا، شكراً</button>
-        </div>
-    </div>
-    
     <script src="config.js"></script>
     <script src="script.js"></script>
 </body>
